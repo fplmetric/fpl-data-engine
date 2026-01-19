@@ -21,15 +21,15 @@ max_price = st.sidebar.slider("Max Price (£)", 3.8, 14.0, 14.0, 0.1)
 max_own = st.sidebar.slider("Max Ownership (%)", 0, 100, 10)
 position = st.sidebar.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
 
-# --- 3. GET DATA ---
+# --- 3. GET DATA (Safe Query - No % symbols here) ---
 query = """
 SELECT 
-    web_name AS "Player", 
-    team_name AS "Team", 
-    position AS "Pos", 
-    cost AS "Price", 
-    selected_by_percent AS "Own%", 
-    xg AS "xG", 
+    web_name, 
+    team_name, 
+    position, 
+    cost, 
+    selected_by_percent, 
+    xg, 
     minutes
 FROM human_readable_fpl
 WHERE snapshot_time > NOW() - INTERVAL '48 hours'
@@ -39,26 +39,37 @@ df = pd.read_sql(query, engine)
 # --- 4. FILTER DATA ---
 filtered = df[
     (df['minutes'] >= min_mins) & 
-    (df['Price'] <= max_price) & 
-    (df['Own%'] <= max_own) &
-    (df['Pos'].isin(position))
+    (df['cost'] <= max_price) & 
+    (df['selected_by_percent'] <= max_own) &
+    (df['position'].isin(position))
 ]
 
-# --- 5. DISPLAY ---
+# --- 5. CLEANUP & RENAME (Safe to use % here) ---
+# We rename the columns for the display only
+display_df = filtered.rename(columns={
+    "web_name": "Player",
+    "team_name": "Team",
+    "position": "Pos",
+    "cost": "Price",
+    "selected_by_percent": "Own%",  # <--- % is safe here
+    "xg": "xG"
+})
+
+# --- 6. DISPLAY ---
 st.title(f"💎 Hidden Gems ({len(filtered)})")
 
-# Top 3 Cards
+# Top 3 Metrics
 col1, col2, col3 = st.columns(3)
 if not filtered.empty:
-    best_xg = filtered.sort_values(by='xG', ascending=False).iloc[0]
-    cheapest = filtered.sort_values(by='Price', ascending=True).iloc[0]
+    best_xg = filtered.sort_values(by='xg', ascending=False).iloc[0]
+    cheapest = filtered.sort_values(by='cost', ascending=True).iloc[0]
     
-    col1.metric("Highest Threat", best_xg['Player'], f"{best_xg['xG']} xG")
-    col2.metric("Best Value", cheapest['Player'], f"£{cheapest['Price']}m")
+    col1.metric("Highest Threat", best_xg['web_name'], f"{best_xg['xg']} xG")
+    col2.metric("Best Value", cheapest['web_name'], f"£{cheapest['cost']}m")
 
 # Main Table
 st.dataframe(
-    filtered.sort_values(by='xG', ascending=False),
+    display_df.sort_values(by='xG', ascending=False),
     use_container_width=True,
     hide_index=True,
     column_config={
