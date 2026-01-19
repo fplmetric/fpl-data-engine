@@ -21,9 +21,11 @@ max_price = st.sidebar.slider("Max Price (£)", 3.8, 14.0, 14.0, 0.1)
 max_own = st.sidebar.slider("Max Ownership (%)", 0, 100, 10)
 position = st.sidebar.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
 
-# --- 3. GET DATA (Safe Query - No % symbols here) ---
+# --- 3. GET DATA (The "Highlander" Query) ---
+# DISTINCT ON (web_name) means: "Only keep one row per player name"
+# ORDER BY ... snapshot_time DESC means: "Make sure that one row is the NEWEST one"
 query = """
-SELECT 
+SELECT DISTINCT ON (web_name)
     web_name, 
     team_name, 
     position, 
@@ -32,7 +34,7 @@ SELECT
     xg, 
     minutes
 FROM human_readable_fpl
-WHERE snapshot_time > NOW() - INTERVAL '48 hours'
+ORDER BY web_name, snapshot_time DESC
 """
 df = pd.read_sql(query, engine)
 
