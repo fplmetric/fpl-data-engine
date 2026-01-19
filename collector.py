@@ -23,6 +23,9 @@ def fetch_fpl_data():
     processed_data = []
     
     for p in elements:
+        # THE FIX: We map the API keys (singular) to our DB keys (plural)
+        # We use .get() for everything to prevent crashes
+        
         player_row = {
             # --- IDENTITY ---
             "id": p['id'],
@@ -37,7 +40,6 @@ def fetch_fpl_data():
             "selected_by_percent": float(p['selected_by_percent']),
             "transfers_in_event": p.get('transfers_in_event', 0),
             "transfers_out_event": p.get('transfers_out_event', 0),
-            "price_change_event": p.get('cost_change_event', 0) / 10.0,
             "value_form": float(p.get('value_form', 0)),
             "value_season": float(p.get('value_season', 0)),
             "form": float(p.get('form', 0)),
@@ -46,47 +48,44 @@ def fetch_fpl_data():
             "minutes": p['minutes'],
             "total_points": p['total_points'],
             "points_per_game": float(p['points_per_game']),
-            # API uses 'starts' for matches started
             "starts": p.get('starts', 0), 
             "matches_played": p.get('starts', 0), 
 
             # --- ATTACK ---
             "goals_scored": p['goals_scored'],
             "assists": p['assists'],
-            "penalties_missed": p.get('penalties_missed', 0),
             
-            # --- DEFENSE (The 2026 Suite) ---
-            "clean_sheets": p['clean_sheets'],
-            "goals_conceded": p['goals_conceded'],
+            # --- DEFENSE (THE FIX) ---
+            "clean_sheets": p.get('clean_sheets', 0),
+            "goals_conceded": p.get('goals_conceded', 0),
             "own_goals": p.get('own_goals', 0),
             "penalties_saved": p.get('penalties_saved', 0),
             
-            # THE FIX IS HERE: Mapped 'contribution' (API) to 'contributions' (DB)
-            "defensive_contributions": p.get('defensive_contribution', 0), 
+            # CRITICAL FIX: The API uses singular 'contribution', we store it
+            "defensive_contributions": p.get('defensive_contribution', 0),
             
             "tackles": p.get('tackles', 0),
             "recoveries": p.get('recoveries', 0),
-            
-            # Mapped 'clearances_blocks_interceptions' to 'cbi'
             "cbi": p.get('clearances_blocks_interceptions', 0),
 
-            # --- UNDERLYING (xStats) ---
+            # --- UNDERLYING ---
             "xg": float(p.get('expected_goals', 0)),
             "xa": float(p.get('expected_assists', 0)),
             "xgi": float(p.get('expected_goal_involvements', 0)),
             "xgc": float(p.get('expected_goals_conceded', 0)),
 
-            # --- BPS & ICT ---
+            # --- BPS ---
             "bonus": p.get('bonus', 0),
             "bps": p.get('bps', 0),
-            "influence": float(p.get('influence', 0)),
-            "creativity": float(p.get('creativity', 0)),
-            "threat": float(p.get('threat', 0)),
             "ict_index": float(p.get('ict_index', 0)),
 
             "snapshot_time": datetime.now().isoformat()
         }
         processed_data.append(player_row)
+        
+        # DEBUG: Print Collins to the logs so you can verify it worked
+        if p['web_name'] == 'Collins':
+            print(f"🕵️ VERIFY COLLINS: DC={player_row['defensive_contributions']}, Tackles={player_row['tackles']}")
 
     return processed_data
 
@@ -100,7 +99,7 @@ def save_to_supabase(data):
     try:
         execute_values(cursor, query, values)
         conn.commit()
-        print("✅ Data successfully saved!")
+        print(f"✅ Successfully saved {len(data)} rows to Supabase!")
     except Exception as e:
         print(f"❌ Database Error: {e}")
     finally:
