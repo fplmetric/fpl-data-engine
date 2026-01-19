@@ -15,7 +15,8 @@ except Exception as e:
     st.error(f"Database Connection Failed: {e}")
     st.stop()
 
-# --- 2. GET DATA (The "Data Vacuum" Query) ---
+# --- 2. GET DATA ---
+# fetching all the key stats from your fresh 2026 database view
 query = """
 SELECT DISTINCT ON (web_name)
     web_name, team_name, position, cost, selected_by_percent, status,
@@ -29,76 +30,126 @@ SELECT DISTINCT ON (web_name)
     -- Defense
     clean_sheets, goals_conceded, xgc,
     
-    -- Work Rate (The New 2026 Suite)
+    -- Work Rate (The 2026 stats)
     def_cons, tackles, recoveries, cbi,
     
-    -- Value & Form
-    form, value_form, value_season, bonus, bps, ict_index
+    -- Value
+    form, value_season, bps
 FROM human_readable_fpl
 ORDER BY web_name, snapshot_time DESC
 """
 df = pd.read_sql(query, engine)
 
 # --- 3. CALCULATE METRICS ---
-df['matches_played'] = df['matches_played'].replace(0, np.nan)
-df['minutes'] = df['minutes'].replace(0, np.nan)
+# Fill NaNs to prevent math errors
+df = df.fillna(0)
+df['matches_played'] = df['matches_played'].replace(0, 1) # Avoid div/0
+df['minutes'] = df['minutes'].replace(0, 1) # Avoid div/0
 
-# Per Match / Per 90 Stats
-df['dc_per_match'] = df['def_cons'] / df['matches_played']
+# --- The New Calculations You Requested ---
+
+# 1. DefCons per 90 (Normalized Work Rate)
+df['dc_per_90'] = (df['def_cons'] / df['minutes']) * 90
+
+# 2. Avg Minutes (Reliability)
+df['avg_minutes'] = df['minutes'] / df['matches_played']
+
+# 3. Tackles per 90
 df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
+
+# 4. xGC per 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
-df = df.fillna(0)
 
 # --- 4. SIDEBAR FILTERS ---
 st.sidebar.header("🎯 Master Filters")
-position = st.sidebar.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
-min_mins = st.sidebar.slider("Min Minutes Played", 0, 2000, 500, 100)
-max_price = st.sidebar.slider("Max Price (£)", 3.8, 15.0, 15.0, 0.1)
 
-st.sidebar.subheader("🛡️ Work Rate (New)")
-min_dc = st.sidebar.slider("Min Def. Contributions (Total)", 0, 300, 0)
-min_tackles = st.sidebar.slider("Min Tackles (Total)", 0, 100, 0)
+# Position & Price
+position = st.sidebar.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
+# Updated: Price now goes up to 15.1 as requested
+max_price = st.sidebar.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
+
+# The Requested Metric Filters
+st.sidebar.subheader("⚙️ Reliability")
+# Filter: Avg Minutes (e.g. >60 means they usually start)
+min_avg_mins = st.sidebar.slider("Avg Minutes per Match", 0, 90, 45)
+# Filter: Points Per Game
+min_ppg = st.sidebar.slider("Min Points Per Game", 0.0, 10.0, 2.5, 0.1)
+
+st.sidebar.subheader("🛡️ Work Rate (Per 90)")
+# Filter: DefCons per 90 (The new 2026 metric normalized)
+min_dc90 = st.sidebar.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
 
 # --- 5. FILTER DATA ---
 filtered = df[
-    (df['minutes'] >= min_mins) & 
-    (df['cost'] <= max_price) & 
-    (df['def_cons'] >= min_dc) &
-    (df['tackles'] >= min_tackles) &
-    (df['position'].isin(position))
+    (df['position'].isin(position)) &
+    (df['cost'] <= max_price) &
+    (df['avg_minutes'] >= min_avg_mins) & 
+    (df['points_per_game'] >= min_ppg) &
+    (df['dc_per_90'] >= min_dc90)
 ]
 
 # --- 6. DISPLAY ---
 st.title(f"🚀 FPL Metric 2026 ({len(filtered)})")
 
-# Top Level Metrics
+# Top Level Cards
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xg = filtered.sort_values('xg', ascending=False).iloc[0]
-    best_dc = filtered.sort_values('def_cons', ascending=False).iloc[0]
+    best_dc = filtered.sort_values('dc_per_90', ascending=False).iloc[0]
+    best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
+    
     col1.metric("🔥 Threat King", best_xg['web_name'], f"{best_xg['xg']} xG")
-    col2.metric("🛡️ Workhorse (DC)", best_dc['web_name'], f"{int(best_dc['def_cons'])}")
+    col2.metric("🛡️ Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}")
+    col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
+    col4.metric("🧠 AVG Points", f"{filtered['points_per_game'].mean():.2f}", "PPG")
 
-# --- TABS FOR ORGANIZED DATA ---
+# --- TABS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate (2026)"])
 
 with tab1:
-    st.dataframe(filtered[['web_name', 'team_name', 'position', 'cost', 'total_points', 'form']].sort_values('total_points', ascending=False), use_container_width=True, hide_index=True)
-
-with tab2: # Attack Tab
-    st.dataframe(filtered[['web_name', 'xg', 'xa', 'xgi', 'goals_scored']].sort_values('xg', ascending=False), use_container_width=True, hide_index=True)
-
-with tab3: # Defense Tab
-    st.dataframe(filtered[['web_name', 'clean_sheets', 'xgc', 'xgc_per_90']].sort_values('clean_sheets', ascending=False), use_container_width=True, hide_index=True)
-
-with tab4: # The New Work Rate Tab
     st.dataframe(
-        filtered[['web_name', 'def_cons', 'dc_per_match', 'tackles', 'recoveries', 'cbi']].sort_values('def_cons', ascending=False),
+        filtered[['web_name', 'team_name', 'position', 'cost', 'total_points', 'points_per_game', 'avg_minutes']].sort_values('total_points', ascending=False),
         use_container_width=True,
         hide_index=True,
         column_config={
-            "def_cons": st.column_config.NumberColumn("Total DC", help="Defensive Contributions"),
+            "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
+            "points_per_game": st.column_config.NumberColumn("PPG", format="%.1f"),
+            "avg_minutes": st.column_config.NumberColumn("Mins/Gm", format="%.0f"),
+        }
+    )
+
+with tab2: # Attack Tab
+    st.dataframe(
+        filtered[['web_name', 'xg', 'xa', 'xgi', 'goals_scored']].sort_values('xg', ascending=False),
+        use_container_width=True, 
+        hide_index=True,
+        column_config={
+            "xg": st.column_config.NumberColumn("xG", format="%.2f"),
+            "xgi": st.column_config.NumberColumn("xGI", format="%.2f"),
+        }
+    )
+
+with tab3: # Defense Tab
+    st.dataframe(
+        filtered[['web_name', 'clean_sheets', 'xgc', 'xgc_per_90']].sort_values('clean_sheets', ascending=False),
+        use_container_width=True, 
+        hide_index=True,
+        column_config={
+            "xgc_per_90": st.column_config.NumberColumn("xGC/90", format="%.2f"),
+        }
+    )
+
+with tab4: # The New Work Rate Tab
+    st.markdown("### 🛠️ Defensive Work Rate (Per 90)")
+    st.dataframe(
+        filtered[['web_name', 'dc_per_match', 'dc_per_90', 'tackles_per_90', 'def_cons']].sort_values('dc_per_90', ascending=False),
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "def_cons": st.column_config.NumberColumn("Total DC"),
             "dc_per_match": st.column_config.NumberColumn("DC/Match", format="%.1f"),
+            "dc_per_90": st.column_config.NumberColumn("DC/90", format="%.2f", help="Defensive Contributions per 90 mins"),
+            "tackles_per_90": st.column_config.NumberColumn("Tackles/90", format="%.2f"),
         }
     )
