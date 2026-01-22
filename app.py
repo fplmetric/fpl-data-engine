@@ -140,7 +140,7 @@ with tab1:
         styled_df, # Use the styled version here
         use_container_width=True, 
         hide_index=True,
-        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
+        column_order=['Player', 'team_name', 'position', 'cost', 'selected_by_percent', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
         column_config={
             "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
             "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"),
@@ -154,7 +154,7 @@ with tab2:
     st.dataframe(
         styled_df, # Apply style
         use_container_width=True, hide_index=True,
-        column_order=['web_name', 'xg', 'xa', 'xgi', 'goals_scored'],
+        column_order=['Player', 'xg', 'xa', 'xgi', 'goals_scored'],
         column_config={"xg": st.column_config.NumberColumn("xG", format="%.2f")}
     )
 
@@ -162,7 +162,7 @@ with tab3:
     st.dataframe(
         styled_df, # Apply style
         use_container_width=True, hide_index=True,
-        column_order=['web_name', 'clean_sheets', 'xgc', 'xgc_per_90'],
+        column_order=['Player', 'clean_sheets', 'xgc', 'xgc_per_90'],
         column_config={"xgc_per_90": st.column_config.NumberColumn("xGC/90", format="%.2f")}
     )
 
@@ -170,7 +170,7 @@ with tab4:
     st.dataframe(
         styled_df, # Apply style
         use_container_width=True, hide_index=True,
-        column_order=['web_name', 'dc_per_match', 'dc_per_90', 'tackles_per_90', 'def_cons'],
+        column_order=['Player', 'dc_per_match', 'dc_per_90', 'tackles_per_90', 'def_cons'],
         column_config={
             "def_cons": st.column_config.NumberColumn("Total DC"),
             "dc_per_match": st.column_config.NumberColumn("DC/Match", format="%.1f"),
