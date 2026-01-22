@@ -12,6 +12,7 @@ def get_db_connection():
     return psycopg2.connect(DB_URL)
 
 def fetch_fpl_data():
+    print("🚀 STARTING COLLECTOR SCRIPT - VERSION: FIX_ID_COLLISION_V2") # <--- LOOK FOR THIS IN LOGS
     print("🚀 Connecting to FPL API...")
     url = "https://fantasy.premierleague.com/api/bootstrap-static/"
     response = requests.get(url)
@@ -23,12 +24,11 @@ def fetch_fpl_data():
     processed_data = []
     
     for p in elements:
-        # --- THE FIX IS HERE ---
-        # We rename 'id' to 'player_id'.
-        # We REMOVE the 'id' key so the database auto-generates a unique Row ID.
-        
+        # --- CRITICAL FIX ---
+        # We use 'player_id' instead of 'id'
+        # We DO NOT send an 'id' key to the database
         player_row = {
-            "player_id": p['id'],  # <--- CHANGED THIS
+            "player_id": p['id'],  # Stores FPL ID (e.g., 3) in a safe column
             "web_name": p['web_name'],
             "team_code": p['team'],
             "position_id": p['element_type'],
@@ -80,7 +80,7 @@ def fetch_fpl_data():
         }
         processed_data.append(player_row)
         
-        # DEBUG: Verify Collins to confirm data is real
+        # DEBUG CHECK
         if p['web_name'] == 'Collins':
             print(f"🕵️ VERIFY COLLINS: DC={player_row['defensive_contributions']}, Tackles={player_row['tackles']}")
 
@@ -91,6 +91,12 @@ def save_to_supabase(data):
     conn = get_db_connection()
     cursor = conn.cursor()
     columns = data[0].keys()
+    
+    # SAFETY CHECK: If 'id' is in columns, STOP immediately
+    if 'id' in columns:
+        print("❌ CRITICAL ERROR: The 'id' key is still present! Script is not updated.")
+        return
+
     query = "INSERT INTO fpl_full_history ({}) VALUES %s".format(','.join(columns))
     values = [[row[col] for col in columns] for row in data]
     try:
