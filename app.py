@@ -18,10 +18,10 @@ except Exception as e:
     st.stop()
 
 # --- 2. GET DATA ---
-# FIXED: We now select DISTINCT ON (player_id) instead of web_name
+# We fetch 'news' as well so we can show injury details on hover
 query = """
 SELECT DISTINCT ON (player_id)
-    player_id, web_name, team_name, position, cost, selected_by_percent, status,
+    player_id, web_name, team_name, position, cost, selected_by_percent, status, news,
     
     -- Activity
     minutes, starts, matches_played, total_points, points_per_game,
@@ -47,7 +47,6 @@ df = df.fillna(0)
 df['matches_played'] = df['matches_played'].replace(0, 1)
 df['minutes'] = df['minutes'].replace(0, 1)
 
-# Metric Calculations
 df['dc_per_match'] = df['def_cons'] / df['matches_played']
 df['dc_per_90'] = (df['def_cons'] / df['minutes']) * 90
 df['avg_minutes'] = df['minutes'] / df['matches_played']
@@ -55,7 +54,27 @@ df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
 
-# --- 4. SIDEBAR FILTERS ---
+# --- 4. STYLING FUNCTION (The Magic Logic) ---
+def highlight_status(row):
+    """
+    Returns a CSS style string for the whole row or specific cells
+    based on the 'status' column.
+    """
+    status = row['status']
+    
+    # 🔴 Unavailable (Injured, Suspended, etc.)
+    if status in ['i', 'u', 'n', 's']:
+        return ['background-color: #ffcccc; color: #8a0000'] * len(row)
+    
+    # 🟡 Doubtful (75%, 50%, 25% chance)
+    elif status == 'd':
+        return ['background-color: #fffae6; color: #8a6d00'] * len(row)
+    
+    # 🟢 Available (Default - No Color)
+    else:
+        return [''] * len(row)
+
+# --- 5. SIDEBAR FILTERS ---
 with st.sidebar:
     if "logo.png" in [f.name for f in os.scandir(".")]: 
         st.image("logo.png", width=200)
@@ -72,14 +91,17 @@ with st.sidebar:
     max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
 
     st.subheader("⚙️ Reliability")
-    # CHANGED DEFAULT TO 0: So bench players (like Anderson) appear by default
+    # Default 0 to show all players initially
     min_avg_mins = st.slider("Avg Minutes per Match", 0, 90, 0) 
     min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
 
     st.subheader("🛡️ Work Rate (Per 90)")
     min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
 
-# --- 5. FILTER DATA ---
+    # NEW: Toggle to show injured players
+    show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
+
+# --- 6. FILTER DATA ---
 filtered = df[
     (df['position'].isin(position)) &
     (df['cost'] <= max_price) &
@@ -89,10 +111,13 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# --- 6. DISPLAY ---
+# Hide unavailable players if checkbox is unchecked
+if not show_unavailable:
+    filtered = filtered[filtered['status'] == 'a']
+
+# --- 7. DISPLAY ---
 st.title(f"🚀 FPL Metric 2026 ({len(filtered)})")
 
-# Top Level Metrics
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xg = filtered.sort_values('xg', ascending=False).iloc[0]
@@ -107,36 +132,46 @@ if not filtered.empty:
 # --- TABS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate (2026)"])
 
+# We create the styled dataframe once
+styled_df = filtered.style.apply(highlight_status, axis=1)
+
 with tab1:
     st.dataframe(
-        filtered[['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'total_points', 'points_per_game', 'avg_minutes']].sort_values('total_points', ascending=False),
-        use_container_width=True, hide_index=True,
+        styled_df, # Use the styled version here
+        use_container_width=True, 
+        hide_index=True,
+        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'status', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
         column_config={
             "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
             "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"),
             "points_per_game": st.column_config.NumberColumn("PPG", format="%.1f"),
             "avg_minutes": st.column_config.NumberColumn("Mins/Gm", format="%.0f"),
+            "status": st.column_config.TextColumn("Status", help="a=Available, d=Doubtful, i=Injured"),
+            "news": st.column_config.TextColumn("News", width="medium"), # Shows injury details
         }
     )
 
 with tab2: 
     st.dataframe(
-        filtered[['web_name', 'xg', 'xa', 'xgi', 'goals_scored']].sort_values('xg', ascending=False),
+        styled_df, # Apply style
         use_container_width=True, hide_index=True,
+        column_order=['web_name', 'xg', 'xa', 'xgi', 'goals_scored'],
         column_config={"xg": st.column_config.NumberColumn("xG", format="%.2f")}
     )
 
 with tab3: 
     st.dataframe(
-        filtered[['web_name', 'clean_sheets', 'xgc', 'xgc_per_90']].sort_values('clean_sheets', ascending=False),
+        styled_df, # Apply style
         use_container_width=True, hide_index=True,
+        column_order=['web_name', 'clean_sheets', 'xgc', 'xgc_per_90'],
         column_config={"xgc_per_90": st.column_config.NumberColumn("xGC/90", format="%.2f")}
     )
 
 with tab4: 
     st.dataframe(
-        filtered[['web_name', 'dc_per_match', 'dc_per_90', 'tackles_per_90', 'def_cons']].sort_values('dc_per_90', ascending=False),
+        styled_df, # Apply style
         use_container_width=True, hide_index=True,
+        column_order=['web_name', 'dc_per_match', 'dc_per_90', 'tackles_per_90', 'def_cons'],
         column_config={
             "def_cons": st.column_config.NumberColumn("Total DC"),
             "dc_per_match": st.column_config.NumberColumn("DC/Match", format="%.1f"),
