@@ -18,9 +18,10 @@ except Exception as e:
     st.stop()
 
 # --- 2. GET DATA ---
+# FIXED: We now select DISTINCT ON (player_id) instead of web_name
 query = """
-SELECT DISTINCT ON (web_name)
-    web_name, team_name, position, cost, selected_by_percent, status,
+SELECT DISTINCT ON (player_id)
+    player_id, web_name, team_name, position, cost, selected_by_percent, status,
     
     -- Activity
     minutes, starts, matches_played, total_points, points_per_game,
@@ -37,7 +38,7 @@ SELECT DISTINCT ON (web_name)
     -- Value
     form, value_season, bps
 FROM human_readable_fpl
-ORDER BY web_name, snapshot_time DESC
+ORDER BY player_id, snapshot_time DESC
 """
 df = pd.read_sql(query, engine)
 
@@ -67,12 +68,13 @@ with st.sidebar:
     # Cost
     max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
     
-    # NEW: Ownership Filter
-    max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5, help="Lower this to find Differentials!")
+    # Ownership
+    max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
 
     st.subheader("⚙️ Reliability")
-    min_avg_mins = st.slider("Avg Minutes per Match", 0, 90, 45)
-    min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 2.5, 0.1)
+    # CHANGED DEFAULT TO 0: So bench players (like Anderson) appear by default
+    min_avg_mins = st.slider("Avg Minutes per Match", 0, 90, 0) 
+    min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
 
     st.subheader("🛡️ Work Rate (Per 90)")
     min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
@@ -81,7 +83,7 @@ with st.sidebar:
 filtered = df[
     (df['position'].isin(position)) &
     (df['cost'] <= max_price) &
-    (df['selected_by_percent'] <= max_owner) &  # <--- NEW FILTER LOGIC
+    (df['selected_by_percent'] <= max_owner) & 
     (df['avg_minutes'] >= min_avg_mins) & 
     (df['points_per_game'] >= min_ppg) &
     (df['dc_per_90'] >= min_dc90)
@@ -111,7 +113,7 @@ with tab1:
         use_container_width=True, hide_index=True,
         column_config={
             "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
-            "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"), # <--- NEW COLUMN
+            "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"),
             "points_per_game": st.column_config.NumberColumn("PPG", format="%.1f"),
             "avg_minutes": st.column_config.NumberColumn("Mins/Gm", format="%.0f"),
         }
