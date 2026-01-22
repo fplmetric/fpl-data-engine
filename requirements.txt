@@ -1,5 +1,7 @@
-requests
-pandas
-sqlalchemy
-psycopg2-binary
 streamlit
+pandas
+psycopg2-binary
+sqlalchemy
+requests
+numpy
+altair<5
