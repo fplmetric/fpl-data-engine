@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 import altair as alt
+import os
 
 st.set_page_config(page_title="FPL Metric 2026", page_icon="⚽", layout="wide")
 
