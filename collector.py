@@ -23,12 +23,12 @@ def fetch_fpl_data():
     processed_data = []
     
     for p in elements:
-        # THE FIX: We map the API keys (singular) to our DB keys (plural)
-        # We use .get() for everything to prevent crashes
+        # --- THE FIX IS HERE ---
+        # We rename 'id' to 'player_id'.
+        # We REMOVE the 'id' key so the database auto-generates a unique Row ID.
         
         player_row = {
-            # --- IDENTITY ---
-            "id": p['id'],
+            "player_id": p['id'],  # <--- CHANGED THIS
             "web_name": p['web_name'],
             "team_code": p['team'],
             "position_id": p['element_type'],
@@ -55,15 +55,12 @@ def fetch_fpl_data():
             "goals_scored": p['goals_scored'],
             "assists": p['assists'],
             
-            # --- DEFENSE (THE FIX) ---
+            # --- DEFENSE ---
             "clean_sheets": p.get('clean_sheets', 0),
             "goals_conceded": p.get('goals_conceded', 0),
             "own_goals": p.get('own_goals', 0),
             "penalties_saved": p.get('penalties_saved', 0),
-            
-            # CRITICAL FIX: The API uses singular 'contribution', we store it
             "defensive_contributions": p.get('defensive_contribution', 0),
-            
             "tackles": p.get('tackles', 0),
             "recoveries": p.get('recoveries', 0),
             "cbi": p.get('clearances_blocks_interceptions', 0),
@@ -83,7 +80,7 @@ def fetch_fpl_data():
         }
         processed_data.append(player_row)
         
-        # DEBUG: Print Collins to the logs so you can verify it worked
+        # DEBUG: Verify Collins to confirm data is real
         if p['web_name'] == 'Collins':
             print(f"🕵️ VERIFY COLLINS: DC={player_row['defensive_contributions']}, Tackles={player_row['tackles']}")
 
