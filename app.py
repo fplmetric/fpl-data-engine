@@ -44,7 +44,10 @@ df = pd.read_sql(query, engine)
 # --- 3. CALCULATE METRICS ---
 df = df.fillna(0)
 df['matches_played'] = df['matches_played'].replace(0, 1)
-df['minutes'] = df['minutes'].replace(0, 1)
+df['minutes'] = df['minutes'].replace(0, 1) # Prevent division by zero
+
+# CHANGED: Now calculating xGI per 90 Minutes instead of per Match
+df['xgi_per_90'] = (df['xgi'] / df['minutes']) * 90
 
 df['dc_per_match'] = df['def_cons'] / df['matches_played']
 df['dc_per_90'] = (df['def_cons'] / df['minutes']) * 90
@@ -70,43 +73,34 @@ with st.sidebar:
     
     st.header("🎯 Master Filters")
 
-    # --- TEAM SELECTOR LOGIC (New) ---
+    # --- TEAM SELECTOR LOGIC ---
     all_teams = sorted(df['team_name'].unique())
     
-    # Initialize session state for teams if it doesn't exist
     if 'team_selection' not in st.session_state:
         st.session_state['team_selection'] = all_teams
 
-    # Callback functions for the buttons
     def select_all_teams():
         st.session_state['team_selection'] = all_teams
     
     def deselect_all_teams():
         st.session_state['team_selection'] = []
 
-    # Create two columns for the buttons
     col_sel, col_desel = st.columns(2)
     with col_sel:
         st.button("✅ All", on_click=select_all_teams, use_container_width=True)
     with col_desel:
         st.button("❌ None", on_click=deselect_all_teams, use_container_width=True)
 
-    # The Multiselect Widget (Controlled by session_state key)
     selected_teams = st.multiselect(
         "Select Teams", 
         all_teams, 
         default=all_teams, 
-        key='team_selection' # This connects the widget to the buttons
+        key='team_selection'
     )
-    # ---------------------------------
+    # ---------------------------
 
-    # Position
     position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
-    
-    # Cost
     max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
-    
-    # Ownership
     max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
 
     st.subheader("⚙️ Reliability")
@@ -159,22 +153,27 @@ with tab1:
         styled_df,
         use_container_width=True, 
         hide_index=True,
-        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
+        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'status', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
         column_config={
             "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
             "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"),
             "points_per_game": st.column_config.NumberColumn("PPG", format="%.1f"),
             "avg_minutes": st.column_config.NumberColumn("Mins/Gm", format="%.0f"),
+            "status": st.column_config.TextColumn("Status", width="small"),
             "news": st.column_config.TextColumn("News", width="medium"),
         }
     )
 
 with tab2: 
+    # UPDATED COLUMN: xgi_per_90
     st.dataframe(
         styled_df,
         use_container_width=True, hide_index=True,
-        column_order=['web_name', 'xg', 'xa', 'xgi', 'goals_scored'],
-        column_config={"xg": st.column_config.NumberColumn("xG", format="%.2f")}
+        column_order=['web_name', 'xg', 'xa', 'xgi', 'xgi_per_90', 'goals_scored'],
+        column_config={
+            "xg": st.column_config.NumberColumn("xG", format="%.2f"),
+            "xgi_per_90": st.column_config.NumberColumn("xGI/90", format="%.2f") # <--- RENAMED
+        }
     )
 
 with tab3: 
