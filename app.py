@@ -159,13 +159,12 @@ with tab1:
         styled_df,
         use_container_width=True, 
         hide_index=True,
-        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'status', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
+        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
         column_config={
             "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
             "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"),
             "points_per_game": st.column_config.NumberColumn("PPG", format="%.1f"),
             "avg_minutes": st.column_config.NumberColumn("Mins/Gm", format="%.0f"),
-            "status": st.column_config.TextColumn("Status", width="small"),
             "news": st.column_config.TextColumn("News", width="medium"),
         }
     )
