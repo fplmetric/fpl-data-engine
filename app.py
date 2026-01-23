@@ -18,7 +18,6 @@ except Exception as e:
     st.stop()
 
 # --- 2. GET DATA ---
-# We fetch 'news' as well so we can show injury details on hover
 query = """
 SELECT DISTINCT ON (player_id)
     player_id, web_name, team_name, position, cost, selected_by_percent, status, news,
@@ -54,23 +53,13 @@ df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
 
-# --- 4. STYLING FUNCTION (The Magic Logic) ---
+# --- 4. STYLING FUNCTION ---
 def highlight_status(row):
-    """
-    Returns a CSS style string for the whole row or specific cells
-    based on the 'status' column.
-    """
     status = row['status']
-    
-    # 🔴 Unavailable (Injured, Suspended, etc.)
     if status in ['i', 'u', 'n', 's']:
         return ['background-color: #ffcccc; color: #8a0000'] * len(row)
-    
-    # 🟡 Doubtful (75%, 50%, 25% chance)
     elif status == 'd':
         return ['background-color: #fffae6; color: #8a6d00'] * len(row)
-    
-    # 🟢 Available (Default - No Color)
     else:
         return [''] * len(row)
 
@@ -81,28 +70,32 @@ with st.sidebar:
     
     st.header("🎯 Master Filters")
 
-    # Position
+    # 1. Team Filter (NEW)
+    # Get unique teams from the data and sort them
+    all_teams = sorted(df['team_name'].unique())
+    selected_teams = st.multiselect("Select Teams", all_teams, default=all_teams)
+
+    # 2. Position
     position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
     
-    # Cost
+    # 3. Cost
     max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
     
-    # Ownership
+    # 4. Ownership
     max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
 
     st.subheader("⚙️ Reliability")
-    # Default 0 to show all players initially
     min_avg_mins = st.slider("Avg Minutes per Match", 0, 90, 0) 
     min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
 
     st.subheader("🛡️ Work Rate (Per 90)")
     min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
 
-    # NEW: Toggle to show injured players
     show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
 
 # --- 6. FILTER DATA ---
 filtered = df[
+    (df['team_name'].isin(selected_teams)) &  # <--- NEW TEAM FILTER LOGIC
     (df['position'].isin(position)) &
     (df['cost'] <= max_price) &
     (df['selected_by_percent'] <= max_owner) & 
@@ -111,7 +104,6 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# Hide unavailable players if checkbox is unchecked
 if not show_unavailable:
     filtered = filtered[filtered['status'] == 'a']
 
@@ -132,27 +124,31 @@ if not filtered.empty:
 # --- TABS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate (2026)"])
 
-# We create the styled dataframe once
-styled_df = filtered.style.apply(highlight_status, axis=1)
+# Check if data is empty before styling to prevent errors
+if not filtered.empty:
+    styled_df = filtered.style.apply(highlight_status, axis=1)
+else:
+    styled_df = filtered # Fallback for empty results
 
 with tab1:
     st.dataframe(
-        styled_df, # Use the styled version here
+        styled_df,
         use_container_width=True, 
         hide_index=True,
-        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
+        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'status', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
         column_config={
             "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
             "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"),
             "points_per_game": st.column_config.NumberColumn("PPG", format="%.1f"),
             "avg_minutes": st.column_config.NumberColumn("Mins/Gm", format="%.0f"),
-            "news": st.column_config.TextColumn("News", width="medium"), # Shows injury details
+            "status": st.column_config.TextColumn("Status", width="small"),
+            "news": st.column_config.TextColumn("News", width="medium"),
         }
     )
 
 with tab2: 
     st.dataframe(
-        styled_df, # Apply style
+        styled_df,
         use_container_width=True, hide_index=True,
         column_order=['web_name', 'xg', 'xa', 'xgi', 'goals_scored'],
         column_config={"xg": st.column_config.NumberColumn("xG", format="%.2f")}
@@ -160,7 +156,7 @@ with tab2:
 
 with tab3: 
     st.dataframe(
-        styled_df, # Apply style
+        styled_df,
         use_container_width=True, hide_index=True,
         column_order=['web_name', 'clean_sheets', 'xgc', 'xgc_per_90'],
         column_config={"xgc_per_90": st.column_config.NumberColumn("xGC/90", format="%.2f")}
@@ -168,7 +164,7 @@ with tab3:
 
 with tab4: 
     st.dataframe(
-        styled_df, # Apply style
+        styled_df,
         use_container_width=True, hide_index=True,
         column_order=['web_name', 'dc_per_match', 'dc_per_90', 'tackles_per_90', 'def_cons'],
         column_config={
