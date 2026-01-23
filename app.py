@@ -70,18 +70,43 @@ with st.sidebar:
     
     st.header("🎯 Master Filters")
 
-    # 1. Team Filter (NEW)
-    # Get unique teams from the data and sort them
+    # --- TEAM SELECTOR LOGIC (New) ---
     all_teams = sorted(df['team_name'].unique())
-    selected_teams = st.multiselect("Select Teams", all_teams, default=all_teams)
+    
+    # Initialize session state for teams if it doesn't exist
+    if 'team_selection' not in st.session_state:
+        st.session_state['team_selection'] = all_teams
 
-    # 2. Position
+    # Callback functions for the buttons
+    def select_all_teams():
+        st.session_state['team_selection'] = all_teams
+    
+    def deselect_all_teams():
+        st.session_state['team_selection'] = []
+
+    # Create two columns for the buttons
+    col_sel, col_desel = st.columns(2)
+    with col_sel:
+        st.button("✅ All", on_click=select_all_teams, use_container_width=True)
+    with col_desel:
+        st.button("❌ None", on_click=deselect_all_teams, use_container_width=True)
+
+    # The Multiselect Widget (Controlled by session_state key)
+    selected_teams = st.multiselect(
+        "Select Teams", 
+        all_teams, 
+        default=all_teams, 
+        key='team_selection' # This connects the widget to the buttons
+    )
+    # ---------------------------------
+
+    # Position
     position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
     
-    # 3. Cost
+    # Cost
     max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
     
-    # 4. Ownership
+    # Ownership
     max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
 
     st.subheader("⚙️ Reliability")
@@ -95,7 +120,7 @@ with st.sidebar:
 
 # --- 6. FILTER DATA ---
 filtered = df[
-    (df['team_name'].isin(selected_teams)) &  # <--- NEW TEAM FILTER LOGIC
+    (df['team_name'].isin(selected_teams)) &
     (df['position'].isin(position)) &
     (df['cost'] <= max_price) &
     (df['selected_by_percent'] <= max_owner) & 
@@ -124,11 +149,10 @@ if not filtered.empty:
 # --- TABS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate (2026)"])
 
-# Check if data is empty before styling to prevent errors
 if not filtered.empty:
     styled_df = filtered.style.apply(highlight_status, axis=1)
 else:
-    styled_df = filtered # Fallback for empty results
+    styled_df = filtered
 
 with tab1:
     st.dataframe(
