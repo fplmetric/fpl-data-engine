@@ -149,7 +149,7 @@ if not show_unavailable:
 
 # --- 7. DISPLAY ---
 # CHANGED: Replaced the redundant "FPL Metric" title with a dashboard header
-st.title("Scouting Dashboard")
+st.title("FPL Metric Scouting Dashboard")
 st.markdown(f"""
 <div style="display: flex; align-items: center; margin-bottom: 20px;">
     <span style="font-size: 1.2rem; color: #b0b0b0; margin-right: 15px;">
