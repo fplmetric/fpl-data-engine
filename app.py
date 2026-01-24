@@ -44,9 +44,9 @@ df = pd.read_sql(query, engine)
 # --- 3. CALCULATE METRICS ---
 df = df.fillna(0)
 df['matches_played'] = df['matches_played'].replace(0, 1)
-df['minutes'] = df['minutes'].replace(0, 1) # Prevent division by zero
+df['minutes'] = df['minutes'].replace(0, 1)
 
-# CHANGED: Now calculating xGI per 90 Minutes instead of per Match
+# xGI per 90 Minutes
 df['xgi_per_90'] = (df['xgi'] / df['minutes']) * 90
 
 df['dc_per_match'] = df['def_cons'] / df['matches_played']
@@ -59,10 +59,12 @@ df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 # --- 4. STYLING FUNCTION ---
 def highlight_status(row):
     status = row['status']
+    # Darker red for unavailable
     if status in ['i', 'u', 'n', 's']:
-        return ['background-color: #ffcccc; color: #8a0000'] * len(row)
+        return ['background-color: #4A0000; color: #FFCCCC'] * len(row)
+    # Darker yellow for doubtful
     elif status == 'd':
-        return ['background-color: #fffae6; color: #8a6d00'] * len(row)
+        return ['background-color: #4A3F00; color: #FFFFA0'] * len(row)
     else:
         return [''] * len(row)
 
@@ -153,25 +155,25 @@ with tab1:
         styled_df,
         use_container_width=True, 
         hide_index=True,
+        # REMOVED 'status' from here
         column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
         column_config={
             "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
             "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"),
             "points_per_game": st.column_config.NumberColumn("PPG", format="%.1f"),
             "avg_minutes": st.column_config.NumberColumn("Mins/Gm", format="%.0f"),
-            "news": st.column_config.TextColumn("News", width="medium"),
+            "news": st.column_config.TextColumn("News", width="medium"), # Kept News
         }
     )
 
 with tab2: 
-    # UPDATED COLUMN: xgi_per_90
     st.dataframe(
         styled_df,
         use_container_width=True, hide_index=True,
         column_order=['web_name', 'xg', 'xa', 'xgi', 'xgi_per_90', 'goals_scored'],
         column_config={
             "xg": st.column_config.NumberColumn("xG", format="%.2f"),
-            "xgi_per_90": st.column_config.NumberColumn("xGI/90", format="%.2f") # <--- RENAMED
+            "xgi_per_90": st.column_config.NumberColumn("xGI/90", format="%.2f")
         }
     )
 
@@ -200,7 +202,7 @@ with tab4:
 st.markdown("---")
 st.markdown(
     """
-    <div style='text-align: center; color: #888;'>
+    <div style='text-align: center; color: #B0B0B0;'>
         <p>📊 <strong>FPL Metric 2026</strong> | Built for the Fantasy Premier League Community</p>
     </div>
     """,
