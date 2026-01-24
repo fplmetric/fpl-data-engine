@@ -148,7 +148,18 @@ if not show_unavailable:
     filtered = filtered[filtered['status'] == 'a']
 
 # --- 7. DISPLAY ---
-st.title(f" FPL Metric ({len(filtered)})")
+# CHANGED: Replaced the redundant "FPL Metric" title with a dashboard header
+st.title("Scouting Dashboard")
+st.markdown(f"""
+<div style="display: flex; align-items: center; margin-bottom: 20px;">
+    <span style="font-size: 1.2rem; color: #b0b0b0; margin-right: 15px;">
+        Analyze live data, find differentials, and build your winning squad.
+    </span>
+    <span style="background-color: #00FF85; color: black; padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9rem;">
+        {len(filtered)} Players Found
+    </span>
+</div>
+""", unsafe_allow_html=True)
 
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
