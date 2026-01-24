@@ -86,8 +86,8 @@ def highlight_status(row):
 
 # --- 5. SIDEBAR FILTERS ---
 with st.sidebar:
-    if "logo.png" in [f.name for f in os.scandir(".")]: 
-        st.image("logo.png", width=200)
+    if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
+        st.image("fpl_metric_logo.png", width=200)
     
     st.header("🎯 Master Filters")
 
