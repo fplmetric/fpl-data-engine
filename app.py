@@ -7,7 +7,7 @@ import os
 
 # --- 1. SETUP ---
 # CHANGED: page_icon is now your logo file
-st.set_page_config(page_title="FPL Metric 2026", page_icon="logo.png", layout="wide")
+st.set_page_config(page_title="FPL Metric 2026", page_icon="fpl_metric_logo.png", layout="wide")
 
 # --- CUSTOM CSS FIX ---
 # This forces the text inside the Green Multiselect Bars to be BLACK
