@@ -92,7 +92,7 @@ with st.sidebar:
         with mid:
             st.image("fpl_metric_logo.png", use_container_width=True)
     
-    st.header("🎯 Master Filters")
+    st.header("Filters")
 
     # --- TEAM SELECTOR LOGIC ---
     all_teams = sorted(df['team_name'].unique())
