@@ -145,7 +145,7 @@ if not show_unavailable:
     filtered = filtered[filtered['status'] == 'a']
 
 # --- 7. DISPLAY ---
-st.title(f"🚀 FPL Metric 2026 ({len(filtered)})")
+st.title(f" FPL Metric ({len(filtered)})")
 
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
@@ -159,7 +159,7 @@ if not filtered.empty:
     col4.metric("🧠 AVG Points", f"{filtered['points_per_game'].mean():.2f}", "PPG")
 
 # --- TABS ---
-tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate (2026)"])
+tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate "])
 
 if not filtered.empty:
     styled_df = filtered.style.apply(highlight_status, axis=1)
@@ -218,7 +218,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #B0B0B0;'>
-        <p>📊 <strong>FPL Metric 2026</strong> | Built for the Fantasy Premier League Community</p>
+        <p>📊 <strong>FPL Metric</strong> | Built for the Fantasy Premier League Community</p>
     </div>
     """,
     unsafe_allow_html=True
