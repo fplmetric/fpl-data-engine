@@ -5,9 +5,25 @@ from sqlalchemy import create_engine
 import altair as alt
 import os
 
-st.set_page_config(page_title="FPL Metric 2026", page_icon="⚽", layout="wide")
-
 # --- 1. SETUP ---
+# CHANGED: page_icon is now your logo file
+st.set_page_config(page_title="FPL Metric 2026", page_icon="logo.png", layout="wide")
+
+# --- CUSTOM CSS FIX ---
+# This forces the text inside the Green Multiselect Bars to be BLACK
+st.markdown(
+    """
+    <style>
+    /* Target the text inside the multiselect tags */
+    span[data-baseweb="tag"] {
+        color: black !important; /* Force black text */
+        font-weight: bold;       /* Make it bold for better contrast */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 try:
     url = st.secrets["DATABASE_URL"]
     if url.startswith("postgres://"):
@@ -155,14 +171,13 @@ with tab1:
         styled_df,
         use_container_width=True, 
         hide_index=True,
-        # REMOVED 'status' from here
         column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
         column_config={
             "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
             "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"),
             "points_per_game": st.column_config.NumberColumn("PPG", format="%.1f"),
             "avg_minutes": st.column_config.NumberColumn("Mins/Gm", format="%.0f"),
-            "news": st.column_config.TextColumn("News", width="medium"), # Kept News
+            "news": st.column_config.TextColumn("News", width="medium"), 
         }
     )
 
