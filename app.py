@@ -88,7 +88,7 @@ def highlight_status(row):
 with st.sidebar:
     # CHANGED: Use columns to center the logo
     if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-        col1, mid, col2 = st.columns([1, 2, 1]) # Create 3 columns
+        col1, mid, col2 = st.columns([1, 5, 1]) # Create 3 columns
         with mid:
             st.image("fpl_metric_logo.png", use_container_width=True)
     
