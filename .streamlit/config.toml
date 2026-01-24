@@ -1,0 +1,19 @@
+[theme]
+# The main background color of your app
+backgroundColor = "#1E0030"
+
+# The secondary background (sidebars, cards)
+secondaryBackgroundColor = "#2A0042"
+
+# The primary color (buttons, sliders, links, and the accent)
+# This is the neon green from your logo
+primaryColor = "#00FF85" 
+
+# The text color
+textColor = "#FFFFFF"
+
+# Font family
+font = "sans serif"
+
+[server]
+enableCORS = false
