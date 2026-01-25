@@ -222,48 +222,7 @@ if not filtered.empty:
     col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
     col4.metric("🧠 AVG Points", f"{filtered['points_per_game'].mean():.2f}", "PPG")
 
-# 3. FIXTURE TICKER
-with st.expander("📅 Fixture Difficulty Ticker", expanded=True):
-    ticker_df = get_fixture_ticker()
-    
-    # --- SORT LOGIC (UPDATED) ---
-    # We find the columns that look like "GW24", "GW25" etc.
-    gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
-    
-    # Dropdown Options: "Next 5 Matches" + Individual Gameweeks
-    sort_options = ["Total Difficulty (Next 5)"] + gw_cols
-    
-    # The Widget
-    sort_choice = st.selectbox("Sort Table By:", sort_options)
-    
-    # Sorting Engine
-    if sort_choice == "Total Difficulty (Next 5)":
-        # Default: Sort by total difficulty (Easy to Hard)
-        ticker_df = ticker_df.sort_values('Total Difficulty', ascending=True)
-    else:
-        # Specific GW: Sort by that GW's hidden difficulty value (Dif_GWxx)
-        # We look for the 'Dif_' column we created in get_fixture_ticker
-        target_dif_col = f"Dif_{sort_choice}"
-        if target_dif_col in ticker_df.columns:
-            ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
-
-    display_cols = ['Logo', 'Team'] + gw_cols
-    
-    styled_ticker = ticker_df.style.apply(style_ticker_row, axis=1)
-    
-    st.dataframe(
-        styled_ticker,
-        column_order=display_cols,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Logo": st.column_config.ImageColumn(" ", width="small"),
-            "Team": st.column_config.TextColumn("Team", width="medium"),
-        }
-    )
-    st.caption("Use the dropdown to sort by the easiest fixtures for a specific Gameweek.")
-
-# 4. DATA TABLE
+# 3. DATA TABLE (MOVED UP)
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate "])
 if not filtered.empty:
     styled_df = filtered.style.apply(highlight_status, axis=1)
@@ -313,6 +272,40 @@ with tab4:
             "tackles_per_90": st.column_config.NumberColumn("Tackles/90", format="%.2f"),
         }
     )
+
+# 4. FIXTURE TICKER (MOVED DOWN)
+st.markdown("---") # Visual separator
+st.header("📅 Fixture Difficulty Ticker")
+
+ticker_df = get_fixture_ticker()
+
+# Sort Logic
+# We find the columns that look like "GW24", "GW25" etc.
+gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
+sort_options = ["Total Difficulty (Next 5)"] + gw_cols
+sort_choice = st.selectbox("Sort Table By:", sort_options)
+
+if sort_choice == "Total Difficulty (Next 5)":
+    ticker_df = ticker_df.sort_values('Total Difficulty', ascending=True)
+else:
+    target_dif_col = f"Dif_{sort_choice}"
+    if target_dif_col in ticker_df.columns:
+        ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
+
+display_cols = ['Logo', 'Team'] + gw_cols
+styled_ticker = ticker_df.style.apply(style_ticker_row, axis=1)
+
+st.dataframe(
+    styled_ticker,
+    column_order=display_cols,
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "Logo": st.column_config.ImageColumn(" ", width="small"),
+        "Team": st.column_config.TextColumn("Team", width="medium"),
+    }
+)
+st.caption("Use the dropdown to sort by the easiest fixtures for a specific Gameweek. Green = Easy, Red = Hard.")
 
 st.markdown("---")
 st.markdown(
