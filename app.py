@@ -234,13 +234,18 @@ def get_fixture_ticker():
 def get_price_changes():
     """Fetches daily price risers and fallers from FPL API"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
+    
     teams = {t['id']: t['name'] for t in static['teams']}
+    # Map Element Type ID to Position String
+    pos_map = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
+    
     changes = []
     for p in static['elements']:
         if p['cost_change_event'] != 0:
             changes.append({
                 'web_name': p['web_name'],
                 'team': teams[p['team']],
+                'position': pos_map.get(p['element_type'], "UNK"), # Get Position
                 'cost': p['now_cost'] / 10,
                 'change': p['cost_change_event'] / 10,
                 'selected_by_percent': p['selected_by_percent']
@@ -609,7 +614,9 @@ else:
                             <img src="{logo_img}" style="width: 35px; height: 35px; object-fit: contain;">
                             <div style="display: flex; flex-direction: column; line-height: 1.2;">
                                 <span style="font-weight: bold; font-size: 1.05rem; color: #FFF;">{row['web_name']}</span>
-                                <span style="font-size: 0.85rem; color: #AAA; font-weight: 500;">{row['team']}</span>
+                                <span style="font-size: 0.85rem; color: #AAA; font-weight: 500;">
+                                    {row['team']} <span style="opacity: 0.5;">|</span> {row['position']}
+                                </span>
                             </div>
                         </div>
                     </td>
@@ -635,7 +642,9 @@ else:
                             <img src="{logo_img}" style="width: 35px; height: 35px; object-fit: contain;">
                             <div style="display: flex; flex-direction: column; line-height: 1.2;">
                                 <span style="font-weight: bold; font-size: 1.05rem; color: #FFF;">{row['web_name']}</span>
-                                <span style="font-size: 0.85rem; color: #AAA; font-weight: 500;">{row['team']}</span>
+                                <span style="font-size: 0.85rem; color: #AAA; font-weight: 500;">
+                                    {row['team']} <span style="opacity: 0.5;">|</span> {row['position']}
+                                </span>
                             </div>
                         </div>
                     </td>
