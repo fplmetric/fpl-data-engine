@@ -266,11 +266,13 @@ with tab1:
         styled_df,
         use_container_width=True, 
         hide_index=True,
-        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'news', 'total_points', 'points_per_game', 'avg_minutes'],
+        # CHANGED: Added 'matches_played' so you can see the correct match count next to Avg Mins
+        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'news', 'total_points', 'points_per_game', 'matches_played', 'avg_minutes'],
         column_config={
             "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
             "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"),
             "points_per_game": st.column_config.NumberColumn("PPG", format="%.1f"),
+            "matches_played": st.column_config.NumberColumn("Matches", format="%.0f"),
             "avg_minutes": st.column_config.NumberColumn("Mins/Gm", format="%.0f"),
             "news": st.column_config.TextColumn("News", width="medium"), 
         }
@@ -324,13 +326,12 @@ else:
         ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
 
 # --- HTML GENERATION ---
-# 1. Colors Setup
 colors = {
-    1: '#375523', # Dark Green
-    2: '#00FF85', # Green (Official Neon)
-    3: '#EBEBEB', # Grey
-    4: '#FF0055', # Pinkish Red
-    5: '#680808'  # Dark Red
+    1: '#375523', 
+    2: '#00FF85', 
+    3: '#EBEBEB', 
+    4: '#FF0055', 
+    5: '#680808'  
 }
 text_colors = {
     1: 'white',
@@ -340,7 +341,6 @@ text_colors = {
     5: 'white'
 }
 
-# 2. Build Rows (No Indentation to fix Display Bug)
 html_rows = ""
 for index, row in ticker_df.iterrows():
     team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
@@ -355,7 +355,6 @@ for index, row in ticker_df.iterrows():
     
     html_rows += f"<tr>{team_cell}{fixture_cells}</tr>"
 
-# 3. Build Table Header
 header_cols = "".join([f"<th>{col}</th>" for col in gw_cols])
 html_table = f"""
 <table class="fixture-table">
@@ -373,7 +372,7 @@ html_table = f"""
 
 st.markdown(html_table, unsafe_allow_html=True)
 
-# 4. LEGEND (FDR Key) - UPDATED: "Easy" is now BEFORE "1"
+# 4. LEGEND (FDR Key)
 st.markdown("""
 <div class="fdr-legend">
     <span style="font-weight:bold; color: white;">FDR Key:</span>
