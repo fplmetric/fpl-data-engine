@@ -36,14 +36,35 @@ except Exception as e:
 # --- FIXTURE TICKER LOGIC ---
 @st.cache_data(ttl=3600) 
 def get_fixture_ticker():
+    # Fetch bootstrap data for Teams AND Team Codes (needed for logos)
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
-    teams = {t['id']: {'name': t['name'], 'short': t['short_name']} for t in static['teams']}
+    
+    # Map: ID -> {Name, ShortName, Code}
+    teams = {
+        t['id']: {
+            'name': t['name'], 
+            'short': t['short_name'],
+            'code': t['code'] # This is the magic number for logos
+        } 
+        for t in static['teams']
+    }
+    
     fixtures = requests.get('https://fantasy.premierleague.com/api/fixtures/?future=1').json()
     
     ticker_data = []
+    
     for team_id, team_info in teams.items():
+        # Get next 5 matches
         team_fixtures = [f for f in fixtures if f['team_h'] == team_id or f['team_a'] == team_id][:5]
-        row = {'Team': team_info['name'], 'TeamID': team_id, 'Difficulty': 0}
+        
+        # Build the URL for the team badge
+        logo_url = f"https://resources.premierleague.com/premierleague/badges/20/t{team_info['code']}.png"
+        
+        row = {
+            'Logo': logo_url, # New Logo Column
+            'Team': team_info['name'], 
+            'Difficulty': 0
+        }
         
         for i, f in enumerate(team_fixtures):
             is_home = f['team_h'] == team_id
@@ -51,12 +72,48 @@ def get_fixture_ticker():
             difficulty = f['team_h_difficulty'] if is_home else f['team_a_difficulty']
             opponent_short = teams[opponent_id]['short']
             loc = "(H)" if is_home else "(A)"
-            row[f'GW{f["event"]}'] = f"{opponent_short} {loc}"
+            
+            # Column Name: GW + Event Number
+            col_name = f"GW{f['event']}"
+            row[col_name] = f"{opponent_short} {loc}"
+            
+            # Store difficulty for sorting and styling
             row['Difficulty'] += difficulty 
-            row[f'Dif_{i+1}'] = difficulty
+            row[f'Dif_{col_name}'] = difficulty # Store difficulty mapped to the specific GW column
 
         ticker_data.append(row)
+        
     return pd.DataFrame(ticker_data)
+
+def style_ticker_row(row):
+    """
+    Colors the fixture cells based on the hidden difficulty values.
+    """
+    styles = []
+    
+    # Define Official FPL Colors
+    colors = {
+        2: 'background-color: #00FF85; color: black; font-weight: bold', # Green (Easy)
+        3: 'background-color: #EBEBEB; color: black; font-weight: bold', # Grey (Medium)
+        4: 'background-color: #FF0055; color: white; font-weight: bold', # Red (Hard)
+        5: 'background-color: #680808; color: white; font-weight: bold'  # Dark Red (Very Hard)
+    }
+
+    for col in row.index:
+        # Check if this column is a Gameweek column (e.g., "GW24")
+        if str(col).startswith('GW'):
+            # Find the corresponding difficulty value we saved earlier
+            dif_key = f'Dif_{col}'
+            difficulty = row.get(dif_key, 3) # Default to 3 if missing
+            
+            # Get the color style, default to grey
+            style = colors.get(difficulty, colors[3])
+            styles.append(style)
+        else:
+            # Leave other columns (Team, Logo) alone
+            styles.append('')
+            
+    return styles
 
 # --- DATABASE QUERY ---
 query = """
@@ -160,7 +217,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 2. METRICS (MOVED TO TOP)
+# 2. METRICS
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xg = filtered.sort_values('xg', ascending=False).iloc[0]
@@ -172,17 +229,35 @@ if not filtered.empty:
     col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
     col4.metric("🧠 AVG Points", f"{filtered['points_per_game'].mean():.2f}", "PPG")
 
-# 3. FIXTURE TICKER (MOVED BELOW METRICS)
+# 3. FIXTURE TICKER (LOGOS + COLORS)
 with st.expander("📅 Fixture Difficulty Ticker", expanded=True):
     ticker_df = get_fixture_ticker()
+    
+    # Sort
     sort_order = st.radio("Sort By:", ["🟢 Easiest Run (Buy)", "🔴 Hardest Run (Avoid)"], horizontal=True)
     if "Easiest" in sort_order:
         ticker_df = ticker_df.sort_values('Difficulty', ascending=True)
     else:
         ticker_df = ticker_df.sort_values('Difficulty', ascending=False)
-    display_cols = ['Team'] + [c for c in ticker_df.columns if 'GW' in c]
-    st.dataframe(ticker_df[display_cols], use_container_width=True, hide_index=True)
-    st.caption("Tip: Teams are sorted by the total difficulty of their next 5 games.")
+    
+    # Columns to show: Logo, Team, GW...
+    gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
+    display_cols = ['Logo', 'Team'] + gw_cols
+    
+    # Apply Styling
+    styled_ticker = ticker_df.style.apply(style_ticker_row, axis=1)
+    
+    st.dataframe(
+        styled_ticker,
+        column_order=display_cols, # Force Order
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Logo": st.column_config.ImageColumn(" ", width="small"), # Render URL as Image
+            "Team": st.column_config.TextColumn("Team", width="medium"),
+        }
+    )
+    st.caption("Teams sorted by next 5 games. Green = Easy, Red = Hard.")
 
 # 4. DATA TABLE
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate "])
