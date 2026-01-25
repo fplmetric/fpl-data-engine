@@ -19,12 +19,21 @@ st.markdown(
         font-weight: bold;
     }
     
-    /* SCROLLABLE TABLE CONTAINER */
-    .table-container {
+    /* CONTAINER 1: Player Table (Scrollable) */
+    .player-table-container {
         max-height: 500px; /* Shows approx 10 rows */
         overflow-y: auto;  /* Enables vertical scrolling */
         border: 1px solid #333;
         border-radius: 4px;
+        margin-bottom: 20px;
+    }
+
+    /* CONTAINER 2: Fixture Ticker (Full View - No Scroll) */
+    .fixture-table-container {
+        width: 100%;
+        border: 1px solid #333;
+        border-radius: 4px;
+        overflow-x: auto; /* Horizontal scroll on mobile only */
     }
 
     /* MODERN TABLE STYLING */
@@ -45,7 +54,7 @@ st.markdown(
         /* Sticky Header Logic */
         position: sticky;
         top: 0;
-        z-index: 2; /* Ensures header stays on top of scrolling content */
+        z-index: 2; 
     }
     .modern-table th:first-child, .modern-table th:nth-child(2) {
         text-align: left; 
@@ -56,7 +65,7 @@ st.markdown(
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
-        background-color: #0E1117; /* Matches Streamlit Dark Mode BG */
+        background-color: #0E1117; 
     }
     .modern-table tr:hover td {
         filter: brightness(1.2);
@@ -83,11 +92,11 @@ st.markdown(
     /* Fixture Ticker Specifics */
     .diff-badge {
         display: block;
-        padding: 6px 4px;
+        padding: 8px 6px; /* Bigger padding for ticker */
         border-radius: 6px;
         text-align: center;
         font-weight: bold;
-        font-size: 0.85rem;
+        font-size: 0.9rem; /* Slightly larger font */
         width: 100%;
     }
     .fdr-legend {
@@ -311,7 +320,7 @@ with tab1:
     # 2. Get Team Mapping
     team_map = get_team_map()
     
-    # 3. Build HTML Table (NO INDENTATION)
+    # 3. Build HTML Table
     html_rows = ""
     for _, row in sorted_df.iterrows():
         # -- Status Coloring --
@@ -346,7 +355,7 @@ with tab1:
         html_rows += "</tr>"
 
     html_table = f"""
-    <div class="table-container">
+    <div class="player-table-container">
         <table class="modern-table">
             <thead>
                 <tr>
@@ -419,7 +428,7 @@ else:
     if target_dif_col in ticker_df.columns:
         ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
 
-# --- HTML GENERATION (Flattened) ---
+# --- HTML GENERATION ---
 colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
 text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
@@ -439,8 +448,8 @@ for index, row in ticker_df.iterrows():
 
 header_cols = "".join([f"<th>{col}</th>" for col in gw_cols])
 html_table = f"""
-<div class="table-container">
-<table class="fixture-table">
+<div class="fixture-table-container">
+<table class="modern-table">
   <thead>
     <tr>
       <th>Team</th>
