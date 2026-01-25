@@ -177,6 +177,34 @@ st.markdown(
     .arrow-up { background-color: #00FF85; }
     .arrow-down { background-color: #FF0055; }
 
+    /* === BUY ME A COFFEE BUTTON === */
+    .bmc-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #FFDD00;
+        color: #000000 !important;
+        text-decoration: none;
+        font-weight: 700;
+        padding: 10px 20px;
+        border-radius: 30px;
+        margin-top: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 2px solid #000;
+    }
+    .bmc-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0,0,0,0.4);
+        text-decoration: none;
+        color: #000000 !important;
+    }
+    .bmc-logo {
+        width: 20px;
+        height: 20px;
+        margin-right: 8px;
+    }
+
     /* === 📱 MOBILE OPTIMIZATION === */
     @media (max-width: 768px) {
         h1 { font-size: 1.8rem !important; }
@@ -365,6 +393,18 @@ with st.sidebar:
         min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
         show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
         submitted = st.form_submit_button("Apply Filters", use_container_width=True)
+
+    # --- BUY ME A COFFEE BUTTON ---
+    st.markdown("---")
+    st.markdown(
+        """
+        <a href="https://www.buymeacoffee.com/fplmetric" target="_blank" class="bmc-button">
+            <img src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg" alt="Buy me a coffee" class="bmc-logo">
+            <span>Buy me a coffee</span>
+        </a>
+        """,
+        unsafe_allow_html=True
+    )
 
 # --- 6. FILTER DATA ---
 df = df[df['minutes'] >= 90]
