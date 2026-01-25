@@ -518,4 +518,142 @@ with tab4:
     cols = { "def_cons": "Total DC", "dc_per_90": "DC/90", "tackles": "Tackles", "tackles_per_90": "Tackles/90", "cbi": "CBI" }
     render_modern_table(filtered, cols, "sort_workrate")
 
-# 4. FIXTURE TICK
+# 4. FIXTURE TICKER
+st.markdown("---") 
+st.header("📅 Fixture Difficulty Ticker")
+
+ticker_df = get_fixture_ticker()
+gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
+sort_options = ["Total Difficulty (Next 5)"] + gw_cols
+
+col_ticker_sort, _ = st.columns([1, 4]) 
+with col_ticker_sort:
+    sort_choice = st.selectbox("Sort Table By:", sort_options)
+
+if sort_choice == "Total Difficulty (Next 5)":
+    ticker_df = ticker_df.sort_values('Total Difficulty', ascending=True)
+else:
+    target_dif_col = f"Dif_{sort_choice}"
+    if target_dif_col in ticker_df.columns:
+        ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
+
+colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
+text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
+
+html_rows = ""
+for index, row in ticker_df.iterrows():
+    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333; padding-left: 15px;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
+    fixture_cells = ""
+    for col in gw_cols:
+        dif_key = f'Dif_{col}'
+        difficulty = row.get(dif_key, 3)
+        bg_color = colors.get(difficulty, '#EBEBEB')
+        txt_color = text_colors.get(difficulty, 'black')
+        fixture_cells += f'<td><span class="diff-badge" style="background-color: {bg_color}; color: {txt_color};">{row[col]}</span></td>'
+    html_rows += f"<tr>{team_cell}{fixture_cells}</tr>"
+
+header_cols = "".join([f"<th>{col}</th>" for col in gw_cols])
+html_table = f"""
+<div class="fixture-table-container">
+<table class="modern-table">
+  <thead><tr><th>Team</th>{header_cols}</tr></thead>
+  <tbody>{html_rows}</tbody>
+</table>
+</div>
+"""
+st.markdown(html_table, unsafe_allow_html=True)
+
+st.markdown("""
+<div class="fdr-legend">
+    <span style="font-weight:bold; color: white;">FDR Key:</span>
+    <div class="legend-item">Easy <div class="legend-box" style="background-color: #375523; color: white;">1</div></div>
+    <div class="legend-item"><div class="legend-box" style="background-color: #00FF85;">2</div></div>
+    <div class="legend-item"><div class="legend-box" style="background-color: #EBEBEB;">3</div></div>
+    <div class="legend-item"><div class="legend-box" style="background-color: #FF0055; color: white;">4</div></div>
+    <div class="legend-item"><div class="legend-box" style="background-color: #680808; color: white;">5</div> Hard</div>
+</div>
+""", unsafe_allow_html=True)
+
+# 5. MARKET MOVERS (PRICE CHANGES)
+st.markdown("---")
+st.header("📈 Market Movers (Today)")
+
+df_changes = get_price_changes()
+team_map = get_team_map()
+
+if df_changes.empty:
+    st.info("No price changes recorded today.")
+else:
+    col_risers, col_fallers = st.columns(2)
+    
+    # --- RISERS ---
+    with col_risers:
+        st.subheader("🚀 Price Risers")
+        risers = df_changes[df_changes['change'] > 0].sort_values('change', ascending=False)
+        
+        if risers.empty:
+            st.info("No risers today.")
+        else:
+            html_rows = ""
+            for _, row in risers.iterrows():
+                t_code = get_team_map().get(row['team'], 0)
+                logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
+                
+                html_rows += f"""<tr>
+                    <td style="font-weight: bold; padding-left: 15px;">{row['web_name']}</td>
+                    <td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team']}</td>
+                    <td style="text-align: center;">£{row['cost']}</td>
+                    <td style="text-align: center; color: #00FF85; font-weight: bold;">+£{row['change']}</td>
+                </tr>"""
+            
+            html_table = f"""
+            <div class="player-table-container" style="max-height: 300px;">
+                <table class="modern-table">
+                    <thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead>
+                    <tbody>{html_rows}</tbody>
+                </table>
+            </div>
+            """
+            st.markdown(html_table, unsafe_allow_html=True)
+
+    # --- FALLERS ---
+    with col_fallers:
+        st.subheader("📉 Price Fallers")
+        fallers = df_changes[df_changes['change'] < 0].sort_values('change', ascending=True)
+        
+        if fallers.empty:
+            st.info("No fallers today.")
+        else:
+            html_rows = ""
+            for _, row in fallers.iterrows():
+                t_code = get_team_map().get(row['team'], 0)
+                logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
+                
+                html_rows += f"""<tr>
+                    <td style="font-weight: bold; padding-left: 15px;">{row['web_name']}</td>
+                    <td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team']}</td>
+                    <td style="text-align: center;">£{row['cost']}</td>
+                    <td style="text-align: center; color: #FF0055; font-weight: bold;">-£{abs(row['change'])}</td>
+                </tr>"""
+            
+            html_table = f"""
+            <div class="player-table-container" style="max-height: 300px;">
+                <table class="modern-table">
+                    <thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead>
+                    <tbody>{html_rows}</tbody>
+                </table>
+            </div>
+            """
+            st.markdown(html_table, unsafe_allow_html=True)
+
+# --- FOOTER ---
+st.markdown("---")
+st.markdown(
+    """
+    <div style='text-align: center; color: #B0B0B0;'>
+        <p>📊 <strong>FPL Metric</strong> | Built for the Fantasy Premier League Community</p>
+        <p><a href="https://x.com/FPL_Metric" target="_blank" style="color: #00FF85; text-decoration: none; font-weight: bold;">Follow us on X: @FPL_Metric</a></p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
