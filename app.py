@@ -282,6 +282,20 @@ if not show_unavailable:
 
 # --- 7. DISPLAY ---
 st.title("FPL Metric Scouting Dashboard")
+
+# --- FILTER HINT BANNER ---
+st.markdown(
+    """
+    <div style="background-color: #1E1E1E; padding: 10px 15px; border-radius: 5px; border-left: 4px solid #00FF85; margin-bottom: 20px;">
+        <span style="color: #E0E0E0; font-size: 0.95rem;">
+            <strong>Pro Tip:</strong> 👈 Use the <strong>Sidebar</strong> on the left to filter players by 
+            <span style="color: #00FF85;">Team</span>, <span style="color: #00FF85;">Position</span>, and <span style="color: #00FF85;">Price</span>.
+        </span>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 st.markdown(f"""
 <div style="display: flex; align-items: center; margin-bottom: 20px;">
     <span style="font-size: 1.2rem; color: #b0b0b0; margin-right: 15px;">
@@ -316,23 +330,19 @@ def render_modern_table(dataframe, column_config, sort_key):
         return
 
     # --- SORTING LOGIC ---
-    # 1. Define the Global Sort Options available in ALL tabs
     sort_options = {
         "total_points": "Total Points",
         "cost": "Price",
         "selected_by_percent": "Ownership",
         "matches_played": "Matches"
     }
-    # 2. Add Tab-Specific Options
     sort_options.update(column_config)
     
-    # 3. Remove "News" from Sort Options (but keep in table if in config)
     if "news" in sort_options:
         del sort_options["news"]
 
     col_sort, _ = st.columns([1, 4])
     with col_sort:
-        # Create list for dropdown
         options_keys = list(sort_options.keys())
         options_labels = list(sort_options.values())
         
@@ -343,7 +353,6 @@ def render_modern_table(dataframe, column_config, sort_key):
     team_map = get_team_map()
     
     # --- HEADER CONSTRUCTION ---
-    # Global headers included in ALL tables
     base_headers = ["Name", "Team", "Pos", "Price", "Own%", "Matches"]
     dynamic_headers = list(column_config.values())
     all_headers = base_headers + dynamic_headers
@@ -369,21 +378,18 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # --- FIXED METADATA CELLS (Common to all tabs) ---
+        # --- FIXED METADATA CELLS ---
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
         html_rows += f"""<td style="font-weight: bold; font-size: 1rem;">{status_dot} {row['web_name']}</td>"""
         html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
         html_rows += f"""<td><span class="pos-badge">{row['position']}</span></td>"""
         
-        # Price Column (Highlight if sorting by Price)
         s_price = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'cost' else "text-align: center;"
         html_rows += f"""<td style="{s_price}">£{row['cost']}</td>"""
         
-        # Ownership Column (Highlight if sorting by Own%)
         s_own = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'selected_by_percent' else "text-align: center;"
         html_rows += f"""<td style="{s_own}">{row['selected_by_percent']}%</td>"""
         
-        # Matches Column (Highlight if sorting by Matches)
         s_match = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'matches_played' else "text-align: center;"
         html_rows += f"""<td style="{s_match}">{int(row['matches_played'])}</td>"""
         
@@ -396,7 +402,6 @@ def render_modern_table(dataframe, column_config, sort_key):
             if col_name in ['matches_played', 'avg_minutes', 'total_points', 'goals_scored', 'assists', 'clean_sheets', 'goals_conceded']:
                 display_val = int(val)
             
-            # Highlight if this specific column is the one being sorted
             style = "text-align: center;"
             if col_name == selected_col:
                 style += " font-weight: bold; color: #00FF85;"
