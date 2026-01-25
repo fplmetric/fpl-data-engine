@@ -280,7 +280,6 @@ st.header("📅 Fixture Difficulty Ticker")
 ticker_df = get_fixture_ticker()
 
 # Sort Logic
-# We find the columns that look like "GW24", "GW25" etc.
 gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
 sort_options = ["Total Difficulty (Next 5)"] + gw_cols
 sort_choice = st.selectbox("Sort Table By:", sort_options)
@@ -307,11 +306,17 @@ st.dataframe(
 )
 st.caption("Use the dropdown to sort by the easiest fixtures for a specific Gameweek. Green = Easy, Red = Hard.")
 
+# --- FOOTER (NOW WITH X HANDLE) ---
 st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #B0B0B0;'>
         <p>📊 <strong>FPL Metric</strong> | Built for the Fantasy Premier League Community</p>
+        <p>
+            <a href="https://x.com/FPL_Metric" target="_blank" style="color: #00FF85; text-decoration: none; font-weight: bold;">
+                Follow us on X: @FPL_Metric
+            </a>
+        </p>
     </div>
     """,
     unsafe_allow_html=True
