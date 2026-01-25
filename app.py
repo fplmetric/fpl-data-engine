@@ -19,6 +19,12 @@ st.markdown(
         font-weight: bold;
     }
     
+    /* DROPDOWN CURSOR FIX */
+    /* Forces the 'Hand' cursor on all Selectbox/Dropdown elements */
+    div[data-baseweb="select"] > div {
+        cursor: pointer !important;
+    }
+    
     /* CONTAINER 1: Player Table (Scrollable) */
     .player-table-container {
         max-height: 500px; 
@@ -250,6 +256,7 @@ with st.sidebar:
     max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
     max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
     st.subheader("⚙️ Reliability")
+    
     min_avg_mins = st.slider("Avg Minutes per Match", 0, 90, 0) 
     min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
     
@@ -270,9 +277,7 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# --- FILTER LOGIC FIXED ---
-# If checkbox is UNCHECKED, remove strictly 'Red' statuses (i, u, n, s).
-# This keeps 'Available' (a) AND 'Doubtful' (d) players.
+# --- FILTER LOGIC ---
 if not show_unavailable:
     filtered = filtered[~filtered['status'].isin(['i', 'u', 'n', 's'])]
 
@@ -436,7 +441,11 @@ ticker_df = get_fixture_ticker()
 # --- SORT LOGIC ---
 gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
 sort_options = ["Total Difficulty (Next 5)"] + gw_cols
-sort_choice = st.selectbox("Sort Table By:", sort_options)
+
+# FIXED: Wrapped in columns to restrict width
+col_ticker_sort, _ = st.columns([1, 4]) 
+with col_ticker_sort:
+    sort_choice = st.selectbox("Sort Table By:", sort_options)
 
 if sort_choice == "Total Difficulty (Next 5)":
     ticker_df = ticker_df.sort_values('Total Difficulty', ascending=True)
