@@ -161,6 +161,28 @@ st.markdown(
         font-weight: bold; color: black;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
+
+    /* === MARKET MOVER ARROWS === */
+    .arrow-icon {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: 900;
+        margin-right: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .arrow-up {
+        background-color: #00FF85;
+        color: black;
+    }
+    .arrow-down {
+        background-color: #FF0055;
+        color: white;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -300,7 +322,6 @@ with st.sidebar:
     def deselect_all_teams():
         st.session_state['team_selection'] = []
 
-    # FIXED: Added context and clearer button labels
     st.caption("Quickly Select/Deselect Teams:") 
     col_sel, col_desel = st.columns(2)
     with col_sel:
@@ -612,6 +633,7 @@ else:
                 html_rows += f"""<tr>
                     <td style="padding-left: 20px;">
                         <div style="display: flex; align-items: center; gap: 12px;">
+                            <div class="arrow-icon arrow-up">↑</div>
                             <img src="{logo_img}" style="width: 35px; height: 35px; object-fit: contain;">
                             <div style="display: flex; flex-direction: column; line-height: 1.2;">
                                 <span style="font-weight: bold; font-size: 1.05rem; color: #FFF;">{row['web_name']}</span>
@@ -640,6 +662,7 @@ else:
                 html_rows += f"""<tr>
                     <td style="padding-left: 20px;">
                         <div style="display: flex; align-items: center; gap: 12px;">
+                            <div class="arrow-icon arrow-down">↓</div>
                             <img src="{logo_img}" style="width: 35px; height: 35px; object-fit: contain;">
                             <div style="display: flex; flex-direction: column; line-height: 1.2;">
                                 <span style="font-weight: bold; font-size: 1.05rem; color: #FFF;">{row['web_name']}</span>
