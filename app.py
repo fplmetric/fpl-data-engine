@@ -19,34 +19,54 @@ st.markdown(
         font-weight: bold;
     }
     
-    /* Custom Fixture Table Styling */
-    .fixture-table {
+    /* MODERN TABLE STYLING */
+    .modern-table {
         width: 100%;
         border-collapse: collapse;
-        font-family: sans-serif;
-        font-size: 0.9rem;
+        font-family: 'Source Sans Pro', sans-serif;
+        margin-bottom: 20px;
     }
-    .fixture-table th {
-        background-color: #262730;
-        color: #FFFFFF;
-        padding: 12px;
+    .modern-table th {
+        background-color: #1E1E1E; /* Dark Header */
+        color: #E0E0E0;
+        padding: 14px 10px;
         text-align: center;
-        border-bottom: 2px solid #444;
+        border-bottom: 2px solid #333;
+        font-weight: 600;
+        font-size: 0.95rem;
     }
-    .fixture-table th:first-child {
-        text-align: left;
+    .modern-table th:first-child, .modern-table th:nth-child(2) {
+        text-align: left; /* Left align Name and Team */
     }
-    .fixture-table td {
-        padding: 8px 12px;
-        border-bottom: 1px solid #333;
+    .modern-table td {
+        padding: 10px 10px;
+        border-bottom: 1px solid #2C2C2C;
         color: #E0E0E0;
         vertical-align: middle;
+        font-size: 0.9rem;
     }
-    .fixture-table tr:hover {
-        background-color: #2A2B35;
+    .modern-table tr:hover td {
+        filter: brightness(1.1); /* Slight brighten on hover */
     }
     
-    /* Difficulty Colors (Badges) */
+    /* Badges & Pills */
+    .pos-badge {
+        background-color: #333;
+        color: #DDD;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    .status-pill {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+    }
+    
+    /* Fixture Ticker Specifics */
     .diff-badge {
         display: block;
         padding: 6px 4px;
@@ -56,8 +76,6 @@ st.markdown(
         font-size: 0.85rem;
         width: 100%;
     }
-
-    /* FDR Legend Styling */
     .fdr-legend {
         display: flex;
         gap: 15px;
@@ -67,20 +85,11 @@ st.markdown(
         color: #B0B0B0;
         align-items: center;
     }
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
     .legend-box {
-        width: 25px;
-        height: 25px;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        color: black; /* Default text color */
+        width: 25px; height: 25px; border-radius: 4px;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: bold; color: black;
     }
     </style>
     """,
@@ -97,6 +106,13 @@ except Exception as e:
     st.stop()
 
 # --- 2. GET DATA ---
+
+@st.cache_data(ttl=3600)
+def get_team_map():
+    """Fetches mapping of Team Name -> Code for Logos"""
+    static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
+    # Map Name -> Code (e.g. "Arsenal" -> 3)
+    return {t['name']: t['code'] for t in static['teams']}
 
 # --- FIXTURE TICKER LOGIC ---
 @st.cache_data(ttl=3600) 
@@ -172,7 +188,7 @@ df['avg_minutes'] = df['minutes'] / df['matches_played']
 df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
-# --- 4. STYLING FUNCTION ---
+# --- 4. STYLING FUNCTION (Legacy for other tabs) ---
 def highlight_status(row):
     status = row['status']
     if status in ['i', 'u', 'n', 's']:
@@ -261,22 +277,95 @@ if not filtered.empty:
 else:
     styled_df = filtered
 
+# --- TAB 1: MODERN OVERVIEW TABLE ---
 with tab1:
-    st.dataframe(
-        styled_df,
-        use_container_width=True, 
-        hide_index=True,
-        # CHANGED: Added 'matches_played' so you can see the correct match count next to Avg Mins
-        column_order=['web_name', 'team_name', 'position', 'cost', 'selected_by_percent', 'news', 'total_points', 'points_per_game', 'matches_played', 'avg_minutes'],
-        column_config={
-            "cost": st.column_config.NumberColumn("Price", format="£%.1f"),
-            "selected_by_percent": st.column_config.NumberColumn("Own%", format="%.1f%%"),
-            "points_per_game": st.column_config.NumberColumn("PPG", format="%.1f"),
-            "matches_played": st.column_config.NumberColumn("Matches", format="%.0f"),
-            "avg_minutes": st.column_config.NumberColumn("Mins/Gm", format="%.0f"),
-            "news": st.column_config.TextColumn("News", width="medium"), 
-        }
-    )
+    # 1. Sort Controls (Since HTML tables don't sort automatically)
+    sort_cols = {
+        "Total Points": "total_points",
+        "Price": "cost",
+        "Ownership": "selected_by_percent",
+        "Matches Played": "matches_played",
+        "PPG": "points_per_game",
+        "Mins/Gm": "avg_minutes"
+    }
+    
+    col_sort, col_dummy = st.columns([1, 4])
+    with col_sort:
+        sort_choice = st.selectbox("Sort Overview By:", list(sort_cols.keys()), index=0)
+    
+    # Sort the data
+    sorted_df = filtered.sort_values(sort_cols[sort_choice], ascending=False)
+    
+    # 2. Get Team Mapping for Logos
+    team_map = get_team_map()
+    
+    # 3. Build HTML Table
+    html_rows = ""
+    for _, row in sorted_df.iterrows():
+        # -- Status Coloring --
+        row_style = ""
+        text_color = "#E0E0E0" # Default text
+        status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>' # Green dot default
+        
+        status = row['status']
+        if status in ['i', 'u', 'n', 's']: # Injured/Unavailable
+            row_style = 'background-color: #380E0E;' # Dark Red background
+            text_color = '#FFCCCC'
+            status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
+        elif status == 'd': # Doubtful
+            row_style = 'background-color: #383100;' # Dark Yellow background
+            text_color = '#FFFFA0'
+            status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
+            
+        # -- Team Logo --
+        t_code = team_map.get(row['team_name'], 0)
+        logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
+        
+        # -- Row Construction --
+        html_rows += f"""
+        <tr style="{row_style} color: {text_color};">
+            <td style="font-weight: bold; font-size: 1rem;">
+                {status_dot} {row['web_name']}
+            </td>
+            <td style="display: flex; align-items: center; border-bottom: none;">
+                <img src="{logo_img}" style="width: 20px; margin-right: 8px;">
+                {row['team_name']}
+            </td>
+            <td><span class="pos-badge">{row['position']}</span></td>
+            <td style="text-align: center;">£{row['cost']}</td>
+            <td style="text-align: center;">{row['selected_by_percent']}%</td>
+            <td style="text-align: center; font-weight: bold;">{int(row['matches_played'])}</td>
+            <td style="text-align: center;">{row['total_points']}</td>
+            <td style="text-align: center; color: #00FF85;">{row['points_per_game']}</td>
+            <td style="text-align: center;">{int(row['avg_minutes'])}</td>
+            <td style="font-size: 0.8rem; opacity: 0.8;">{row['news']}</td>
+        </tr>
+        """
+        
+    html_table = f"""
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Team</th>
+                <th>Pos</th>
+                <th>Price</th>
+                <th>Own%</th>
+                <th>Matches</th>
+                <th>Pts</th>
+                <th>PPG</th>
+                <th>Mins/Gm</th>
+                <th>News</th>
+            </tr>
+        </thead>
+        <tbody>
+            {html_rows}
+        </tbody>
+    </table>
+    """
+    st.markdown(html_table, unsafe_allow_html=True)
+
+# --- OTHER TABS (Keep standard dataframes for deep stats) ---
 with tab2: 
     st.dataframe(
         styled_df,
