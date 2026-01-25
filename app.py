@@ -218,6 +218,7 @@ def get_price_changes():
     """Fetches daily price risers and fallers from FPL API"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     
+    # Create Team ID map
     teams = {t['id']: t['name'] for t in static['teams']}
     
     changes = []
@@ -302,14 +303,9 @@ with st.sidebar:
         min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
         show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
         
-        # This button triggers the re-run ONCE
         submitted = st.form_submit_button("🚀 Apply Filters", use_container_width=True)
 
 # --- 6. FILTER DATA ---
-# This filter logic runs every time, but visual updates only happen on 'submitted' if controlled manually.
-# In Streamlit, form values are only updated in 'session_state' after submit.
-# Effectively, 'selected_teams' variable holds the LAST submitted value.
-
 df = df[df['minutes'] >= 90]
 
 filtered = df[
@@ -327,26 +323,30 @@ if not show_unavailable:
 
 # --- 7. DISPLAY ---
 
-# ... (Keep Logo & Title Code same as before) ...
+# === 1. BRANDING: Main Page Logo ===
+if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
+    _, col_main_logo, _ = st.columns([3, 2, 3]) 
+    with col_main_logo:
+        st.image("fpl_metric_logo.png", use_container_width=True)
 
-col1, col2, col3, col4 = st.columns(4)
-if not filtered.empty:
-    # 1. Threat King (xGI)
-    best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
-    
-    # 2. Work Rate (DC/90)
-    best_dc = filtered.sort_values('dc_per_90', ascending=False).iloc[0]
-    
-    # 3. Best Value (Total Points / Price)
-    best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
-    
-    # 4. Best Points Per Game (PPG) - NEW
-    best_ppg = filtered.sort_values('points_per_game', ascending=False).iloc[0]
-    
-    col1.metric("🔥 Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']} xGI")
-    col2.metric("🛡️ Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}")
-    col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
-    col4.metric("🧠 Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']} PPG")
+# === 2. BRANDING: Title ===
+st.markdown("""
+<div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="
+        font-size: 3rem;
+        font-weight: 800;
+        background: linear-gradient(to right, #00FF85, #FFFFFF);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 30px rgba(0, 255, 133, 0.3);
+        margin: 0;
+        padding-bottom: 10px;
+    ">
+        FPL Metric Scouting Dashboard
+    </h1>
+    <div style="width: 100px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div>
+</div>
+""", unsafe_allow_html=True)
 
 # --- AESTHETIC FILTER HINT BANNER ---
 st.markdown(
@@ -384,14 +384,22 @@ st.markdown(f"""
 
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
-    best_xg = filtered.sort_values('xg', ascending=False).iloc[0]
+    # 1. Threat King (xGI)
+    best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
+    
+    # 2. Work Rate (DC/90)
     best_dc = filtered.sort_values('dc_per_90', ascending=False).iloc[0]
+    
+    # 3. Best Value (Total Points / Price)
     best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
     
-    col1.metric("🔥 Threat King", best_xg['web_name'], f"{best_xg['xg']} xG")
+    # 4. Best Points Per Game (PPG)
+    best_ppg = filtered.sort_values('points_per_game', ascending=False).iloc[0]
+    
+    col1.metric("🔥 Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']} xGI")
     col2.metric("🛡️ Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}")
     col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
-    col4.metric("🧠 AVG Points", f"{filtered['points_per_game'].mean():.2f}", "PPG")
+    col4.metric("🧠 Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']} PPG")
 
 # --------------------------------------------------------
 # --- REUSABLE TABLE RENDERER FUNCTION ---
@@ -510,142 +518,4 @@ with tab4:
     cols = { "def_cons": "Total DC", "dc_per_90": "DC/90", "tackles": "Tackles", "tackles_per_90": "Tackles/90", "cbi": "CBI" }
     render_modern_table(filtered, cols, "sort_workrate")
 
-# 4. FIXTURE TICKER
-st.markdown("---") 
-st.header("📅 Fixture Difficulty Ticker")
-
-ticker_df = get_fixture_ticker()
-gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
-sort_options = ["Total Difficulty (Next 5)"] + gw_cols
-
-col_ticker_sort, _ = st.columns([1, 4]) 
-with col_ticker_sort:
-    sort_choice = st.selectbox("Sort Table By:", sort_options)
-
-if sort_choice == "Total Difficulty (Next 5)":
-    ticker_df = ticker_df.sort_values('Total Difficulty', ascending=True)
-else:
-    target_dif_col = f"Dif_{sort_choice}"
-    if target_dif_col in ticker_df.columns:
-        ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
-
-colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
-text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
-
-html_rows = ""
-for index, row in ticker_df.iterrows():
-    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333; padding-left: 15px;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
-    fixture_cells = ""
-    for col in gw_cols:
-        dif_key = f'Dif_{col}'
-        difficulty = row.get(dif_key, 3)
-        bg_color = colors.get(difficulty, '#EBEBEB')
-        txt_color = text_colors.get(difficulty, 'black')
-        fixture_cells += f'<td><span class="diff-badge" style="background-color: {bg_color}; color: {txt_color};">{row[col]}</span></td>'
-    html_rows += f"<tr>{team_cell}{fixture_cells}</tr>"
-
-header_cols = "".join([f"<th>{col}</th>" for col in gw_cols])
-html_table = f"""
-<div class="fixture-table-container">
-<table class="modern-table">
-  <thead><tr><th>Team</th>{header_cols}</tr></thead>
-  <tbody>{html_rows}</tbody>
-</table>
-</div>
-"""
-st.markdown(html_table, unsafe_allow_html=True)
-
-st.markdown("""
-<div class="fdr-legend">
-    <span style="font-weight:bold; color: white;">FDR Key:</span>
-    <div class="legend-item">Easy <div class="legend-box" style="background-color: #375523; color: white;">1</div></div>
-    <div class="legend-item"><div class="legend-box" style="background-color: #00FF85;">2</div></div>
-    <div class="legend-item"><div class="legend-box" style="background-color: #EBEBEB;">3</div></div>
-    <div class="legend-item"><div class="legend-box" style="background-color: #FF0055; color: white;">4</div></div>
-    <div class="legend-item"><div class="legend-box" style="background-color: #680808; color: white;">5</div> Hard</div>
-</div>
-""", unsafe_allow_html=True)
-
-# 5. MARKET MOVERS (PRICE CHANGES)
-st.markdown("---")
-st.header("📈 Market Movers (Today)")
-
-df_changes = get_price_changes()
-team_map = get_team_map()
-
-if df_changes.empty:
-    st.info("No price changes recorded today.")
-else:
-    col_risers, col_fallers = st.columns(2)
-    
-    # --- RISERS ---
-    with col_risers:
-        st.subheader("🚀 Price Risers")
-        risers = df_changes[df_changes['change'] > 0].sort_values('change', ascending=False)
-        
-        if risers.empty:
-            st.info("No risers today.")
-        else:
-            html_rows = ""
-            for _, row in risers.iterrows():
-                t_code = get_team_map().get(row['team'], 0)
-                logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
-                
-                html_rows += f"""<tr>
-                    <td style="font-weight: bold; padding-left: 15px;">{row['web_name']}</td>
-                    <td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team']}</td>
-                    <td style="text-align: center;">£{row['cost']}</td>
-                    <td style="text-align: center; color: #00FF85; font-weight: bold;">+£{row['change']}</td>
-                </tr>"""
-            
-            html_table = f"""
-            <div class="player-table-container" style="max-height: 300px;">
-                <table class="modern-table">
-                    <thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead>
-                    <tbody>{html_rows}</tbody>
-                </table>
-            </div>
-            """
-            st.markdown(html_table, unsafe_allow_html=True)
-
-    # --- FALLERS ---
-    with col_fallers:
-        st.subheader("📉 Price Fallers")
-        fallers = df_changes[df_changes['change'] < 0].sort_values('change', ascending=True)
-        
-        if fallers.empty:
-            st.info("No fallers today.")
-        else:
-            html_rows = ""
-            for _, row in fallers.iterrows():
-                t_code = get_team_map().get(row['team'], 0)
-                logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
-                
-                html_rows += f"""<tr>
-                    <td style="font-weight: bold; padding-left: 15px;">{row['web_name']}</td>
-                    <td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team']}</td>
-                    <td style="text-align: center;">£{row['cost']}</td>
-                    <td style="text-align: center; color: #FF0055; font-weight: bold;">-£{abs(row['change'])}</td>
-                </tr>"""
-            
-            html_table = f"""
-            <div class="player-table-container" style="max-height: 300px;">
-                <table class="modern-table">
-                    <thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead>
-                    <tbody>{html_rows}</tbody>
-                </table>
-            </div>
-            """
-            st.markdown(html_table, unsafe_allow_html=True)
-
-# --- FOOTER ---
-st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center; color: #B0B0B0;'>
-        <p>📊 <strong>FPL Metric</strong> | Built for the Fantasy Premier League Community</p>
-        <p><a href="https://x.com/FPL_Metric" target="_blank" style="color: #00FF85; text-decoration: none; font-weight: bold;">Follow us on X: @FPL_Metric</a></p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# 4. FIXTURE TICK
