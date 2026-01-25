@@ -30,13 +30,17 @@ st.markdown(
         background-color: #262730;
         color: #FFFFFF;
         padding: 12px;
-        text-align: left;
+        text-align: center;
         border-bottom: 2px solid #444;
+    }
+    .fixture-table th:first-child {
+        text-align: left;
     }
     .fixture-table td {
         padding: 8px 12px;
         border-bottom: 1px solid #333;
         color: #E0E0E0;
+        vertical-align: middle;
     }
     .fixture-table tr:hover {
         background-color: #2A2B35;
@@ -45,11 +49,12 @@ st.markdown(
     /* Difficulty Colors (Badges) */
     .diff-badge {
         display: block;
-        padding: 4px 8px;
-        border-radius: 4px;
+        padding: 6px 4px;
+        border-radius: 6px;
         text-align: center;
         font-weight: bold;
-        color: #000;
+        font-size: 0.85rem;
+        width: 100%;
     }
     </style>
     """,
@@ -292,50 +297,43 @@ else:
     if target_dif_col in ticker_df.columns:
         ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
 
-# --- HTML GENERATION ---
-# This block builds a custom HTML table because st.dataframe can't merge images into text cells
-html_table = "<table class='fixture-table'>"
-html_table += "<thead><tr><th>Team</th>"
-for col in gw_cols:
-    html_table += f"<th>{col}</th>"
-html_table += "</tr></thead><tbody>"
-
-# Define colors
-colors = {
-    2: '#00FF85', # Green
-    3: '#EBEBEB', # Grey
-    4: '#FF0055', # Red
-    5: '#680808'  # Dark Red
-}
+# --- HTML GENERATION (Flattened to avoid Indentation Error) ---
+# We build the HTML string carefully to avoid Markdown 'code block' triggering
+html_rows = ""
+colors = {2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
 text_colors = {2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
 for index, row in ticker_df.iterrows():
-    # 1. Merged Logo + Team Cell
-    html_table += f"""
-    <tr>
-        <td style="display: flex; align-items: center; border-bottom: none;">
-            <img src="{row['Logo']}" style="width: 25px; margin-right: 12px;">
-            <span style="font-weight: bold; font-size: 1rem;">{row['Team']}</span>
-        </td>
-    """
+    # Build the merged Logo+Name cell
+    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
     
-    # 2. Fixture Cells with Colors
+    # Build the fixture cells
+    fixture_cells = ""
     for col in gw_cols:
         dif_key = f'Dif_{col}'
         difficulty = row.get(dif_key, 3)
         bg_color = colors.get(difficulty, '#EBEBEB')
         txt_color = text_colors.get(difficulty, 'black')
-        
-        html_table += f"""
-        <td>
-            <span class='diff-badge' style='background-color: {bg_color}; color: {txt_color};'>
-                {row[col]}
-            </span>
-        </td>
-        """
-    html_table += "</tr>"
+        fixture_cells += f'<td><span class="diff-badge" style="background-color: {bg_color}; color: {txt_color};">{row[col]}</span></td>'
+    
+    html_rows += f"<tr>{team_cell}{fixture_cells}</tr>"
 
-html_table += "</tbody></table>"
+# Construct the final table header
+header_cols = "".join([f"<th>{col}</th>" for col in gw_cols])
+html_table = f"""
+<table class="fixture-table">
+  <thead>
+    <tr>
+      <th>Team</th>
+      {header_cols}
+    </tr>
+  </thead>
+  <tbody>
+    {html_rows}
+  </tbody>
+</table>
+"""
+
 st.markdown(html_table, unsafe_allow_html=True)
 st.caption("Use the dropdown to sort by the easiest fixtures for a specific Gameweek.")
 
