@@ -353,6 +353,10 @@ def get_team_upcoming_fixtures():
         
         team_fixtures_map[info['name']] = fixture_list
         
+        # --- FIX: MAP "Nott'm Forest" to "Nottm Forest" ---
+        if info['name'] == "Nott'm Forest":
+            team_fixtures_map["Nottm Forest"] = fixture_list
+        
     return team_fixtures_map
 
 # --- PRICE CHANGE LOGIC ---
