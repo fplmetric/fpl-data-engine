@@ -244,7 +244,6 @@ df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
 # --- 5. SIDEBAR FILTERS ---
 with st.sidebar:
-    # Sidebar Logo
     if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
         col1, mid, col2 = st.columns([1, 5, 1]) 
         with mid:
@@ -301,7 +300,6 @@ if not show_unavailable:
 
 # === 1. BRANDING: Main Page Logo ===
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-    # Centered Logo Layout
     _, col_main_logo, _ = st.columns([3, 2, 3]) 
     with col_main_logo:
         st.image("fpl_metric_logo.png", use_container_width=True)
@@ -379,8 +377,8 @@ def render_modern_table(dataframe, column_config, sort_key):
         return
 
     # --- SORTING LOGIC ---
+    # FIXED: "Total Points" removed from default sort options
     sort_options = {
-        "total_points": "Total Points",
         "cost": "Price",
         "selected_by_percent": "Ownership",
         "matches_played": "Matches"
@@ -472,7 +470,13 @@ def render_modern_table(dataframe, column_config, sort_key):
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate"])
 
 with tab1:
-    cols = { "points_per_game": "PPG", "avg_minutes": "Mins/Gm", "news": "News" }
+    # FIXED: Added Total Points (Pts) to Overview columns
+    cols = { 
+        "total_points": "Pts", 
+        "points_per_game": "PPG", 
+        "avg_minutes": "Mins/Gm", 
+        "news": "News" 
+    }
     render_modern_table(filtered, cols, "sort_overview")
 
 with tab2:
