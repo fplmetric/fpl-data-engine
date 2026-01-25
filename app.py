@@ -4,7 +4,7 @@ import numpy as np
 from sqlalchemy import create_engine
 import altair as alt
 import os
-import requests # <--- Added this back
+import requests
 
 # --- 1. SETUP ---
 st.set_page_config(page_title="FPL Metric", page_icon="favicon.png", layout="wide")
@@ -33,8 +33,8 @@ except Exception as e:
 
 # --- 2. GET DATA ---
 
-# --- FIXTURE TICKER LOGIC (Added Back) ---
-@st.cache_data(ttl=3600) # Cache for 1 hour
+# --- FIXTURE TICKER LOGIC ---
+@st.cache_data(ttl=3600) 
 def get_fixture_ticker():
     # 1. Fetch Teams
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
@@ -201,7 +201,19 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- FIXTURE TICKER SECTION (Added Back) ---
+# --- METRICS (MOVED UP) ---
+col1, col2, col3, col4 = st.columns(4)
+if not filtered.empty:
+    best_xg = filtered.sort_values('xg', ascending=False).iloc[0]
+    best_dc = filtered.sort_values('dc_per_90', ascending=False).iloc[0]
+    best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
+    
+    col1.metric("🔥 Threat King", best_xg['web_name'], f"{best_xg['xg']} xG")
+    col2.metric("🛡️ Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}")
+    col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
+    col4.metric("🧠 AVG Points", f"{filtered['points_per_game'].mean():.2f}", "PPG")
+
+# --- FIXTURE TICKER SECTION (MOVED DOWN) ---
 with st.expander("📅 Fixture Difficulty Ticker", expanded=True):
     ticker_df = get_fixture_ticker()
     
@@ -213,31 +225,14 @@ with st.expander("📅 Fixture Difficulty Ticker", expanded=True):
     else:
         ticker_df = ticker_df.sort_values('Difficulty', ascending=False)
         
-    # Filter columns to only show Team + Games
     display_cols = ['Team'] + [c for c in ticker_df.columns if 'GW' in c]
     
-    # Use Pandas styling for the heatmap (Red-Yellow-Green)
-    # We apply the gradient based on the HIDDEN difficulty columns (Dif_1, Dif_2 etc)
-    # But since Streamlit doesn't support easy complex gradients on hidden cols yet, 
-    # we just show the table clean.
     st.dataframe(
         ticker_df[display_cols],
         use_container_width=True,
         hide_index=True
     )
     st.caption("Tip: Teams are sorted by the total difficulty of their next 5 games.")
-
-# --- METRICS ---
-col1, col2, col3, col4 = st.columns(4)
-if not filtered.empty:
-    best_xg = filtered.sort_values('xg', ascending=False).iloc[0]
-    best_dc = filtered.sort_values('dc_per_90', ascending=False).iloc[0]
-    best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
-    
-    col1.metric("🔥 Threat King", best_xg['web_name'], f"{best_xg['xg']} xG")
-    col2.metric("🛡️ Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}")
-    col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
-    col4.metric("🧠 AVG Points", f"{filtered['points_per_game'].mean():.2f}", "PPG")
 
 # --- TABS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate "])
