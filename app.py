@@ -57,8 +57,8 @@ st.markdown(
     /* CONTAINER 1: Player Table (Scrollable) */
     .player-table-container {
         max-height: 500px; 
-        overflow-y: auto;
-        overflow-x: auto; /* FIXED: Enable Horizontal Scroll on Mobile */ 
+        overflow-y: auto; 
+        overflow-x: auto; /* Mobile Scroll Fix */
         border: 1px solid #444;
         border-radius: 8px; 
         margin-bottom: 20px;
@@ -179,21 +179,14 @@ st.markdown(
 
     /* === 📱 MOBILE OPTIMIZATION === */
     @media (max-width: 768px) {
-        /* Shrink the huge title */
         h1 { font-size: 1.8rem !important; }
-        
-        /* Reduce table padding to fit more data */
         .modern-table th, .modern-table td {
             padding: 10px 6px !important;
             font-size: 0.8rem !important;
         }
-        
-        /* Adjust Player Column padding */
         .modern-table th:first-child, .modern-table td:first-child {
             padding-left: 10px !important;
         }
-        
-        /* Force Stacked Filters if they get squished */
         div[data-baseweb="tab-list"] {
             flex-wrap: wrap;
         }
@@ -216,12 +209,25 @@ except Exception as e:
 
 @st.cache_data(ttl=3600)
 def get_team_map():
-    """Fetches mapping of Team Name -> Code for Logos"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     t_map = {t['name']: t['code'] for t in static['teams']}
     if "Nott'm Forest" in t_map:
         t_map["Nottm Forest"] = t_map["Nott'm Forest"]
     return t_map
+
+# --- FETCH EXPECTED POINTS (NEW) ---
+@st.cache_data(ttl=3600)
+def get_expected_points_map():
+    """Fetches Live Expected Points (ep_next) from API"""
+    static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
+    # Map ID -> ep_next
+    ep_map = {}
+    for p in static['elements']:
+        try:
+            ep_map[p['id']] = float(p.get('ep_next', 0))
+        except:
+            ep_map[p['id']] = 0.0
+    return ep_map
 
 # --- FIXTURE TICKER LOGIC ---
 @st.cache_data(ttl=3600) 
@@ -269,11 +275,9 @@ def get_fixture_ticker():
 # --- PRICE CHANGE LOGIC ---
 @st.cache_data(ttl=3600)
 def get_price_changes():
-    """Fetches daily price risers and fallers from FPL API"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     
     teams = {t['id']: t['name'] for t in static['teams']}
-    # Map Element Type ID to Position String
     pos_map = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
     
     changes = []
@@ -282,7 +286,7 @@ def get_price_changes():
             changes.append({
                 'web_name': p['web_name'],
                 'team': teams[p['team']],
-                'position': pos_map.get(p['element_type'], "UNK"), # Get Position
+                'position': pos_map.get(p['element_type'], "UNK"),
                 'cost': p['now_cost'] / 10,
                 'change': p['cost_change_event'] / 10,
                 'selected_by_percent': p['selected_by_percent']
@@ -308,7 +312,7 @@ ORDER BY player_id, snapshot_time DESC
 """
 df = pd.read_sql(query, engine)
 
-# --- 3. CALCULATE METRICS ---
+# --- 3. CALCULATE METRICS & MERGE LIVE DATA ---
 df = df.fillna(0)
 df['matches_played'] = df['matches_played'].replace(0, 1)
 df['minutes'] = df['minutes'].replace(0, 1)
@@ -318,6 +322,10 @@ df['dc_per_90'] = (df['def_cons'] / df['minutes']) * 90
 df['avg_minutes'] = df['minutes'] / df['matches_played']
 df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
+
+# MERGE LIVE EXPECTED POINTS
+ep_map = get_expected_points_map()
+df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
 # --- 5. SIDEBAR FILTERS ---
 with st.sidebar:
@@ -553,7 +561,13 @@ def render_modern_table(dataframe, column_config, sort_key):
 tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Attack", "Defense", "Work Rate"])
 
 with tab1:
-    cols = { "total_points": "Pts", "points_per_game": "PPG", "avg_minutes": "Mins/Gm", "news": "News" }
+    cols = { 
+        "ep_next": "XP", 
+        "total_points": "Pts", 
+        "points_per_game": "PPG", 
+        "avg_minutes": "Mins/Gm", 
+        "news": "News" 
+    }
     render_modern_table(filtered, cols, "sort_overview")
 
 with tab2:
