@@ -19,12 +19,19 @@ st.markdown(
         font-weight: bold;
     }
     
+    /* SCROLLABLE TABLE CONTAINER */
+    .table-container {
+        max-height: 500px; /* Shows approx 10 rows */
+        overflow-y: auto;  /* Enables vertical scrolling */
+        border: 1px solid #333;
+        border-radius: 4px;
+    }
+
     /* MODERN TABLE STYLING */
     .modern-table {
         width: 100%;
         border-collapse: collapse;
         font-family: 'Source Sans Pro', sans-serif;
-        margin-bottom: 20px;
     }
     .modern-table th {
         background-color: #1E1E1E;
@@ -34,6 +41,11 @@ st.markdown(
         border-bottom: 2px solid #333;
         font-weight: 600;
         font-size: 0.95rem;
+        
+        /* Sticky Header Logic */
+        position: sticky;
+        top: 0;
+        z-index: 2; /* Ensures header stays on top of scrolling content */
     }
     .modern-table th:first-child, .modern-table th:nth-child(2) {
         text-align: left; 
@@ -44,9 +56,11 @@ st.markdown(
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
+        background-color: #0E1117; /* Matches Streamlit Dark Mode BG */
     }
     .modern-table tr:hover td {
-        filter: brightness(1.1);
+        filter: brightness(1.2);
+        background-color: #161920;
     }
     
     /* Badges & Pills */
@@ -297,7 +311,7 @@ with tab1:
     # 2. Get Team Mapping
     team_map = get_team_map()
     
-    # 3. Build HTML Table (NO INDENTATION TO FIX BUG)
+    # 3. Build HTML Table (NO INDENTATION)
     html_rows = ""
     for _, row in sorted_df.iterrows():
         # -- Status Coloring --
@@ -318,7 +332,6 @@ with tab1:
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # Construct Row (Flattened Strings)
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
         html_rows += f"""<td style="font-weight: bold; font-size: 1rem;">{status_dot} {row['web_name']}</td>"""
         html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
@@ -333,25 +346,27 @@ with tab1:
         html_rows += "</tr>"
 
     html_table = f"""
-    <table class="modern-table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Team</th>
-                <th>Pos</th>
-                <th>Price</th>
-                <th>Own%</th>
-                <th>Matches</th>
-                <th>Pts</th>
-                <th>PPG</th>
-                <th>Mins/Gm</th>
-                <th>News</th>
-            </tr>
-        </thead>
-        <tbody>
-            {html_rows}
-        </tbody>
-    </table>
+    <div class="table-container">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Team</th>
+                    <th>Pos</th>
+                    <th>Price</th>
+                    <th>Own%</th>
+                    <th>Matches</th>
+                    <th>Pts</th>
+                    <th>PPG</th>
+                    <th>Mins/Gm</th>
+                    <th>News</th>
+                </tr>
+            </thead>
+            <tbody>
+                {html_rows}
+            </tbody>
+        </table>
+    </div>
     """
     st.markdown(html_table, unsafe_allow_html=True)
 
@@ -424,6 +439,7 @@ for index, row in ticker_df.iterrows():
 
 header_cols = "".join([f"<th>{col}</th>" for col in gw_cols])
 html_table = f"""
+<div class="table-container">
 <table class="fixture-table">
   <thead>
     <tr>
@@ -435,6 +451,7 @@ html_table = f"""
     {html_rows}
   </tbody>
 </table>
+</div>
 """
 
 st.markdown(html_table, unsafe_allow_html=True)
