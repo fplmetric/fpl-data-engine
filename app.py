@@ -60,7 +60,7 @@ st.markdown(
         background: linear-gradient(to bottom, #5e0066, #37003c);
         color: #ffffff;
         padding: 16px 12px;
-        text-align: center;
+        text-align: center !important; /* FIXED: Force Center for ALL headers */
         font-weight: 700;
         font-size: 0.85rem;
         text-transform: uppercase;
@@ -78,10 +78,12 @@ st.markdown(
     .modern-table thead tr:first-child th:first-child { border-top-left-radius: 8px; }
     .modern-table thead tr:first-child th:last-child { border-top-right-radius: 8px; }
 
+    /* FIXED: Specific rule to ensure First & Second columns are also centered */
     .modern-table th:first-child, .modern-table th:nth-child(2) {
-        text-align: left; 
-        padding-left: 15px;
+        text-align: center !important; 
+        padding-left: 0 !important;
     }
+
     .modern-table td {
         padding: 12px 12px; 
         border-bottom: 1px solid #2c2c2c; 
