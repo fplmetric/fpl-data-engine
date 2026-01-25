@@ -300,11 +300,13 @@ with st.sidebar:
     def deselect_all_teams():
         st.session_state['team_selection'] = []
 
+    # FIXED: Added context and clearer button labels
+    st.caption("Quickly Select/Deselect Teams:") 
     col_sel, col_desel = st.columns(2)
     with col_sel:
-        st.button("All", on_click=select_all_teams, use_container_width=True)
+        st.button("✅ All Teams", on_click=select_all_teams, use_container_width=True)
     with col_desel:
-        st.button("None", on_click=deselect_all_teams, use_container_width=True)
+        st.button("❌ Clear Teams", on_click=deselect_all_teams, use_container_width=True)
 
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply' to update.")
