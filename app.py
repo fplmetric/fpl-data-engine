@@ -146,6 +146,25 @@ st.markdown(
         width: 100%;
         box-shadow: inset 0 0 5px rgba(0,0,0,0.2); 
     }
+    
+    /* === MINI FIXTURE BADGES (For Player Table) === */
+    .mini-fix-container {
+        display: flex;
+        gap: 4px;
+        justify-content: center;
+    }
+    .mini-fix-box {
+        width: 28px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        font-weight: 800;
+        border-radius: 3px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
     .fdr-legend {
         display: flex;
         gap: 15px;
@@ -215,6 +234,10 @@ st.markdown(
         .modern-table th:first-child, .modern-table td:first-child {
             padding-left: 10px !important;
         }
+        /* Allow mini badges to wrap or scroll if needed on very small screens */
+        .mini-fix-container {
+            flex-wrap: nowrap; 
+        }
         div[data-baseweb="tab-list"] {
             flex-wrap: wrap;
         }
@@ -257,7 +280,7 @@ def get_expected_points_map():
             ep_map[p['id']] = 0.0
     return ep_map
 
-# --- FIXTURE TICKER LOGIC ---
+# --- FIXTURE TICKER LOGIC (FULL) ---
 @st.cache_data(ttl=3600) 
 def get_fixture_ticker():
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
@@ -299,6 +322,38 @@ def get_fixture_ticker():
         ticker_data.append(row)
         
     return pd.DataFrame(ticker_data)
+
+# --- UPCOMING FIXTURES FOR PLAYERS (NEW MAP) ---
+@st.cache_data(ttl=3600)
+def get_team_upcoming_fixtures():
+    """Returns a Dict: Team Name -> List of next 5 fixtures [{'opp': 'ARS', 'diff': 4}, ...]"""
+    static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
+    fixtures = requests.get('https://fantasy.premierleague.com/api/fixtures/?future=1').json()
+    
+    # Create Team ID -> Info Map
+    teams_info = {t['id']: {'name': t['name'], 'short': t['short_name']} for t in static['teams']}
+    
+    team_fixtures_map = {}
+    
+    for team_id, info in teams_info.items():
+        # Get next 5 matches for this team
+        my_fixtures = [f for f in fixtures if f['team_h'] == team_id or f['team_a'] == team_id][:5]
+        fixture_list = []
+        
+        for f in my_fixtures:
+            is_home = f['team_h'] == team_id
+            opponent_id = f['team_a'] if is_home else f['team_h']
+            difficulty = f['team_h_difficulty'] if is_home else f['team_a_difficulty']
+            opp_short = teams_info[opponent_id]['short']
+            
+            fixture_list.append({
+                'opp': opp_short,
+                'diff': difficulty
+            })
+        
+        team_fixtures_map[info['name']] = fixture_list
+        
+    return team_fixtures_map
 
 # --- PRICE CHANGE LOGIC ---
 @st.cache_data(ttl=3600)
@@ -519,11 +574,18 @@ def render_modern_table(dataframe, column_config, sort_key):
     sorted_df = dataframe.sort_values(selected_col, ascending=False).head(100)
     team_map = get_team_map()
     
-    # --- HEADER CONSTRUCTION (Merged Player Column) ---
-    base_headers = ["Player", "Price", "Own%", "Matches"]
+    # --- FETCH FIXTURES MAP (NEW) ---
+    team_fixtures = get_team_upcoming_fixtures()
+    
+    # --- HEADER CONSTRUCTION (Merged Player Column + Fixtures) ---
+    base_headers = ["Player", "Next 5", "Price", "Own%", "Matches"] # ADDED 'Next 5'
     dynamic_headers = list(column_config.values())
     all_headers = base_headers + dynamic_headers
     header_html = "".join([f"<th>{h}</th>" for h in all_headers])
+    
+    # Colors for mini badges
+    fdr_colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
+    fdr_text = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
     
     html_rows = ""
     for _, row in sorted_df.iterrows():
@@ -544,7 +606,7 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # --- NEW STACKED PLAYER PROFILE CELL ---
+        # --- PLAYER PROFILE CELL ---
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
         html_rows += f"""
         <td style="padding-left: 20px;">
@@ -561,6 +623,17 @@ def render_modern_table(dataframe, column_config, sort_key):
         </td>
         """
         
+        # --- NEW: NEXT 5 FIXTURES COLUMN ---
+        my_fixtures = team_fixtures.get(row['team_name'], [])
+        fix_html = '<div class="mini-fix-container">'
+        for f in my_fixtures:
+            bg = fdr_colors.get(f['diff'], '#333')
+            txt = fdr_text.get(f['diff'], 'white')
+            fix_html += f'<div class="mini-fix-box" style="background-color: {bg}; color: {txt};">{f["opp"]}</div>'
+        fix_html += '</div>'
+        html_rows += f'<td style="text-align: center;">{fix_html}</td>'
+        
+        # --- STANDARD COLUMNS ---
         s_price = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'cost' else "text-align: center;"
         html_rows += f"""<td style="{s_price}">£{row['cost']}</td>"""
         
