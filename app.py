@@ -302,9 +302,9 @@ with st.sidebar:
 
     col_sel, col_desel = st.columns(2)
     with col_sel:
-        st.button("✅ All", on_click=select_all_teams, use_container_width=True)
+        st.button("All", on_click=select_all_teams, use_container_width=True)
     with col_desel:
-        st.button("❌ None", on_click=deselect_all_teams, use_container_width=True)
+        st.button("None", on_click=deselect_all_teams, use_container_width=True)
 
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply' to update.")
@@ -312,13 +312,13 @@ with st.sidebar:
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
         max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
         max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
-        st.subheader("⚙️ Reliability")
+        st.subheader("Reliability")
         min_avg_mins = st.slider("Avg Minutes per Match", 0, 90, 0) 
         min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
-        st.subheader("🛡️ Work Rate (Per 90)")
+        st.subheader("Work Rate (Per 90)")
         min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
         show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
-        submitted = st.form_submit_button("🚀 Apply Filters", use_container_width=True)
+        submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
 # --- 6. FILTER DATA ---
 df = df[df['minutes'] >= 90]
@@ -372,7 +372,6 @@ st.markdown(
         align-items: center;
         box-shadow: 0 4px 10px rgba(0, 255, 133, 0.1);
     ">
-        <span style="font-size: 1.5rem; margin-right: 15px;">🔭</span>
         <span style="color: #E0E0E0; font-size: 1rem; font-family: 'Source Sans Pro', sans-serif; letter-spacing: 0.02em;">
             <strong style="color: #00FF85; text-transform: uppercase;">Scout's Tip:</strong> 
             Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> (top-left) to filter by Team, Position, and Price.
@@ -400,10 +399,10 @@ if not filtered.empty:
     best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
     best_ppg = filtered.sort_values('points_per_game', ascending=False).iloc[0]
     
-    col1.metric("🔥 Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']} xGI")
-    col2.metric("🛡️ Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}")
-    col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
-    col4.metric("🧠 Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']} PPG")
+    col1.metric("Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']} xGI")
+    col2.metric("Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}")
+    col3.metric("Best Value", best_val['web_name'], f"{best_val['value_season']}")
+    col4.metric("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']} PPG")
 
 # --------------------------------------------------------
 # --- REUSABLE TABLE RENDERER FUNCTION (UPDATED) ---
@@ -513,7 +512,7 @@ def render_modern_table(dataframe, column_config, sort_key):
 # --------------------------------------------------------
 # --- TABS LOGIC ---
 # --------------------------------------------------------
-tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate"])
+tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Attack", "Defense", "Work Rate"])
 
 with tab1:
     cols = { "total_points": "Pts", "points_per_game": "PPG", "avg_minutes": "Mins/Gm", "news": "News" }
@@ -533,7 +532,7 @@ with tab4:
 
 # 4. FIXTURE TICKER
 st.markdown("---") 
-st.header("📅 Fixture Difficulty Ticker")
+st.header("Fixture Difficulty Ticker")
 
 ticker_df = get_fixture_ticker()
 gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
@@ -589,7 +588,7 @@ st.markdown("""
 
 # 5. MARKET MOVERS
 st.markdown("---")
-st.header("📈 Market Movers (Today)")
+st.header("Market Movers (Today)")
 
 df_changes = get_price_changes()
 if df_changes.empty:
@@ -599,7 +598,7 @@ else:
     # Reusing the 'Stacked Profile' HTML structure for Market Movers
     
     with col_risers:
-        st.subheader("🚀 Price Risers")
+        st.subheader("Price Risers")
         risers = df_changes[df_changes['change'] > 0].sort_values('change', ascending=False)
         if risers.empty:
             st.info("No risers today.")
@@ -627,7 +626,7 @@ else:
             st.markdown(html_table, unsafe_allow_html=True)
 
     with col_fallers:
-        st.subheader("📉 Price Fallers")
+        st.subheader("Price Fallers")
         fallers = df_changes[df_changes['change'] < 0].sort_values('change', ascending=True)
         if fallers.empty:
             st.info("No fallers today.")
@@ -659,7 +658,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #B0B0B0;'>
-        <p>📊 <strong>FPL Metric</strong> | Built for the Fantasy Premier League Community</p>
+        <p><strong>FPL Metric</strong> | Built for the Fantasy Premier League Community</p>
         <p><a href="https://x.com/FPL_Metric" target="_blank" style="color: #00FF85; text-decoration: none; font-weight: bold;">Follow us on X: @FPL_Metric</a></p>
     </div>
     """,
