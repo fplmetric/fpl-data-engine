@@ -24,6 +24,39 @@ st.markdown(
         cursor: pointer !important;
     }
     
+    /* === AESTHETIC TABS === */
+    /* Tab Container */
+    div[data-baseweb="tab-list"] {
+        gap: 10px; /* Space between tabs */
+        margin-bottom: 20px;
+    }
+
+    /* Individual Tab (Unselected) */
+    button[data-baseweb="tab"] {
+        font-size: 1.1rem !important; /* Larger text */
+        font-weight: 700 !important; /* Bold */
+        padding: 10px 25px !important; /* Bigger click area */
+        background-color: #1E1E1E !important; /* Dark pill background */
+        border-radius: 8px !important;
+        border: 1px solid #333 !important;
+        color: #888 !important; /* Dimmed text */
+        transition: all 0.3s ease;
+    }
+
+    /* Hover State */
+    button[data-baseweb="tab"]:hover {
+        border-color: #666 !important;
+        color: #E0E0E0 !important;
+    }
+
+    /* Active/Selected Tab */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #1E1E1E !important;
+        color: #00FF85 !important; /* Neon Green Text */
+        border: 1px solid #00FF85 !important; /* Neon Green Border */
+        box-shadow: 0 0 10px rgba(0, 255, 133, 0.2); /* Soft Glow */
+    }
+    
     /* CONTAINER 1: Player Table (Scrollable) */
     .player-table-container {
         max-height: 500px; 
@@ -60,7 +93,7 @@ st.markdown(
         background: linear-gradient(to bottom, #5e0066, #37003c);
         color: #ffffff;
         padding: 16px 12px;
-        text-align: center !important; /* FIXED: Force Center for ALL headers */
+        text-align: center !important; 
         font-weight: 700;
         font-size: 0.85rem;
         text-transform: uppercase;
@@ -78,12 +111,10 @@ st.markdown(
     .modern-table thead tr:first-child th:first-child { border-top-left-radius: 8px; }
     .modern-table thead tr:first-child th:last-child { border-top-right-radius: 8px; }
 
-    /* FIXED: Specific rule to ensure First & Second columns are also centered */
     .modern-table th:first-child, .modern-table th:nth-child(2) {
         text-align: center !important; 
         padding-left: 0 !important;
     }
-
     .modern-table td {
         padding: 12px 12px; 
         border-bottom: 1px solid #2c2c2c; 
