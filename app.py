@@ -162,26 +162,22 @@ st.markdown(
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    /* === MARKET MOVER ARROWS === */
+    /* === MARKET MOVER ARROWS (UPDATED) === */
     .arrow-icon {
         display: inline-flex;
         justify-content: center;
         align-items: center;
-        width: 20px;
-        height: 20px;
+        width: 22px; /* Fixed circular size */
+        height: 22px;
         border-radius: 50%;
-        font-size: 12px;
-        font-weight: 900;
         margin-right: 5px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
     .arrow-up {
-        background-color: #00FF85;
-        color: black;
+        background-color: #00FF85; /* Neon Green Background */
     }
     .arrow-down {
-        background-color: #FF0055;
-        color: white;
+        background-color: #FF0055; /* Red/Pink Background */
     }
     </style>
     """,
@@ -618,7 +614,9 @@ if df_changes.empty:
     st.info("No price changes recorded today.")
 else:
     col_risers, col_fallers = st.columns(2)
-    # Reusing the 'Stacked Profile' HTML structure for Market Movers
+    # --- SVG ICONS ---
+    icon_up = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>'
+    icon_down = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
     
     with col_risers:
         st.subheader("Price Risers")
@@ -633,7 +631,7 @@ else:
                 html_rows += f"""<tr>
                     <td style="padding-left: 20px;">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <div class="arrow-icon arrow-up">↑</div>
+                            <div class="arrow-icon arrow-up">{icon_up}</div>
                             <img src="{logo_img}" style="width: 35px; height: 35px; object-fit: contain;">
                             <div style="display: flex; flex-direction: column; line-height: 1.2;">
                                 <span style="font-weight: bold; font-size: 1.05rem; color: #FFF;">{row['web_name']}</span>
@@ -662,7 +660,7 @@ else:
                 html_rows += f"""<tr>
                     <td style="padding-left: 20px;">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <div class="arrow-icon arrow-down">↓</div>
+                            <div class="arrow-icon arrow-down">{icon_down}</div>
                             <img src="{logo_img}" style="width: 35px; height: 35px; object-fit: contain;">
                             <div style="display: flex; flex-direction: column; line-height: 1.2;">
                                 <span style="font-weight: bold; font-size: 1.05rem; color: #FFF;">{row['web_name']}</span>
