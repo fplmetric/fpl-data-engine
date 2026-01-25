@@ -25,37 +25,33 @@ st.markdown(
     }
     
     /* === AESTHETIC TABS (FIXED COLOR SCHEME) === */
-    /* Tab Container */
     div[data-baseweb="tab-list"] {
-        gap: 8px; /* Tighter gap */
+        gap: 8px; 
         margin-bottom: 15px;
     }
 
-    /* Individual Tab (Unselected) */
     button[data-baseweb="tab"] {
         font-size: 1rem !important; 
         font-weight: 600 !important; 
         padding: 8px 20px !important; 
-        background-color: transparent !important; /* FIXED: No more black block */
-        border-radius: 30px !important; /* Fully rounded pill */
-        border: 1px solid rgba(255, 255, 255, 0.2) !important; /* Subtle border */
+        background-color: transparent !important; 
+        border-radius: 30px !important; 
+        border: 1px solid rgba(255, 255, 255, 0.2) !important; 
         color: #CCC !important; 
         transition: all 0.3s ease;
     }
 
-    /* Hover State */
     button[data-baseweb="tab"]:hover {
         background-color: rgba(255, 255, 255, 0.05) !important;
         border-color: #FFF !important;
         color: #FFF !important;
     }
 
-    /* Active/Selected Tab */
     button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #37003c !important; /* FPL Deep Purple */
-        color: #00FF85 !important; /* Neon Green Text */
-        border: 1px solid #00FF85 !important; /* Neon Green Border */
-        box-shadow: 0 0 15px rgba(0, 255, 133, 0.15); /* Soft Green Glow */
+        background-color: #37003c !important; 
+        color: #00FF85 !important; 
+        border: 1px solid #00FF85 !important; 
+        box-shadow: 0 0 15px rgba(0, 255, 133, 0.15); 
     }
     
     /* CONTAINER 1: Player Table (Scrollable) */
@@ -108,14 +104,15 @@ st.markdown(
         box-shadow: 0 5px 10px rgba(0,0,0,0.5); 
     }
 
-    /* Corner Radius for Headers */
     .modern-table thead tr:first-child th:first-child { border-top-left-radius: 8px; }
     .modern-table thead tr:first-child th:last-child { border-top-right-radius: 8px; }
 
-    .modern-table th:first-child, .modern-table th:nth-child(2) {
-        text-align: center !important; 
-        padding-left: 0 !important;
+    /* Left Align the new Player Profile Column */
+    .modern-table th:first-child {
+        text-align: left !important; 
+        padding-left: 20px !important;
     }
+
     .modern-table td {
         padding: 12px 12px; 
         border-bottom: 1px solid #2c2c2c; 
@@ -129,22 +126,11 @@ st.markdown(
         background-color: rgba(255, 255, 255, 0.07) !important; 
     }
     
-    /* Badges & Pills */
-    .pos-badge {
-        background-color: #2a2a2a;
-        color: #DDD;
-        padding: 4px 10px;
-        border-radius: 12px; 
-        font-size: 0.75rem;
-        font-weight: bold;
-        border: 1px solid #444;
-    }
     .status-pill {
         display: inline-block;
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        margin-right: 8px;
         box-shadow: 0 0 5px rgba(0,0,0,0.5); 
     }
     
@@ -196,11 +182,8 @@ def get_team_map():
     """Fetches mapping of Team Name -> Code for Logos"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     t_map = {t['name']: t['code'] for t in static['teams']}
-    
-    # FIX: Handle Nottm Forest spelling mismatch manually
     if "Nott'm Forest" in t_map:
         t_map["Nottm Forest"] = t_map["Nott'm Forest"]
-        
     return t_map
 
 # --- FIXTURE TICKER LOGIC ---
@@ -251,10 +234,7 @@ def get_fixture_ticker():
 def get_price_changes():
     """Fetches daily price risers and fallers from FPL API"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
-    
-    # Create Team ID map
     teams = {t['id']: t['name'] for t in static['teams']}
-    
     changes = []
     for p in static['elements']:
         if p['cost_change_event'] != 0:
@@ -265,9 +245,7 @@ def get_price_changes():
                 'change': p['cost_change_event'] / 10,
                 'selected_by_percent': p['selected_by_percent']
             })
-            
-    df_changes = pd.DataFrame(changes)
-    return df_changes
+    return pd.DataFrame(changes)
 
 # --- DATABASE QUERY ---
 query = """
@@ -299,7 +277,7 @@ df['avg_minutes'] = df['minutes'] / df['matches_played']
 df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
-# --- 5. SIDEBAR FILTERS (OPTIMIZED) ---
+# --- 5. SIDEBAR FILTERS ---
 with st.sidebar:
     if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
         col1, mid, col2 = st.columns([1, 5, 1]) 
@@ -323,7 +301,6 @@ with st.sidebar:
     with col_desel:
         st.button("❌ None", on_click=deselect_all_teams, use_container_width=True)
 
-    # --- PERFORMANCE FIX: WRAPPED IN FORM ---
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply' to update.")
         selected_teams = st.multiselect("Select Teams", all_teams, default=all_teams, key='team_selection')
@@ -336,7 +313,6 @@ with st.sidebar:
         st.subheader("🛡️ Work Rate (Per 90)")
         min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
         show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
-        
         submitted = st.form_submit_button("🚀 Apply Filters", use_container_width=True)
 
 # --- 6. FILTER DATA ---
@@ -356,14 +332,11 @@ if not show_unavailable:
     filtered = filtered[~filtered['status'].isin(['i', 'u', 'n', 's'])]
 
 # --- 7. DISPLAY ---
-
-# === 1. BRANDING: Main Page Logo ===
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
     _, col_main_logo, _ = st.columns([3, 2, 3]) 
     with col_main_logo:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
-# === 2. BRANDING: Title ===
 st.markdown("""
 <div style="text-align: center; margin-bottom: 30px;">
     <h1 style="
@@ -382,7 +355,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- AESTHETIC FILTER HINT BANNER ---
 st.markdown(
     """
     <div style="
@@ -418,16 +390,9 @@ st.markdown(f"""
 
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
-    # 1. Threat King (xGI)
     best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
-    
-    # 2. Work Rate (DC/90)
     best_dc = filtered.sort_values('dc_per_90', ascending=False).iloc[0]
-    
-    # 3. Best Value (Total Points / Price)
     best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
-    
-    # 4. Best Points Per Game (PPG)
     best_ppg = filtered.sort_values('points_per_game', ascending=False).iloc[0]
     
     col1.metric("🔥 Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']} xGI")
@@ -436,7 +401,7 @@ if not filtered.empty:
     col4.metric("🧠 Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']} PPG")
 
 # --------------------------------------------------------
-# --- REUSABLE TABLE RENDERER FUNCTION ---
+# --- REUSABLE TABLE RENDERER FUNCTION (UPDATED) ---
 # --------------------------------------------------------
 def render_modern_table(dataframe, column_config, sort_key):
     if dataframe.empty:
@@ -461,12 +426,11 @@ def render_modern_table(dataframe, column_config, sort_key):
         selected_label = st.selectbox(f"Sort by:", options_labels, key=sort_key)
         selected_col = options_keys[options_labels.index(selected_label)]
         
-    # --- PERFORMANCE FIX: Limit to Top 100 ---
     sorted_df = dataframe.sort_values(selected_col, ascending=False).head(100)
     team_map = get_team_map()
     
-    # --- HEADER CONSTRUCTION ---
-    base_headers = ["Name", "Team", "Pos", "Price", "Own%", "Matches"]
+    # --- HEADER CONSTRUCTION (Merged Player Column) ---
+    base_headers = ["Player", "Price", "Own%", "Matches"]
     dynamic_headers = list(column_config.values())
     all_headers = base_headers + dynamic_headers
     header_html = "".join([f"<th>{h}</th>" for h in all_headers])
@@ -475,8 +439,8 @@ def render_modern_table(dataframe, column_config, sort_key):
     for _, row in sorted_df.iterrows():
         row_style = ""
         text_color = "#E0E0E0"
+        # Status Dot Logic
         status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
-        
         status = row['status']
         if status in ['i', 'u', 'n', 's']: 
             row_style = 'background-color: #4A0000;' 
@@ -490,11 +454,22 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # --- FIXED METADATA CELLS ---
+        # --- NEW STACKED PLAYER PROFILE CELL ---
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
-        html_rows += f"""<td style="font-weight: bold; font-size: 1rem; padding-left: 15px;">{status_dot} {row['web_name']}</td>"""
-        html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none; padding-left: 15px;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
-        html_rows += f"""<td><span class="pos-badge">{row['position']}</span></td>"""
+        html_rows += f"""
+        <td style="padding-left: 20px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 10px; display: flex; justify-content: center;">{status_dot}</div>
+                <img src="{logo_img}" style="width: 35px; height: 35px; object-fit: contain;">
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-weight: bold; font-size: 1.05rem; color: #FFF;">{row['web_name']}</span>
+                    <span style="font-size: 0.85rem; color: #AAA; font-weight: 500;">
+                        {row['team_name']} <span style="opacity: 0.5;">|</span> {row['position']}
+                    </span>
+                </div>
+            </div>
+        </td>
+        """
         
         s_price = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'cost' else "text-align: center;"
         html_rows += f"""<td style="{s_price}">£{row['cost']}</td>"""
@@ -505,7 +480,6 @@ def render_modern_table(dataframe, column_config, sort_key):
         s_match = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'matches_played' else "text-align: center;"
         html_rows += f"""<td style="{s_match}">{int(row['matches_played'])}</td>"""
         
-        # --- DYNAMIC CELLS ---
         for col_name in column_config.keys():
             val = row[col_name]
             display_val = val
@@ -608,23 +582,18 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 5. MARKET MOVERS (PRICE CHANGES)
+# 5. MARKET MOVERS
 st.markdown("---")
 st.header("📈 Market Movers (Today)")
 
 df_changes = get_price_changes()
-team_map = get_team_map()
-
 if df_changes.empty:
     st.info("No price changes recorded today.")
 else:
     col_risers, col_fallers = st.columns(2)
-    
-    # --- RISERS ---
     with col_risers:
         st.subheader("🚀 Price Risers")
         risers = df_changes[df_changes['change'] > 0].sort_values('change', ascending=False)
-        
         if risers.empty:
             st.info("No risers today.")
         else:
@@ -632,29 +601,18 @@ else:
             for _, row in risers.iterrows():
                 t_code = get_team_map().get(row['team'], 0)
                 logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
-                
                 html_rows += f"""<tr>
                     <td style="font-weight: bold; padding-left: 15px;">{row['web_name']}</td>
                     <td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team']}</td>
                     <td style="text-align: center;">£{row['cost']}</td>
                     <td style="text-align: center; color: #00FF85; font-weight: bold;">+£{row['change']}</td>
                 </tr>"""
-            
-            html_table = f"""
-            <div class="player-table-container" style="max-height: 300px;">
-                <table class="modern-table">
-                    <thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead>
-                    <tbody>{html_rows}</tbody>
-                </table>
-            </div>
-            """
+            html_table = f"""<div class="player-table-container" style="max-height: 300px;"><table class="modern-table"><thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead><tbody>{html_rows}</tbody></table></div>"""
             st.markdown(html_table, unsafe_allow_html=True)
 
-    # --- FALLERS ---
     with col_fallers:
         st.subheader("📉 Price Fallers")
         fallers = df_changes[df_changes['change'] < 0].sort_values('change', ascending=True)
-        
         if fallers.empty:
             st.info("No fallers today.")
         else:
@@ -662,22 +620,13 @@ else:
             for _, row in fallers.iterrows():
                 t_code = get_team_map().get(row['team'], 0)
                 logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
-                
                 html_rows += f"""<tr>
                     <td style="font-weight: bold; padding-left: 15px;">{row['web_name']}</td>
                     <td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team']}</td>
                     <td style="text-align: center;">£{row['cost']}</td>
                     <td style="text-align: center; color: #FF0055; font-weight: bold;">-£{abs(row['change'])}</td>
                 </tr>"""
-            
-            html_table = f"""
-            <div class="player-table-container" style="max-height: 300px;">
-                <table class="modern-table">
-                    <thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead>
-                    <tbody>{html_rows}</tbody>
-                </table>
-            </div>
-            """
+            html_table = f"""<div class="player-table-container" style="max-height: 300px;"><table class="modern-table"><thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead><tbody>{html_rows}</tbody></table></div>"""
             st.markdown(html_table, unsafe_allow_html=True)
 
 # --- FOOTER ---
