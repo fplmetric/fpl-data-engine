@@ -9,13 +9,47 @@ import requests
 # --- 1. SETUP ---
 st.set_page_config(page_title="FPL Metric", page_icon="favicon.png", layout="wide")
 
-# --- CUSTOM CSS FIX ---
+# --- CUSTOM CSS ---
 st.markdown(
     """
     <style>
+    /* Multiselect Tags */
     span[data-baseweb="tag"] {
         color: black !important;
         font-weight: bold;
+    }
+    
+    /* Custom Fixture Table Styling */
+    .fixture-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: sans-serif;
+        font-size: 0.9rem;
+    }
+    .fixture-table th {
+        background-color: #262730;
+        color: #FFFFFF;
+        padding: 12px;
+        text-align: left;
+        border-bottom: 2px solid #444;
+    }
+    .fixture-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #333;
+        color: #E0E0E0;
+    }
+    .fixture-table tr:hover {
+        background-color: #2A2B35;
+    }
+    
+    /* Difficulty Colors (Badges) */
+    .diff-badge {
+        display: block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        text-align: center;
+        font-weight: bold;
+        color: #000;
     }
     </style>
     """,
@@ -36,10 +70,7 @@ except Exception as e:
 # --- FIXTURE TICKER LOGIC ---
 @st.cache_data(ttl=3600) 
 def get_fixture_ticker():
-    # Fetch bootstrap data for Teams AND Team Codes (needed for logos)
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
-    
-    # Map: ID -> {Name, ShortName, Code}
     teams = {
         t['id']: {
             'name': t['name'], 
@@ -48,22 +79,18 @@ def get_fixture_ticker():
         } 
         for t in static['teams']
     }
-    
     fixtures = requests.get('https://fantasy.premierleague.com/api/fixtures/?future=1').json()
     
     ticker_data = []
     
     for team_id, team_info in teams.items():
-        # Get next 5 matches
         team_fixtures = [f for f in fixtures if f['team_h'] == team_id or f['team_a'] == team_id][:5]
-        
-        # Build the URL for the team badge
         logo_url = f"https://resources.premierleague.com/premierleague/badges/20/t{team_info['code']}.png"
         
         row = {
             'Logo': logo_url, 
             'Team': team_info['name'], 
-            'Total Difficulty': 0 # Sum of difficulties
+            'Total Difficulty': 0 
         }
         
         for i, f in enumerate(team_fixtures):
@@ -73,40 +100,16 @@ def get_fixture_ticker():
             opponent_short = teams[opponent_id]['short']
             loc = "(H)" if is_home else "(A)"
             
-            # Column Name: GW + Event Number
             col_name = f"GW{f['event']}"
             row[col_name] = f"{opponent_short} {loc}"
             
-            # Store difficulty for sorting and styling
+            # Store difficulty data
             row['Total Difficulty'] += difficulty 
-            # IMPORTANT: Store specific GW difficulty for the "Sort by GW" feature
             row[f'Dif_{col_name}'] = difficulty 
 
         ticker_data.append(row)
         
     return pd.DataFrame(ticker_data)
-
-def style_ticker_row(row):
-    """Colors the fixture cells based on the hidden difficulty values."""
-    styles = []
-    
-    colors = {
-        2: 'background-color: #00FF85; color: black; font-weight: bold', # Green (Easy)
-        3: 'background-color: #EBEBEB; color: black; font-weight: bold', # Grey (Medium)
-        4: 'background-color: #FF0055; color: white; font-weight: bold', # Red (Hard)
-        5: 'background-color: #680808; color: white; font-weight: bold'  # Dark Red (Very Hard)
-    }
-
-    for col in row.index:
-        if str(col).startswith('GW'):
-            dif_key = f'Dif_{col}'
-            difficulty = row.get(dif_key, 3) 
-            style = colors.get(difficulty, colors[3])
-            styles.append(style)
-        else:
-            styles.append('')
-            
-    return styles
 
 # --- DATABASE QUERY ---
 query = """
@@ -197,7 +200,6 @@ if not show_unavailable:
     filtered = filtered[filtered['status'] == 'a']
 
 # --- 7. DISPLAY ---
-# 1. TITLE & BADGE
 st.title("FPL Metric Scouting Dashboard")
 st.markdown(f"""
 <div style="display: flex; align-items: center; margin-bottom: 20px;">
@@ -210,7 +212,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 2. METRICS
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xg = filtered.sort_values('xg', ascending=False).iloc[0]
@@ -222,7 +223,7 @@ if not filtered.empty:
     col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
     col4.metric("🧠 AVG Points", f"{filtered['points_per_game'].mean():.2f}", "PPG")
 
-# 3. DATA TABLE (MOVED UP)
+# 3. DATA TABLE
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate "])
 if not filtered.empty:
     styled_df = filtered.style.apply(highlight_status, axis=1)
@@ -273,13 +274,13 @@ with tab4:
         }
     )
 
-# 4. FIXTURE TICKER (MOVED DOWN)
-st.markdown("---") # Visual separator
+# 4. FIXTURE TICKER (HTML Version for Merged Cells)
+st.markdown("---") 
 st.header("📅 Fixture Difficulty Ticker")
 
 ticker_df = get_fixture_ticker()
 
-# Sort Logic
+# --- SORT LOGIC ---
 gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
 sort_options = ["Total Difficulty (Next 5)"] + gw_cols
 sort_choice = st.selectbox("Sort Table By:", sort_options)
@@ -291,22 +292,54 @@ else:
     if target_dif_col in ticker_df.columns:
         ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
 
-display_cols = ['Logo', 'Team'] + gw_cols
-styled_ticker = ticker_df.style.apply(style_ticker_row, axis=1)
+# --- HTML GENERATION ---
+# This block builds a custom HTML table because st.dataframe can't merge images into text cells
+html_table = "<table class='fixture-table'>"
+html_table += "<thead><tr><th>Team</th>"
+for col in gw_cols:
+    html_table += f"<th>{col}</th>"
+html_table += "</tr></thead><tbody>"
 
-st.dataframe(
-    styled_ticker,
-    column_order=display_cols,
-    use_container_width=True,
-    hide_index=True,
-    column_config={
-        "Logo": st.column_config.ImageColumn(" ", width="small"),
-        "Team": st.column_config.TextColumn("Team", width="medium"),
-    }
-)
-st.caption("Use the dropdown to sort by the easiest fixtures for a specific Gameweek. Green = Easy, Red = Hard.")
+# Define colors
+colors = {
+    2: '#00FF85', # Green
+    3: '#EBEBEB', # Grey
+    4: '#FF0055', # Red
+    5: '#680808'  # Dark Red
+}
+text_colors = {2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
-# --- FOOTER (NOW WITH X HANDLE) ---
+for index, row in ticker_df.iterrows():
+    # 1. Merged Logo + Team Cell
+    html_table += f"""
+    <tr>
+        <td style="display: flex; align-items: center; border-bottom: none;">
+            <img src="{row['Logo']}" style="width: 25px; margin-right: 12px;">
+            <span style="font-weight: bold; font-size: 1rem;">{row['Team']}</span>
+        </td>
+    """
+    
+    # 2. Fixture Cells with Colors
+    for col in gw_cols:
+        dif_key = f'Dif_{col}'
+        difficulty = row.get(dif_key, 3)
+        bg_color = colors.get(difficulty, '#EBEBEB')
+        txt_color = text_colors.get(difficulty, 'black')
+        
+        html_table += f"""
+        <td>
+            <span class='diff-badge' style='background-color: {bg_color}; color: {txt_color};'>
+                {row[col]}
+            </span>
+        </td>
+        """
+    html_table += "</tr>"
+
+html_table += "</tbody></table>"
+st.markdown(html_table, unsafe_allow_html=True)
+st.caption("Use the dropdown to sort by the easiest fixtures for a specific Gameweek.")
+
+# --- FOOTER ---
 st.markdown("---")
 st.markdown(
     """
