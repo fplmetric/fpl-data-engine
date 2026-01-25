@@ -23,11 +23,12 @@ st.markdown(
     .player-table-container {
         max-height: 500px; 
         overflow-y: auto; 
-        border: 1px solid #444; /* Slightly lighter border */
+        border: 1px solid #444;
         border-radius: 4px;
         margin-bottom: 20px;
-        position: relative; /* Context for sticky header */
-        background-color: #0E1117; /* Match app bg */
+        position: relative;
+        padding: 0; /* FIXED: Removes gap causing scroll bleed */
+        /* Removed background-color here to let status colors shine */
     }
 
     /* CONTAINER 2: Fixture Ticker (Full View) */
@@ -36,6 +37,7 @@ st.markdown(
         border: 1px solid #444;
         border-radius: 4px;
         overflow-x: auto;
+        padding: 0;
     }
 
     /* MODERN TABLE STYLING */
@@ -43,9 +45,10 @@ st.markdown(
         width: 100%;
         border-collapse: collapse;
         font-family: 'Source Sans Pro', sans-serif;
+        border-spacing: 0;
     }
     .modern-table th {
-        background-color: #37003c; /* FIXED: FPL Purple Header */
+        background-color: #37003c; /* FPL Purple Header */
         color: #FFFFFF;
         padding: 14px 10px;
         text-align: center;
@@ -56,8 +59,10 @@ st.markdown(
         /* Sticky Header Logic */
         position: sticky;
         top: 0;
-        z-index: 10; /* Force on top */
-        box-shadow: 0 2px 5px rgba(0,0,0,0.3); /* Shadow to cover scrolling rows */
+        z-index: 10;
+        /* FIXED: Stronger shadow and negative margin to seal gap */
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); 
+        margin-top: -1px; 
     }
     .modern-table th:first-child, .modern-table th:nth-child(2) {
         text-align: left; 
@@ -68,10 +73,12 @@ st.markdown(
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
-        background-color: transparent; /* Allows hover/status colors to show */
+        /* FIXED: Force transparent so row color shows */
+        background-color: transparent !important; 
     }
     .modern-table tr:hover td {
-        background-color: rgba(255, 255, 255, 0.05);
+        /* Subtle hover that doesn't hide status colors */
+        background-color: rgba(255, 255, 255, 0.05) !important;
     }
     
     /* Badges & Pills */
