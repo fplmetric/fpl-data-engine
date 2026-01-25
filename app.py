@@ -218,7 +218,6 @@ def get_price_changes():
     """Fetches daily price risers and fallers from FPL API"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     
-    # Create Team ID map
     teams = {t['id']: t['name'] for t in static['teams']}
     
     changes = []
@@ -265,7 +264,7 @@ df['avg_minutes'] = df['minutes'] / df['matches_played']
 df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
-# --- 5. SIDEBAR FILTERS ---
+# --- 5. SIDEBAR FILTERS (OPTIMIZED) ---
 with st.sidebar:
     if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
         col1, mid, col2 = st.columns([1, 5, 1]) 
@@ -289,20 +288,28 @@ with st.sidebar:
     with col_desel:
         st.button("❌ None", on_click=deselect_all_teams, use_container_width=True)
 
-    selected_teams = st.multiselect("Select Teams", all_teams, default=all_teams, key='team_selection')
-    position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
-    max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
-    max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
-    st.subheader("⚙️ Reliability")
-    
-    min_avg_mins = st.slider("Avg Minutes per Match", 0, 90, 0) 
-    min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
-    
-    st.subheader("🛡️ Work Rate (Per 90)")
-    min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
-    show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
+    # --- PERFORMANCE FIX: WRAPPED IN FORM ---
+    with st.form("filter_form"):
+        st.caption("Adjust filters and click 'Apply' to update.")
+        selected_teams = st.multiselect("Select Teams", all_teams, default=all_teams, key='team_selection')
+        position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
+        max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
+        max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
+        st.subheader("⚙️ Reliability")
+        min_avg_mins = st.slider("Avg Minutes per Match", 0, 90, 0) 
+        min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
+        st.subheader("🛡️ Work Rate (Per 90)")
+        min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
+        show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
+        
+        # This button triggers the re-run ONCE
+        submitted = st.form_submit_button("🚀 Apply Filters", use_container_width=True)
 
 # --- 6. FILTER DATA ---
+# This filter logic runs every time, but visual updates only happen on 'submitted' if controlled manually.
+# In Streamlit, form values are only updated in 'session_state' after submit.
+# Effectively, 'selected_teams' variable holds the LAST submitted value.
+
 df = df[df['minutes'] >= 90]
 
 filtered = df[
@@ -315,7 +322,6 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# --- FILTER LOGIC ---
 if not show_unavailable:
     filtered = filtered[~filtered['status'].isin(['i', 'u', 'n', 's'])]
 
@@ -400,7 +406,6 @@ def render_modern_table(dataframe, column_config, sort_key):
         return
 
     # --- SORTING LOGIC ---
-    # FIXED: "Total Points" is NOT in default. It is added via column_config only if needed.
     sort_options = {
         "cost": "Price",
         "selected_by_percent": "Ownership",
@@ -418,7 +423,8 @@ def render_modern_table(dataframe, column_config, sort_key):
         selected_label = st.selectbox(f"Sort by:", options_labels, key=sort_key)
         selected_col = options_keys[options_labels.index(selected_label)]
         
-    sorted_df = dataframe.sort_values(selected_col, ascending=False)
+    # --- PERFORMANCE FIX: Limit to Top 100 ---
+    sorted_df = dataframe.sort_values(selected_col, ascending=False).head(100)
     team_map = get_team_map()
     
     # --- HEADER CONSTRUCTION ---
@@ -493,13 +499,7 @@ def render_modern_table(dataframe, column_config, sort_key):
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate"])
 
 with tab1:
-    # FIXED: Added Total Points (Pts) to Overview columns
-    cols = { 
-        "total_points": "Pts", 
-        "points_per_game": "PPG", 
-        "avg_minutes": "Mins/Gm", 
-        "news": "News" 
-    }
+    cols = { "total_points": "Pts", "points_per_game": "PPG", "avg_minutes": "Mins/Gm", "news": "News" }
     render_modern_table(filtered, cols, "sort_overview")
 
 with tab2:
