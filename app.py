@@ -20,7 +20,6 @@ st.markdown(
     }
     
     /* DROPDOWN CURSOR FIX */
-    /* Forces the 'Hand' cursor on all Selectbox/Dropdown elements */
     div[data-baseweb="select"] > div {
         cursor: pointer !important;
     }
@@ -366,8 +365,10 @@ def render_modern_table(dataframe, column_config, sort_key):
             if col_name in ['matches_played', 'avg_minutes', 'total_points', 'goals_scored', 'assists', 'clean_sheets', 'goals_conceded']:
                 display_val = int(val)
             
+            # --- DYNAMIC HIGHLIGHT LOGIC ---
+            # If this column matches the selected sort column -> GREEN TEXT
             style = "text-align: center;"
-            if "90" in col_name:
+            if col_name == selected_col:
                 style += " font-weight: bold; color: #00FF85;"
                 
             html_rows += f"""<td style="{style}">{display_val}</td>"""
