@@ -28,7 +28,7 @@ st.markdown(
         margin-bottom: 20px;
         position: relative;
         padding: 0; 
-        background-color: transparent; /* FIXED: Removed black bg */
+        background-color: transparent; 
     }
 
     /* CONTAINER 2: Fixture Ticker (Full View) */
@@ -269,8 +269,12 @@ filtered = df[
     (df['points_per_game'] >= min_ppg) &
     (df['dc_per_90'] >= min_dc90)
 ]
+
+# --- FILTER LOGIC FIXED ---
+# If checkbox is UNCHECKED, remove strictly 'Red' statuses (i, u, n, s).
+# This keeps 'Available' (a) AND 'Doubtful' (d) players.
 if not show_unavailable:
-    filtered = filtered[filtered['status'] == 'a']
+    filtered = filtered[~filtered['status'].isin(['i', 'u', 'n', 's'])]
 
 # --- 7. DISPLAY ---
 st.title("FPL Metric Scouting Dashboard")
