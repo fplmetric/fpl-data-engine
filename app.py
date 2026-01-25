@@ -27,7 +27,7 @@ st.markdown(
         margin-bottom: 20px;
     }
     .modern-table th {
-        background-color: #1E1E1E; /* Dark Header */
+        background-color: #1E1E1E;
         color: #E0E0E0;
         padding: 14px 10px;
         text-align: center;
@@ -36,7 +36,7 @@ st.markdown(
         font-size: 0.95rem;
     }
     .modern-table th:first-child, .modern-table th:nth-child(2) {
-        text-align: left; /* Left align Name and Team */
+        text-align: left; 
     }
     .modern-table td {
         padding: 10px 10px;
@@ -46,7 +46,7 @@ st.markdown(
         font-size: 0.9rem;
     }
     .modern-table tr:hover td {
-        filter: brightness(1.1); /* Slight brighten on hover */
+        filter: brightness(1.1);
     }
     
     /* Badges & Pills */
@@ -111,7 +111,6 @@ except Exception as e:
 def get_team_map():
     """Fetches mapping of Team Name -> Code for Logos"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
-    # Map Name -> Code (e.g. "Arsenal" -> 3)
     return {t['name']: t['code'] for t in static['teams']}
 
 # --- FIXTURE TICKER LOGIC ---
@@ -150,7 +149,6 @@ def get_fixture_ticker():
             col_name = f"GW{f['event']}"
             row[col_name] = f"{opponent_short} {loc}"
             
-            # Store difficulty data
             row['Total Difficulty'] += difficulty 
             row[f'Dif_{col_name}'] = difficulty 
 
@@ -188,7 +186,7 @@ df['avg_minutes'] = df['minutes'] / df['matches_played']
 df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
-# --- 4. STYLING FUNCTION (Legacy for other tabs) ---
+# --- 4. STYLING FUNCTION (Legacy) ---
 def highlight_status(row):
     status = row['status']
     if status in ['i', 'u', 'n', 's']:
@@ -279,7 +277,7 @@ else:
 
 # --- TAB 1: MODERN OVERVIEW TABLE ---
 with tab1:
-    # 1. Sort Controls (Since HTML tables don't sort automatically)
+    # 1. Sort Controls
     sort_cols = {
         "Total Points": "total_points",
         "Price": "cost",
@@ -296,52 +294,44 @@ with tab1:
     # Sort the data
     sorted_df = filtered.sort_values(sort_cols[sort_choice], ascending=False)
     
-    # 2. Get Team Mapping for Logos
+    # 2. Get Team Mapping
     team_map = get_team_map()
     
-    # 3. Build HTML Table
+    # 3. Build HTML Table (NO INDENTATION TO FIX BUG)
     html_rows = ""
     for _, row in sorted_df.iterrows():
         # -- Status Coloring --
         row_style = ""
-        text_color = "#E0E0E0" # Default text
-        status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>' # Green dot default
+        text_color = "#E0E0E0"
+        status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
         
         status = row['status']
-        if status in ['i', 'u', 'n', 's']: # Injured/Unavailable
-            row_style = 'background-color: #380E0E;' # Dark Red background
+        if status in ['i', 'u', 'n', 's']: 
+            row_style = 'background-color: #380E0E;'
             text_color = '#FFCCCC'
             status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
-        elif status == 'd': # Doubtful
-            row_style = 'background-color: #383100;' # Dark Yellow background
+        elif status == 'd':
+            row_style = 'background-color: #383100;'
             text_color = '#FFFFA0'
             status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
             
-        # -- Team Logo --
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # -- Row Construction --
-        html_rows += f"""
-        <tr style="{row_style} color: {text_color};">
-            <td style="font-weight: bold; font-size: 1rem;">
-                {status_dot} {row['web_name']}
-            </td>
-            <td style="display: flex; align-items: center; border-bottom: none;">
-                <img src="{logo_img}" style="width: 20px; margin-right: 8px;">
-                {row['team_name']}
-            </td>
-            <td><span class="pos-badge">{row['position']}</span></td>
-            <td style="text-align: center;">£{row['cost']}</td>
-            <td style="text-align: center;">{row['selected_by_percent']}%</td>
-            <td style="text-align: center; font-weight: bold;">{int(row['matches_played'])}</td>
-            <td style="text-align: center;">{row['total_points']}</td>
-            <td style="text-align: center; color: #00FF85;">{row['points_per_game']}</td>
-            <td style="text-align: center;">{int(row['avg_minutes'])}</td>
-            <td style="font-size: 0.8rem; opacity: 0.8;">{row['news']}</td>
-        </tr>
-        """
-        
+        # Construct Row (Flattened Strings)
+        html_rows += f"""<tr style="{row_style} color: {text_color};">"""
+        html_rows += f"""<td style="font-weight: bold; font-size: 1rem;">{status_dot} {row['web_name']}</td>"""
+        html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
+        html_rows += f"""<td><span class="pos-badge">{row['position']}</span></td>"""
+        html_rows += f"""<td style="text-align: center;">£{row['cost']}</td>"""
+        html_rows += f"""<td style="text-align: center;">{row['selected_by_percent']}%</td>"""
+        html_rows += f"""<td style="text-align: center; font-weight: bold;">{int(row['matches_played'])}</td>"""
+        html_rows += f"""<td style="text-align: center;">{row['total_points']}</td>"""
+        html_rows += f"""<td style="text-align: center; color: #00FF85;">{row['points_per_game']}</td>"""
+        html_rows += f"""<td style="text-align: center;">{int(row['avg_minutes'])}</td>"""
+        html_rows += f"""<td style="font-size: 0.8rem; opacity: 0.8;">{row['news']}</td>"""
+        html_rows += "</tr>"
+
     html_table = f"""
     <table class="modern-table">
         <thead>
@@ -365,7 +355,7 @@ with tab1:
     """
     st.markdown(html_table, unsafe_allow_html=True)
 
-# --- OTHER TABS (Keep standard dataframes for deep stats) ---
+# --- OTHER TABS ---
 with tab2: 
     st.dataframe(
         styled_df,
@@ -414,35 +404,23 @@ else:
     if target_dif_col in ticker_df.columns:
         ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
 
-# --- HTML GENERATION ---
-colors = {
-    1: '#375523', 
-    2: '#00FF85', 
-    3: '#EBEBEB', 
-    4: '#FF0055', 
-    5: '#680808'  
-}
-text_colors = {
-    1: 'white',
-    2: 'black',
-    3: 'black',
-    4: 'white',
-    5: 'white'
-}
+# --- HTML GENERATION (Flattened) ---
+colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
+text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
 html_rows = ""
 for index, row in ticker_df.iterrows():
-    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
+    # Team Cell
+    html_rows += f"""<tr><td style="display: flex; align-items: center; border-bottom: 1px solid #333;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>"""
     
-    fixture_cells = ""
+    # Fixture Cells
     for col in gw_cols:
         dif_key = f'Dif_{col}'
         difficulty = row.get(dif_key, 3)
         bg_color = colors.get(difficulty, '#EBEBEB')
         txt_color = text_colors.get(difficulty, 'black')
-        fixture_cells += f'<td><span class="diff-badge" style="background-color: {bg_color}; color: {txt_color};">{row[col]}</span></td>'
-    
-    html_rows += f"<tr>{team_cell}{fixture_cells}</tr>"
+        html_rows += f"""<td><span class="diff-badge" style="background-color: {bg_color}; color: {txt_color};">{row[col]}</span></td>"""
+    html_rows += "</tr>"
 
 header_cols = "".join([f"<th>{col}</th>" for col in gw_cols])
 html_table = f"""
