@@ -21,19 +21,21 @@ st.markdown(
     
     /* CONTAINER 1: Player Table (Scrollable) */
     .player-table-container {
-        max-height: 500px; /* Shows approx 10 rows */
-        overflow-y: auto;  /* Enables vertical scrolling */
-        border: 1px solid #333;
+        max-height: 500px; 
+        overflow-y: auto; 
+        border: 1px solid #444; /* Slightly lighter border */
         border-radius: 4px;
         margin-bottom: 20px;
+        position: relative; /* Context for sticky header */
+        background-color: #0E1117; /* Match app bg */
     }
 
-    /* CONTAINER 2: Fixture Ticker (Full View - No Scroll) */
+    /* CONTAINER 2: Fixture Ticker (Full View) */
     .fixture-table-container {
         width: 100%;
-        border: 1px solid #333;
+        border: 1px solid #444;
         border-radius: 4px;
-        overflow-x: auto; /* Horizontal scroll on mobile only */
+        overflow-x: auto;
     }
 
     /* MODERN TABLE STYLING */
@@ -41,35 +43,35 @@ st.markdown(
         width: 100%;
         border-collapse: collapse;
         font-family: 'Source Sans Pro', sans-serif;
-        background-color: transparent; /* Allows app background to show */
     }
     .modern-table th {
-        background-color: #262730; /* Streamlit Dark Secondary BG */
-        color: #E0E0E0;
+        background-color: #37003c; /* FIXED: FPL Purple Header */
+        color: #FFFFFF;
         padding: 14px 10px;
         text-align: center;
-        border-bottom: 2px solid #444;
+        border-bottom: 2px solid #555;
         font-weight: 600;
         font-size: 0.95rem;
         
         /* Sticky Header Logic */
         position: sticky;
         top: 0;
-        z-index: 2; 
+        z-index: 10; /* Force on top */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3); /* Shadow to cover scrolling rows */
     }
     .modern-table th:first-child, .modern-table th:nth-child(2) {
         text-align: left; 
     }
     .modern-table td {
         padding: 10px 10px;
-        border-bottom: 1px solid #333; /* Thinner separator */
+        border-bottom: 1px solid #333;
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
-        background-color: transparent; /* FIXED: Removed black bg so red/yellow shows */
+        background-color: transparent; /* Allows hover/status colors to show */
     }
     .modern-table tr:hover td {
-        background-color: rgba(255, 255, 255, 0.05); /* Subtle bright overlay for hover */
+        background-color: rgba(255, 255, 255, 0.05);
     }
     
     /* Badges & Pills */
