@@ -33,7 +33,7 @@ st.markdown(
         margin-bottom: 20px;
         position: relative;
         padding: 0; 
-        background-color: transparent; /* FIXED: Transparent Background */
+        background-color: transparent; 
         box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
     }
 
@@ -44,7 +44,7 @@ st.markdown(
         border-radius: 8px;
         overflow-x: auto;
         padding: 0;
-        background-color: transparent; /* FIXED: Transparent Background */
+        background-color: transparent;
     }
 
     /* MODERN TABLE STYLING */
@@ -88,7 +88,7 @@ st.markdown(
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
-        background-color: transparent !important; /* FIXED: Force Transparent */
+        background-color: transparent !important; 
         transition: background-color 0.2s ease; 
     }
     .modern-table tr:hover td {
@@ -211,6 +211,29 @@ def get_fixture_ticker():
         ticker_data.append(row)
         
     return pd.DataFrame(ticker_data)
+
+# --- PRICE CHANGE LOGIC ---
+@st.cache_data(ttl=3600)
+def get_price_changes():
+    """Fetches daily price risers and fallers from FPL API"""
+    static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
+    
+    # Create Team ID map
+    teams = {t['id']: t['name'] for t in static['teams']}
+    
+    changes = []
+    for p in static['elements']:
+        if p['cost_change_event'] != 0:
+            changes.append({
+                'web_name': p['web_name'],
+                'team': teams[p['team']],
+                'cost': p['now_cost'] / 10,
+                'change': p['cost_change_event'] / 10,
+                'selected_by_percent': p['selected_by_percent']
+            })
+            
+    df_changes = pd.DataFrame(changes)
+    return df_changes
 
 # --- DATABASE QUERY ---
 query = """
@@ -377,7 +400,7 @@ def render_modern_table(dataframe, column_config, sort_key):
         return
 
     # --- SORTING LOGIC ---
-    # FIXED: "Total Points" removed from default sort options
+    # FIXED: "Total Points" is NOT in default. It is added via column_config only if needed.
     sort_options = {
         "cost": "Price",
         "selected_by_percent": "Ownership",
@@ -547,6 +570,79 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# 5. MARKET MOVERS (PRICE CHANGES)
+st.markdown("---")
+st.header("📈 Market Movers (Today)")
+
+df_changes = get_price_changes()
+team_map = get_team_map()
+
+if df_changes.empty:
+    st.info("No price changes recorded today.")
+else:
+    col_risers, col_fallers = st.columns(2)
+    
+    # --- RISERS ---
+    with col_risers:
+        st.subheader("🚀 Price Risers")
+        risers = df_changes[df_changes['change'] > 0].sort_values('change', ascending=False)
+        
+        if risers.empty:
+            st.info("No risers today.")
+        else:
+            html_rows = ""
+            for _, row in risers.iterrows():
+                t_code = get_team_map().get(row['team'], 0)
+                logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
+                
+                html_rows += f"""<tr>
+                    <td style="font-weight: bold; padding-left: 15px;">{row['web_name']}</td>
+                    <td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team']}</td>
+                    <td style="text-align: center;">£{row['cost']}</td>
+                    <td style="text-align: center; color: #00FF85; font-weight: bold;">+£{row['change']}</td>
+                </tr>"""
+            
+            html_table = f"""
+            <div class="player-table-container" style="max-height: 300px;">
+                <table class="modern-table">
+                    <thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead>
+                    <tbody>{html_rows}</tbody>
+                </table>
+            </div>
+            """
+            st.markdown(html_table, unsafe_allow_html=True)
+
+    # --- FALLERS ---
+    with col_fallers:
+        st.subheader("📉 Price Fallers")
+        fallers = df_changes[df_changes['change'] < 0].sort_values('change', ascending=True)
+        
+        if fallers.empty:
+            st.info("No fallers today.")
+        else:
+            html_rows = ""
+            for _, row in fallers.iterrows():
+                t_code = get_team_map().get(row['team'], 0)
+                logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
+                
+                html_rows += f"""<tr>
+                    <td style="font-weight: bold; padding-left: 15px;">{row['web_name']}</td>
+                    <td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team']}</td>
+                    <td style="text-align: center;">£{row['cost']}</td>
+                    <td style="text-align: center; color: #FF0055; font-weight: bold;">-£{abs(row['change'])}</td>
+                </tr>"""
+            
+            html_table = f"""
+            <div class="player-table-container" style="max-height: 300px;">
+                <table class="modern-table">
+                    <thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead>
+                    <tbody>{html_rows}</tbody>
+                </table>
+            </div>
+            """
+            st.markdown(html_table, unsafe_allow_html=True)
+
+# --- FOOTER ---
 st.markdown("---")
 st.markdown(
     """
