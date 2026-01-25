@@ -41,13 +41,14 @@ st.markdown(
         width: 100%;
         border-collapse: collapse;
         font-family: 'Source Sans Pro', sans-serif;
+        background-color: transparent; /* Allows app background to show */
     }
     .modern-table th {
-        background-color: #1E1E1E;
+        background-color: #262730; /* Streamlit Dark Secondary BG */
         color: #E0E0E0;
         padding: 14px 10px;
         text-align: center;
-        border-bottom: 2px solid #333;
+        border-bottom: 2px solid #444;
         font-weight: 600;
         font-size: 0.95rem;
         
@@ -61,15 +62,14 @@ st.markdown(
     }
     .modern-table td {
         padding: 10px 10px;
-        border-bottom: 1px solid #2C2C2C;
+        border-bottom: 1px solid #333; /* Thinner separator */
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
-        background-color: #0E1117; 
+        background-color: transparent; /* FIXED: Removed black bg so red/yellow shows */
     }
     .modern-table tr:hover td {
-        filter: brightness(1.2);
-        background-color: #161920;
+        background-color: rgba(255, 255, 255, 0.05); /* Subtle bright overlay for hover */
     }
     
     /* Badges & Pills */
@@ -92,11 +92,11 @@ st.markdown(
     /* Fixture Ticker Specifics */
     .diff-badge {
         display: block;
-        padding: 8px 6px; /* Bigger padding for ticker */
+        padding: 8px 6px; 
         border-radius: 6px;
         text-align: center;
         font-weight: bold;
-        font-size: 0.9rem; /* Slightly larger font */
+        font-size: 0.9rem; 
         width: 100%;
     }
     .fdr-legend {
@@ -330,11 +330,13 @@ with tab1:
         
         status = row['status']
         if status in ['i', 'u', 'n', 's']: 
-            row_style = 'background-color: #380E0E;'
+            # DARK RED background for injured
+            row_style = 'background-color: #4A0000;' 
             text_color = '#FFCCCC'
             status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
         elif status == 'd':
-            row_style = 'background-color: #383100;'
+            # DARK YELLOW background for doubtful
+            row_style = 'background-color: #4A3F00;' 
             text_color = '#FFFFA0'
             status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
             
@@ -428,7 +430,7 @@ else:
     if target_dif_col in ticker_df.columns:
         ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
 
-# --- HTML GENERATION ---
+# --- HTML GENERATION (Flattened) ---
 colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
 text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
