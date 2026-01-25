@@ -50,11 +50,37 @@ st.markdown(
     .diff-badge {
         display: block;
         padding: 6px 4px;
-        border-radius: 6px;
+        border-radius: 4px;
         text-align: center;
         font-weight: bold;
         font-size: 0.85rem;
         width: 100%;
+    }
+
+    /* FDR Legend Styling */
+    .fdr-legend {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+        font-family: sans-serif;
+        font-size: 0.85rem;
+        color: #B0B0B0;
+        align-items: center;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .legend-box {
+        width: 25px;
+        height: 25px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: black; /* Default text color */
     }
     </style>
     """,
@@ -279,7 +305,7 @@ with tab4:
         }
     )
 
-# 4. FIXTURE TICKER (HTML Version for Merged Cells)
+# 4. FIXTURE TICKER
 st.markdown("---") 
 st.header("📅 Fixture Difficulty Ticker")
 
@@ -297,17 +323,28 @@ else:
     if target_dif_col in ticker_df.columns:
         ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
 
-# --- HTML GENERATION (Flattened to avoid Indentation Error) ---
-# We build the HTML string carefully to avoid Markdown 'code block' triggering
-html_rows = ""
-colors = {2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
-text_colors = {2: 'black', 3: 'black', 4: 'white', 5: 'white'}
+# --- HTML GENERATION ---
+# 1. Colors Setup
+colors = {
+    1: '#375523', # Dark Green
+    2: '#00FF85', # Green (Official Neon)
+    3: '#EBEBEB', # Grey
+    4: '#FF0055', # Pinkish Red
+    5: '#680808'  # Dark Red
+}
+text_colors = {
+    1: 'white',
+    2: 'black',
+    3: 'black',
+    4: 'white',
+    5: 'white'
+}
 
+# 2. Build Rows (No Indentation to fix Display Bug)
+html_rows = ""
 for index, row in ticker_df.iterrows():
-    # Build the merged Logo+Name cell
     team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
     
-    # Build the fixture cells
     fixture_cells = ""
     for col in gw_cols:
         dif_key = f'Dif_{col}'
@@ -318,7 +355,7 @@ for index, row in ticker_df.iterrows():
     
     html_rows += f"<tr>{team_cell}{fixture_cells}</tr>"
 
-# Construct the final table header
+# 3. Build Table Header
 header_cols = "".join([f"<th>{col}</th>" for col in gw_cols])
 html_table = f"""
 <table class="fixture-table">
@@ -335,7 +372,19 @@ html_table = f"""
 """
 
 st.markdown(html_table, unsafe_allow_html=True)
-st.caption("Use the dropdown to sort by the easiest fixtures for a specific Gameweek.")
+
+# 4. LEGEND (FDR Key)
+st.markdown("""
+<div class="fdr-legend">
+    <span style="font-weight:bold; color: white;">FDR Key:</span>
+    <div class="legend-item"><div class="legend-box" style="background-color: #375523; color: white;">1</div> Easy</div>
+    <div class="legend-item"><div class="legend-box" style="background-color: #00FF85;">2</div></div>
+    <div class="legend-item"><div class="legend-box" style="background-color: #EBEBEB;">3</div></div>
+    <div class="legend-item"><div class="legend-box" style="background-color: #FF0055; color: white;">4</div></div>
+    <div class="legend-item"><div class="legend-box" style="background-color: #680808; color: white;">5</div> Hard</div>
+</div>
+""", unsafe_allow_html=True)
+
 
 # --- FOOTER ---
 st.markdown("---")
