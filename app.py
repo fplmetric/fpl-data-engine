@@ -29,96 +29,75 @@ st.markdown(
         max-height: 500px; 
         overflow-y: auto; 
         border: 1px solid #444;
-        border-radius: 8px; /* Softer corners for container */
+        border-radius: 4px;
         margin-bottom: 20px;
         position: relative;
         padding: 0; 
-        background-color: #121212; /* Dark background for table area */
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        background-color: transparent; 
     }
 
     /* CONTAINER 2: Fixture Ticker (Full View) */
     .fixture-table-container {
         width: 100%;
         border: 1px solid #444;
-        border-radius: 8px;
+        border-radius: 4px;
         overflow-x: auto;
         padding: 0;
-        background-color: #121212;
     }
 
     /* MODERN TABLE STYLING */
     .modern-table {
         width: 100%;
-        border-collapse: separate; /* Allows for border-radius on corners */
-        border-spacing: 0;
+        border-collapse: collapse;
         font-family: 'Source Sans Pro', sans-serif;
+        border-spacing: 0;
     }
-
-    /* === VISUALLY APPEALING HEADERS === */
     .modern-table th {
-        /* Subtle gradient background for depth */
-        background: linear-gradient(to bottom, #5e0066, #37003c);
-        color: #ffffff;
-        padding: 16px 12px;
+        background-color: #37003c; /* FPL Purple Header */
+        color: #FFFFFF;
+        padding: 14px 10px;
         text-align: center;
+        border-bottom: 2px solid #555;
+        font-weight: 600;
+        font-size: 0.95rem;
         
-        /* Modern typography */
-        font-weight: 700;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.4); /* Subtle pop */
-        
-        /* Borders and Separation */
-        border-bottom: none;
-        border-top: 1px solid rgba(255,255,255,0.1); /* Subtle top highlight */
-        
-        /* Sticky Header Logic with strong shadow */
+        /* Sticky Header Logic */
         position: sticky;
         top: 0;
         z-index: 10;
-        box-shadow: 0 5px 10px rgba(0,0,0,0.5); 
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); 
+        margin-top: -1px; 
     }
-
-    /* Rounded corners for top-left and top-right headers */
-    .modern-table thead tr:first-child th:first-child { border-top-left-radius: 8px; }
-    .modern-table thead tr:first-child th:last-child { border-top-right-radius: 8px; }
-
     .modern-table th:first-child, .modern-table th:nth-child(2) {
         text-align: left; 
-        padding-left: 15px;
     }
     .modern-table td {
-        padding: 12px 12px; /* Slightly more padding for rows */
-        border-bottom: 1px solid #2c2c2c; /* subtler separator */
+        padding: 10px 10px;
+        border-bottom: 1px solid #333;
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
         background-color: transparent !important; 
-        transition: background-color 0.2s ease; /* Smooth hover transition */
     }
     .modern-table tr:hover td {
-        background-color: rgba(255, 255, 255, 0.07) !important; /* Brighter hover */
+        background-color: rgba(255, 255, 255, 0.05) !important;
     }
     
     /* Badges & Pills */
     .pos-badge {
-        background-color: #2a2a2a;
+        background-color: #333;
         color: #DDD;
-        padding: 4px 10px;
-        border-radius: 12px; /* More rounded badge */
-        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
         font-weight: bold;
-        border: 1px solid #444;
     }
     .status-pill {
         display: inline-block;
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        margin-right: 8px;
-        box-shadow: 0 0 5px rgba(0,0,0,0.5); /* Glow effect for status */
+        margin-right: 6px;
     }
     
     /* Fixture Ticker Specifics */
@@ -130,7 +109,6 @@ st.markdown(
         font-weight: bold;
         font-size: 0.9rem; 
         width: 100%;
-        box-shadow: inset 0 0 5px rgba(0,0,0,0.2); /* Inner shadow for depth */
     }
     .fdr-legend {
         display: flex;
@@ -146,7 +124,6 @@ st.markdown(
         width: 25px; height: 25px; border-radius: 4px;
         display: flex; align-items: center; justify-content: center;
         font-weight: bold; color: black;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
     </style>
     """,
@@ -309,7 +286,7 @@ st.title("FPL Metric Scouting Dashboard")
 # --- FILTER HINT BANNER ---
 st.markdown(
     """
-    <div style="background-color: #1E1E1E; padding: 10px 15px; border-radius: 5px; border-left: 4px solid #00FF85; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+    <div style="background-color: #1E1E1E; padding: 10px 15px; border-radius: 5px; border-left: 4px solid #00FF85; margin-bottom: 20px;">
         <span style="color: #E0E0E0; font-size: 0.95rem;">
             <strong>Pro Tip:</strong> 👈 Use the <strong>Sidebar</strong> on the left to filter players by 
             <span style="color: #00FF85;">Team</span>, <span style="color: #00FF85;">Position</span>, and <span style="color: #00FF85;">Price</span>.
@@ -324,7 +301,7 @@ st.markdown(f"""
     <span style="font-size: 1.2rem; color: #b0b0b0; margin-right: 15px;">
         Analyze live data, find differentials, and build your winning squad.
     </span>
-    <span style="background-color: #00FF85; color: black; padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,FF,85,0.3);">
+    <span style="background-color: #00FF85; color: black; padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9rem;">
         {len(filtered)} Players Found
     </span>
 </div>
@@ -403,8 +380,8 @@ def render_modern_table(dataframe, column_config, sort_key):
         
         # --- FIXED METADATA CELLS ---
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
-        html_rows += f"""<td style="font-weight: bold; font-size: 1rem; padding-left: 15px;">{status_dot} {row['web_name']}</td>"""
-        html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none; padding-left: 15px;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
+        html_rows += f"""<td style="font-weight: bold; font-size: 1rem;">{status_dot} {row['web_name']}</td>"""
+        html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
         html_rows += f"""<td><span class="pos-badge">{row['position']}</span></td>"""
         
         s_price = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'cost' else "text-align: center;"
@@ -517,7 +494,7 @@ text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
 html_rows = ""
 for index, row in ticker_df.iterrows():
-    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333; padding-left: 15px;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
+    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
     fixture_cells = ""
     for col in gw_cols:
         dif_key = f'Dif_{col}'
