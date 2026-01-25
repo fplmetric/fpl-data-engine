@@ -591,6 +591,8 @@ if df_changes.empty:
     st.info("No price changes recorded today.")
 else:
     col_risers, col_fallers = st.columns(2)
+    # Reusing the 'Stacked Profile' HTML structure for Market Movers
+    
     with col_risers:
         st.subheader("🚀 Price Risers")
         risers = df_changes[df_changes['change'] > 0].sort_values('change', ascending=False)
@@ -602,12 +604,19 @@ else:
                 t_code = get_team_map().get(row['team'], 0)
                 logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
                 html_rows += f"""<tr>
-                    <td style="font-weight: bold; padding-left: 15px;">{row['web_name']}</td>
-                    <td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team']}</td>
+                    <td style="padding-left: 20px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <img src="{logo_img}" style="width: 35px; height: 35px; object-fit: contain;">
+                            <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                                <span style="font-weight: bold; font-size: 1.05rem; color: #FFF;">{row['web_name']}</span>
+                                <span style="font-size: 0.85rem; color: #AAA; font-weight: 500;">{row['team']}</span>
+                            </div>
+                        </div>
+                    </td>
                     <td style="text-align: center;">£{row['cost']}</td>
                     <td style="text-align: center; color: #00FF85; font-weight: bold;">+£{row['change']}</td>
                 </tr>"""
-            html_table = f"""<div class="player-table-container" style="max-height: 300px;"><table class="modern-table"><thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead><tbody>{html_rows}</tbody></table></div>"""
+            html_table = f"""<div class="player-table-container" style="max-height: 300px;"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{html_rows}</tbody></table></div>"""
             st.markdown(html_table, unsafe_allow_html=True)
 
     with col_fallers:
@@ -621,12 +630,19 @@ else:
                 t_code = get_team_map().get(row['team'], 0)
                 logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
                 html_rows += f"""<tr>
-                    <td style="font-weight: bold; padding-left: 15px;">{row['web_name']}</td>
-                    <td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team']}</td>
+                    <td style="padding-left: 20px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <img src="{logo_img}" style="width: 35px; height: 35px; object-fit: contain;">
+                            <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                                <span style="font-weight: bold; font-size: 1.05rem; color: #FFF;">{row['web_name']}</span>
+                                <span style="font-size: 0.85rem; color: #AAA; font-weight: 500;">{row['team']}</span>
+                            </div>
+                        </div>
+                    </td>
                     <td style="text-align: center;">£{row['cost']}</td>
                     <td style="text-align: center; color: #FF0055; font-weight: bold;">-£{abs(row['change'])}</td>
                 </tr>"""
-            html_table = f"""<div class="player-table-container" style="max-height: 300px;"><table class="modern-table"><thead><tr><th>Name</th><th>Team</th><th>Price</th><th>Change</th></tr></thead><tbody>{html_rows}</tbody></table></div>"""
+            html_table = f"""<div class="player-table-container" style="max-height: 300px;"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{html_rows}</tbody></table></div>"""
             st.markdown(html_table, unsafe_allow_html=True)
 
 # --- FOOTER ---
