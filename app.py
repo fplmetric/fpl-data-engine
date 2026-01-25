@@ -28,6 +28,7 @@ st.markdown(
         margin-bottom: 20px;
         position: relative;
         padding: 0; 
+        background-color: transparent; /* FIXED: Removed black bg */
     }
 
     /* CONTAINER 2: Fixture Ticker (Full View) */
@@ -139,7 +140,13 @@ except Exception as e:
 def get_team_map():
     """Fetches mapping of Team Name -> Code for Logos"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
-    return {t['name']: t['code'] for t in static['teams']}
+    t_map = {t['name']: t['code'] for t in static['teams']}
+    
+    # FIX: Handle Nottm Forest spelling mismatch manually
+    if "Nott'm Forest" in t_map:
+        t_map["Nottm Forest"] = t_map["Nott'm Forest"]
+        
+    return t_map
 
 # --- FIXTURE TICKER LOGIC ---
 @st.cache_data(ttl=3600) 
@@ -243,8 +250,6 @@ with st.sidebar:
     max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
     max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
     st.subheader("⚙️ Reliability")
-    
-    # NOTE: We enforce min_avg_mins logic via specific 'minutes' check below
     min_avg_mins = st.slider("Avg Minutes per Match", 0, 90, 0) 
     min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
     
@@ -253,7 +258,6 @@ with st.sidebar:
     show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
 
 # --- 6. FILTER DATA ---
-# GLOBAL FILTER: Exclude players with less than 90 mins played season-wide to fix per/90 skew
 df = df[df['minutes'] >= 90]
 
 filtered = df[
@@ -298,43 +302,29 @@ if not filtered.empty:
 def render_modern_table(dataframe, column_config, sort_key):
     """
     Renders a consistent HTML table for any tab.
-    dataframe: The filtered data.
-    column_config: Dict of {col_name: 'Display Header'}
-    sort_key: Unique key for the selectbox to avoid ID conflicts.
     """
     if dataframe.empty:
         st.info("No players match your filters.")
         return
 
-    # 1. Sorting
     col_sort, _ = st.columns([1, 4])
     with col_sort:
-        # Create a reverse lookup for sorting
         options = list(column_config.keys())
         labels = list(column_config.values())
         selected_label = st.selectbox(f"Sort by:", labels, key=sort_key)
-        
-        # Find the actual column name for the selected label
         selected_col = options[labels.index(selected_label)]
         
     sorted_df = dataframe.sort_values(selected_col, ascending=False)
-    
-    # 2. Get Team Mapping
     team_map = get_team_map()
     
-    # 3. Build Headers
-    # Always include: Name, Team, Pos, Price, Own% (The "Metadata" columns)
-    # Then append the specific columns passed in column_config
     base_headers = ["Name", "Team", "Pos", "Price", "Own%"]
     dynamic_headers = list(column_config.values())
     all_headers = base_headers + dynamic_headers
     
     header_html = "".join([f"<th>{h}</th>" for h in all_headers])
     
-    # 4. Build Rows
     html_rows = ""
     for _, row in sorted_df.iterrows():
-        # -- Status Coloring --
         row_style = ""
         text_color = "#E0E0E0"
         status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
@@ -352,7 +342,6 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # -- Metadata Cells (Fixed) --
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
         html_rows += f"""<td style="font-weight: bold; font-size: 1rem;">{status_dot} {row['web_name']}</td>"""
         html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
@@ -360,18 +349,14 @@ def render_modern_table(dataframe, column_config, sort_key):
         html_rows += f"""<td style="text-align: center;">£{row['cost']}</td>"""
         html_rows += f"""<td style="text-align: center;">{row['selected_by_percent']}%</td>"""
         
-        # -- Dynamic Data Cells --
         for col_name in column_config.keys():
             val = row[col_name]
-            
-            # Formatting logic
             display_val = val
             if isinstance(val, float):
                 display_val = f"{val:.2f}"
             if col_name in ['matches_played', 'avg_minutes', 'total_points', 'goals_scored', 'assists', 'clean_sheets', 'goals_conceded']:
                 display_val = int(val)
             
-            # Highlight 'per 90' stats slightly
             style = "text-align: center;"
             if "90" in col_name:
                 style += " font-weight: bold; color: #00FF85;"
@@ -398,7 +383,6 @@ def render_modern_table(dataframe, column_config, sort_key):
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate"])
 
 with tab1:
-    # Overview Config
     cols = {
         "matches_played": "Matches",
         "total_points": "Pts",
@@ -409,7 +393,6 @@ with tab1:
     render_modern_table(filtered, cols, "sort_overview")
 
 with tab2:
-    # Attack Config
     cols = {
         "xg": "xG",
         "xa": "xA",
@@ -421,7 +404,6 @@ with tab2:
     render_modern_table(filtered, cols, "sort_attack")
 
 with tab3:
-    # Defense Config
     cols = {
         "clean_sheets": "Clean Sheets",
         "goals_conceded": "Conceded",
@@ -431,7 +413,6 @@ with tab3:
     render_modern_table(filtered, cols, "sort_defense")
 
 with tab4:
-    # Work Rate Config
     cols = {
         "def_cons": "Total DC",
         "dc_per_90": "DC/90",
@@ -466,17 +447,16 @@ text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
 html_rows = ""
 for index, row in ticker_df.iterrows():
-    # Team Cell
-    html_rows += f"""<tr><td style="display: flex; align-items: center; border-bottom: 1px solid #333;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>"""
-    
-    # Fixture Cells
+    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
+    fixture_cells = ""
     for col in gw_cols:
         dif_key = f'Dif_{col}'
         difficulty = row.get(dif_key, 3)
         bg_color = colors.get(difficulty, '#EBEBEB')
         txt_color = text_colors.get(difficulty, 'black')
-        html_rows += f"""<td><span class="diff-badge" style="background-color: {bg_color}; color: {txt_color};">{row[col]}</span></td>"""
-    html_rows += "</tr>"
+        fixture_cells += f'<td><span class="diff-badge" style="background-color: {bg_color}; color: {txt_color};">{row[col]}</span></td>'
+    
+    html_rows += f"<tr>{team_cell}{fixture_cells}</tr>"
 
 header_cols = "".join([f"<th>{col}</th>" for col in gw_cols])
 html_table = f"""
