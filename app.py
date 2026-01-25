@@ -33,7 +33,7 @@ st.markdown(
         margin-bottom: 20px;
         position: relative;
         padding: 0; 
-        background-color: transparent; /* FIXED: No Black Background */
+        background-color: transparent; /* FIXED: Transparent Background */
         box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
     }
 
@@ -44,7 +44,7 @@ st.markdown(
         border-radius: 8px;
         overflow-x: auto;
         padding: 0;
-        background-color: transparent; /* FIXED: No Black Background */
+        background-color: transparent; /* FIXED: Transparent Background */
     }
 
     /* MODERN TABLE STYLING */
@@ -244,6 +244,7 @@ df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
 # --- 5. SIDEBAR FILTERS ---
 with st.sidebar:
+    # Sidebar Logo
     if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
         col1, mid, col2 = st.columns([1, 5, 1]) 
         with mid:
@@ -298,7 +299,14 @@ if not show_unavailable:
 
 # --- 7. DISPLAY ---
 
-# === VISUALLY APPEALING TITLE ===
+# === 1. BRANDING: Main Page Logo ===
+if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
+    # Centered Logo Layout
+    _, col_main_logo, _ = st.columns([3, 2, 3]) 
+    with col_main_logo:
+        st.image("fpl_metric_logo.png", use_container_width=True)
+
+# === 2. BRANDING: Title ===
 st.markdown("""
 <div style="text-align: center; margin-bottom: 30px;">
     <h1 style="
