@@ -327,30 +327,26 @@ if not show_unavailable:
 
 # --- 7. DISPLAY ---
 
-# === 1. BRANDING: Main Page Logo ===
-if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-    _, col_main_logo, _ = st.columns([3, 2, 3]) 
-    with col_main_logo:
-        st.image("fpl_metric_logo.png", use_container_width=True)
+# ... (Keep Logo & Title Code same as before) ...
 
-# === 2. BRANDING: Title ===
-st.markdown("""
-<div style="text-align: center; margin-bottom: 30px;">
-    <h1 style="
-        font-size: 3rem;
-        font-weight: 800;
-        background: linear-gradient(to right, #00FF85, #FFFFFF);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 30px rgba(0, 255, 133, 0.3);
-        margin: 0;
-        padding-bottom: 10px;
-    ">
-        FPL Metric Scouting Dashboard
-    </h1>
-    <div style="width: 100px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div>
-</div>
-""", unsafe_allow_html=True)
+col1, col2, col3, col4 = st.columns(4)
+if not filtered.empty:
+    # 1. Threat King (xGI)
+    best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
+    
+    # 2. Work Rate (DC/90)
+    best_dc = filtered.sort_values('dc_per_90', ascending=False).iloc[0]
+    
+    # 3. Best Value (Total Points / Price)
+    best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
+    
+    # 4. Best Points Per Game (PPG) - NEW
+    best_ppg = filtered.sort_values('points_per_game', ascending=False).iloc[0]
+    
+    col1.metric("🔥 Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']} xGI")
+    col2.metric("🛡️ Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}")
+    col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
+    col4.metric("🧠 Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']} PPG")
 
 # --- AESTHETIC FILTER HINT BANNER ---
 st.markdown(
