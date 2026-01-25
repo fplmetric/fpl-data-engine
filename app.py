@@ -24,37 +24,38 @@ st.markdown(
         cursor: pointer !important;
     }
     
-    /* === AESTHETIC TABS === */
+    /* === AESTHETIC TABS (FIXED COLOR SCHEME) === */
     /* Tab Container */
     div[data-baseweb="tab-list"] {
-        gap: 10px; /* Space between tabs */
-        margin-bottom: 20px;
+        gap: 8px; /* Tighter gap */
+        margin-bottom: 15px;
     }
 
     /* Individual Tab (Unselected) */
     button[data-baseweb="tab"] {
-        font-size: 1.1rem !important; /* Larger text */
-        font-weight: 700 !important; /* Bold */
-        padding: 10px 25px !important; /* Bigger click area */
-        background-color: #1E1E1E !important; /* Dark pill background */
-        border-radius: 8px !important;
-        border: 1px solid #333 !important;
-        color: #888 !important; /* Dimmed text */
+        font-size: 1rem !important; 
+        font-weight: 600 !important; 
+        padding: 8px 20px !important; 
+        background-color: transparent !important; /* FIXED: No more black block */
+        border-radius: 30px !important; /* Fully rounded pill */
+        border: 1px solid rgba(255, 255, 255, 0.2) !important; /* Subtle border */
+        color: #CCC !important; 
         transition: all 0.3s ease;
     }
 
     /* Hover State */
     button[data-baseweb="tab"]:hover {
-        border-color: #666 !important;
-        color: #E0E0E0 !important;
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-color: #FFF !important;
+        color: #FFF !important;
     }
 
     /* Active/Selected Tab */
     button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #1E1E1E !important;
+        background-color: #37003c !important; /* FPL Deep Purple */
         color: #00FF85 !important; /* Neon Green Text */
         border: 1px solid #00FF85 !important; /* Neon Green Border */
-        box-shadow: 0 0 10px rgba(0, 255, 133, 0.2); /* Soft Glow */
+        box-shadow: 0 0 15px rgba(0, 255, 133, 0.15); /* Soft Green Glow */
     }
     
     /* CONTAINER 1: Player Table (Scrollable) */
