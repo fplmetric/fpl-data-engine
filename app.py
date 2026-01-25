@@ -315,17 +315,36 @@ def render_modern_table(dataframe, column_config, sort_key):
         st.info("No players match your filters.")
         return
 
+    # --- SORTING LOGIC ---
+    # 1. Define the Global Sort Options available in ALL tabs
+    sort_options = {
+        "total_points": "Total Points",
+        "cost": "Price",
+        "selected_by_percent": "Ownership",
+        "matches_played": "Matches"
+    }
+    # 2. Add Tab-Specific Options
+    sort_options.update(column_config)
+    
+    # 3. Remove "News" from Sort Options (but keep in table if in config)
+    if "news" in sort_options:
+        del sort_options["news"]
+
     col_sort, _ = st.columns([1, 4])
     with col_sort:
-        options = list(column_config.keys())
-        labels = list(column_config.values())
-        selected_label = st.selectbox(f"Sort by:", labels, key=sort_key)
-        selected_col = options[labels.index(selected_label)]
+        # Create list for dropdown
+        options_keys = list(sort_options.keys())
+        options_labels = list(sort_options.values())
+        
+        selected_label = st.selectbox(f"Sort by:", options_labels, key=sort_key)
+        selected_col = options_keys[options_labels.index(selected_label)]
         
     sorted_df = dataframe.sort_values(selected_col, ascending=False)
     team_map = get_team_map()
     
-    base_headers = ["Name", "Team", "Pos", "Price", "Own%"]
+    # --- HEADER CONSTRUCTION ---
+    # Global headers included in ALL tables
+    base_headers = ["Name", "Team", "Pos", "Price", "Own%", "Matches"]
     dynamic_headers = list(column_config.values())
     all_headers = base_headers + dynamic_headers
     
@@ -350,13 +369,25 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
+        # --- FIXED METADATA CELLS (Common to all tabs) ---
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
         html_rows += f"""<td style="font-weight: bold; font-size: 1rem;">{status_dot} {row['web_name']}</td>"""
         html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
         html_rows += f"""<td><span class="pos-badge">{row['position']}</span></td>"""
-        html_rows += f"""<td style="text-align: center;">£{row['cost']}</td>"""
-        html_rows += f"""<td style="text-align: center;">{row['selected_by_percent']}%</td>"""
         
+        # Price Column (Highlight if sorting by Price)
+        s_price = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'cost' else "text-align: center;"
+        html_rows += f"""<td style="{s_price}">£{row['cost']}</td>"""
+        
+        # Ownership Column (Highlight if sorting by Own%)
+        s_own = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'selected_by_percent' else "text-align: center;"
+        html_rows += f"""<td style="{s_own}">{row['selected_by_percent']}%</td>"""
+        
+        # Matches Column (Highlight if sorting by Matches)
+        s_match = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'matches_played' else "text-align: center;"
+        html_rows += f"""<td style="{s_match}">{int(row['matches_played'])}</td>"""
+        
+        # --- DYNAMIC TAB-SPECIFIC CELLS ---
         for col_name in column_config.keys():
             val = row[col_name]
             display_val = val
@@ -365,8 +396,7 @@ def render_modern_table(dataframe, column_config, sort_key):
             if col_name in ['matches_played', 'avg_minutes', 'total_points', 'goals_scored', 'assists', 'clean_sheets', 'goals_conceded']:
                 display_val = int(val)
             
-            # --- DYNAMIC HIGHLIGHT LOGIC ---
-            # If this column matches the selected sort column -> GREEN TEXT
+            # Highlight if this specific column is the one being sorted
             style = "text-align: center;"
             if col_name == selected_col:
                 style += " font-weight: bold; color: #00FF85;"
@@ -394,8 +424,6 @@ tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Def
 
 with tab1:
     cols = {
-        "matches_played": "Matches",
-        "total_points": "Pts",
         "points_per_game": "PPG",
         "avg_minutes": "Mins/Gm",
         "news": "News"
