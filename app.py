@@ -29,89 +29,75 @@ st.markdown(
         max-height: 500px; 
         overflow-y: auto; 
         border: 1px solid #444;
-        border-radius: 8px; 
+        border-radius: 4px;
         margin-bottom: 20px;
         position: relative;
         padding: 0; 
-        background-color: #121212; 
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        background-color: transparent; 
     }
 
     /* CONTAINER 2: Fixture Ticker (Full View) */
     .fixture-table-container {
         width: 100%;
         border: 1px solid #444;
-        border-radius: 8px;
+        border-radius: 4px;
         overflow-x: auto;
         padding: 0;
-        background-color: #121212;
     }
 
     /* MODERN TABLE STYLING */
     .modern-table {
         width: 100%;
-        border-collapse: separate; 
-        border-spacing: 0;
+        border-collapse: collapse;
         font-family: 'Source Sans Pro', sans-serif;
+        border-spacing: 0;
     }
-
-    /* === VISUALLY APPEALING HEADERS === */
     .modern-table th {
-        background: linear-gradient(to bottom, #5e0066, #37003c);
-        color: #ffffff;
-        padding: 16px 12px;
+        background-color: #37003c; /* FPL Purple Header */
+        color: #FFFFFF;
+        padding: 14px 10px;
         text-align: center;
-        font-weight: 700;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.4); 
-        border-bottom: none;
-        border-top: 1px solid rgba(255,255,255,0.1); 
+        border-bottom: 2px solid #555;
+        font-weight: 600;
+        font-size: 0.95rem;
+        
+        /* Sticky Header Logic */
         position: sticky;
         top: 0;
         z-index: 10;
-        box-shadow: 0 5px 10px rgba(0,0,0,0.5); 
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); 
+        margin-top: -1px; 
     }
-
-    /* Corner Radius for Headers */
-    .modern-table thead tr:first-child th:first-child { border-top-left-radius: 8px; }
-    .modern-table thead tr:first-child th:last-child { border-top-right-radius: 8px; }
-
     .modern-table th:first-child, .modern-table th:nth-child(2) {
         text-align: left; 
-        padding-left: 15px;
     }
     .modern-table td {
-        padding: 12px 12px; 
-        border-bottom: 1px solid #2c2c2c; 
+        padding: 10px 10px;
+        border-bottom: 1px solid #333;
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
-        background-color: transparent !important; /* Allows row color to show */
-        transition: background-color 0.2s ease; 
+        background-color: transparent !important; 
     }
     .modern-table tr:hover td {
-        background-color: rgba(255, 255, 255, 0.07) !important; 
+        background-color: rgba(255, 255, 255, 0.05) !important;
     }
     
     /* Badges & Pills */
     .pos-badge {
-        background-color: #2a2a2a;
+        background-color: #333;
         color: #DDD;
-        padding: 4px 10px;
-        border-radius: 12px; 
-        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
         font-weight: bold;
-        border: 1px solid #444;
     }
     .status-pill {
         display: inline-block;
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        margin-right: 8px;
-        box-shadow: 0 0 5px rgba(0,0,0,0.5); 
+        margin-right: 6px;
     }
     
     /* Fixture Ticker Specifics */
@@ -123,7 +109,6 @@ st.markdown(
         font-weight: bold;
         font-size: 0.9rem; 
         width: 100%;
-        box-shadow: inset 0 0 5px rgba(0,0,0,0.2); 
     }
     .fdr-legend {
         display: flex;
@@ -139,7 +124,6 @@ st.markdown(
         width: 25px; height: 25px; border-radius: 4px;
         display: flex; align-items: center; justify-content: center;
         font-weight: bold; color: black;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
     </style>
     """,
@@ -163,7 +147,7 @@ def get_team_map():
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     t_map = {t['name']: t['code'] for t in static['teams']}
     
-    # FIX: Handle Nottm Forest spelling mismatch
+    # FIX: Handle Nottm Forest spelling mismatch manually
     if "Nott'm Forest" in t_map:
         t_map["Nottm Forest"] = t_map["Nott'm Forest"]
         
@@ -280,7 +264,6 @@ with st.sidebar:
     show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
 
 # --- 6. FILTER DATA ---
-# GLOBAL FILTER: 90 Minutes Minimum
 df = df[df['minutes'] >= 90]
 
 filtered = df[
@@ -294,30 +277,19 @@ filtered = df[
 ]
 
 # --- FILTER LOGIC ---
-# If checkbox is UNCHECKED, remove strictly 'Red' statuses (i, u, n, s)
 if not show_unavailable:
     filtered = filtered[~filtered['status'].isin(['i', 'u', 'n', 's'])]
 
 # --- 7. DISPLAY ---
 st.title("FPL Metric Scouting Dashboard")
 
-# --- AESTHETIC FILTER HINT BANNER (Glassmorphism) ---
+# --- FILTER HINT BANNER ---
 st.markdown(
     """
-    <div style="
-        background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
-        border: 1px solid #00FF85;
-        border-radius: 8px;
-        padding: 12px 20px;
-        margin-bottom: 25px;
-        display: flex;
-        align-items: center;
-        box-shadow: 0 4px 10px rgba(0, 255, 133, 0.1);
-    ">
-        <span style="font-size: 1.5rem; margin-right: 15px;">🔭</span>
-        <span style="color: #E0E0E0; font-size: 1rem; font-family: 'Source Sans Pro', sans-serif; letter-spacing: 0.02em;">
-            <strong style="color: #00FF85; text-transform: uppercase;">Scout's Tip:</strong> 
-            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> (top-left) to filter by Team, Position, and Price.
+    <div style="background-color: #1E1E1E; padding: 10px 15px; border-radius: 5px; border-left: 4px solid #00FF85; margin-bottom: 20px;">
+        <span style="color: #E0E0E0; font-size: 0.95rem;">
+            <strong>Pro Tip:</strong> 👈 Use the <strong>Sidebar</strong> on the left to filter players by 
+            <span style="color: #00FF85;">Team</span>, <span style="color: #00FF85;">Position</span>, and <span style="color: #00FF85;">Price</span>.
         </span>
     </div>
     """,
@@ -329,7 +301,7 @@ st.markdown(f"""
     <span style="font-size: 1.2rem; color: #b0b0b0; margin-right: 15px;">
         Analyze live data, find differentials, and build your winning squad.
     </span>
-    <span style="background-color: #00FF85; color: black; padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 0 10px rgba(0,255,133,0.4);">
+    <span style="background-color: #00FF85; color: black; padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9rem;">
         {len(filtered)} Players Found
     </span>
 </div>
@@ -350,6 +322,9 @@ if not filtered.empty:
 # --- REUSABLE TABLE RENDERER FUNCTION ---
 # --------------------------------------------------------
 def render_modern_table(dataframe, column_config, sort_key):
+    """
+    Renders a consistent HTML table for any tab.
+    """
     if dataframe.empty:
         st.info("No players match your filters.")
         return
@@ -366,11 +341,11 @@ def render_modern_table(dataframe, column_config, sort_key):
     if "news" in sort_options:
         del sort_options["news"]
 
-    # Limit width of sort dropdown
     col_sort, _ = st.columns([1, 4])
     with col_sort:
         options_keys = list(sort_options.keys())
         options_labels = list(sort_options.values())
+        
         selected_label = st.selectbox(f"Sort by:", options_labels, key=sort_key)
         selected_col = options_keys[options_labels.index(selected_label)]
         
@@ -381,11 +356,11 @@ def render_modern_table(dataframe, column_config, sort_key):
     base_headers = ["Name", "Team", "Pos", "Price", "Own%", "Matches"]
     dynamic_headers = list(column_config.values())
     all_headers = base_headers + dynamic_headers
+    
     header_html = "".join([f"<th>{h}</th>" for h in all_headers])
     
     html_rows = ""
     for _, row in sorted_df.iterrows():
-        # Determine Status Colors
         row_style = ""
         text_color = "#E0E0E0"
         status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
@@ -403,13 +378,12 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # --- BUILD ROW STRING (No Indentation to fix Code Block Bug) ---
+        # --- FIXED METADATA CELLS ---
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
-        html_rows += f"""<td style="font-weight: bold; font-size: 1rem; padding-left: 15px;">{status_dot} {row['web_name']}</td>"""
-        html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none; padding-left: 15px;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
+        html_rows += f"""<td style="font-weight: bold; font-size: 1rem;">{status_dot} {row['web_name']}</td>"""
+        html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
         html_rows += f"""<td><span class="pos-badge">{row['position']}</span></td>"""
         
-        # --- FIXED CELLS (Highlight if Sorted) ---
         s_price = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'cost' else "text-align: center;"
         html_rows += f"""<td style="{s_price}">£{row['cost']}</td>"""
         
@@ -419,7 +393,7 @@ def render_modern_table(dataframe, column_config, sort_key):
         s_match = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'matches_played' else "text-align: center;"
         html_rows += f"""<td style="{s_match}">{int(row['matches_played'])}</td>"""
         
-        # --- DYNAMIC CELLS (Highlight if Sorted) ---
+        # --- DYNAMIC TAB-SPECIFIC CELLS ---
         for col_name in column_config.keys():
             val = row[col_name]
             display_val = val
@@ -433,12 +407,15 @@ def render_modern_table(dataframe, column_config, sort_key):
                 style += " font-weight: bold; color: #00FF85;"
                 
             html_rows += f"""<td style="{style}">{display_val}</td>"""
+            
         html_rows += "</tr>"
 
     html_table = f"""
     <div class="player-table-container">
         <table class="modern-table">
-            <thead><tr>{header_html}</tr></thead>
+            <thead>
+                <tr>{header_html}</tr>
+            </thead>
             <tbody>{html_rows}</tbody>
         </table>
     </div>
@@ -451,30 +428,55 @@ def render_modern_table(dataframe, column_config, sort_key):
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate"])
 
 with tab1:
-    cols = { "points_per_game": "PPG", "avg_minutes": "Mins/Gm", "news": "News" }
+    cols = {
+        "points_per_game": "PPG",
+        "avg_minutes": "Mins/Gm",
+        "news": "News"
+    }
     render_modern_table(filtered, cols, "sort_overview")
 
 with tab2:
-    cols = { "xg": "xG", "xa": "xA", "xgi": "xGI", "xgi_per_90": "xGI/90", "goals_scored": "Goals", "assists": "Assists" }
+    cols = {
+        "xg": "xG",
+        "xa": "xA",
+        "xgi": "xGI",
+        "xgi_per_90": "xGI/90",
+        "goals_scored": "Goals",
+        "assists": "Assists"
+    }
     render_modern_table(filtered, cols, "sort_attack")
 
 with tab3:
-    cols = { "clean_sheets": "Clean Sheets", "goals_conceded": "Conceded", "xgc": "xGC", "xgc_per_90": "xGC/90" }
+    cols = {
+        "clean_sheets": "Clean Sheets",
+        "goals_conceded": "Conceded",
+        "xgc": "xGC",
+        "xgc_per_90": "xGC/90"
+    }
     render_modern_table(filtered, cols, "sort_defense")
 
 with tab4:
-    cols = { "def_cons": "Total DC", "dc_per_90": "DC/90", "tackles": "Tackles", "tackles_per_90": "Tackles/90", "cbi": "CBI" }
+    cols = {
+        "def_cons": "Total DC",
+        "dc_per_90": "DC/90",
+        "tackles": "Tackles",
+        "tackles_per_90": "Tackles/90",
+        "cbi": "CBI"
+    }
     render_modern_table(filtered, cols, "sort_workrate")
+
 
 # 4. FIXTURE TICKER
 st.markdown("---") 
 st.header("📅 Fixture Difficulty Ticker")
 
 ticker_df = get_fixture_ticker()
+
+# --- SORT LOGIC ---
 gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
 sort_options = ["Total Difficulty (Next 5)"] + gw_cols
 
-# Limit width of sort dropdown
+# FIXED: Wrapped in columns to restrict width
 col_ticker_sort, _ = st.columns([1, 4]) 
 with col_ticker_sort:
     sort_choice = st.selectbox("Sort Table By:", sort_options)
@@ -486,12 +488,13 @@ else:
     if target_dif_col in ticker_df.columns:
         ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
 
+# --- HTML GENERATION ---
 colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
 text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
 html_rows = ""
 for index, row in ticker_df.iterrows():
-    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333; padding-left: 15px;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
+    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
     fixture_cells = ""
     for col in gw_cols:
         dif_key = f'Dif_{col}'
@@ -499,28 +502,29 @@ for index, row in ticker_df.iterrows():
         bg_color = colors.get(difficulty, '#EBEBEB')
         txt_color = text_colors.get(difficulty, 'black')
         fixture_cells += f'<td><span class="diff-badge" style="background-color: {bg_color}; color: {txt_color};">{row[col]}</span></td>'
+    
     html_rows += f"<tr>{team_cell}{fixture_cells}</tr>"
 
 header_cols = "".join([f"<th>{col}</th>" for col in gw_cols])
 html_table = f"""
 <div class="fixture-table-container">
 <table class="modern-table">
-  <thead><tr><th>Team</th>{header_html}</tr></thead>
-  <tbody>{html_rows}</tbody>
+  <thead>
+    <tr>
+      <th>Team</th>
+      {header_cols}
+    </tr>
+  </thead>
+  <tbody>
+    {html_rows}
+  </tbody>
 </table>
 </div>
 """
-# Note: I'm reusing the modern table structure, but fixing the header call for ticker
-html_table = f"""
-<div class="fixture-table-container">
-<table class="modern-table">
-  <thead><tr><th>Team</th>{header_cols}</tr></thead>
-  <tbody>{html_rows}</tbody>
-</table>
-</div>
-"""
+
 st.markdown(html_table, unsafe_allow_html=True)
 
+# 4. LEGEND (FDR Key)
 st.markdown("""
 <div class="fdr-legend">
     <span style="font-weight:bold; color: white;">FDR Key:</span>
@@ -532,12 +536,18 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+
+# --- FOOTER ---
 st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #B0B0B0;'>
         <p>📊 <strong>FPL Metric</strong> | Built for the Fantasy Premier League Community</p>
-        <p><a href="https://x.com/FPL_Metric" target="_blank" style="color: #00FF85; text-decoration: none; font-weight: bold;">Follow us on X: @FPL_Metric</a></p>
+        <p>
+            <a href="https://x.com/FPL_Metric" target="_blank" style="color: #00FF85; text-decoration: none; font-weight: bold;">
+                Follow us on X: @FPL_Metric
+            </a>
+        </p>
     </div>
     """,
     unsafe_allow_html=True
