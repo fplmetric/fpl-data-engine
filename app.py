@@ -50,7 +50,7 @@ st.markdown(
     .diff-badge {
         display: block;
         padding: 6px 4px;
-        border-radius: 4px;
+        border-radius: 6px;
         text-align: center;
         font-weight: bold;
         font-size: 0.85rem;
@@ -373,11 +373,11 @@ html_table = f"""
 
 st.markdown(html_table, unsafe_allow_html=True)
 
-# 4. LEGEND (FDR Key)
+# 4. LEGEND (FDR Key) - UPDATED: "Easy" is now BEFORE "1"
 st.markdown("""
 <div class="fdr-legend">
     <span style="font-weight:bold; color: white;">FDR Key:</span>
-    <div class="legend-item"><div class="legend-box" style="background-color: #375523; color: white;">1</div> Easy</div>
+    <div class="legend-item">Easy <div class="legend-box" style="background-color: #375523; color: white;">1</div></div>
     <div class="legend-item"><div class="legend-box" style="background-color: #00FF85;">2</div></div>
     <div class="legend-item"><div class="legend-box" style="background-color: #EBEBEB;">3</div></div>
     <div class="legend-item"><div class="legend-box" style="background-color: #FF0055; color: white;">4</div></div>
