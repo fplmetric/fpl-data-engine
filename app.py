@@ -57,7 +57,8 @@ st.markdown(
     /* CONTAINER 1: Player Table (Scrollable) */
     .player-table-container {
         max-height: 500px; 
-        overflow-y: auto; 
+        overflow-y: auto;
+        overflow-x: auto; /* FIXED: Enable Horizontal Scroll on Mobile */ 
         border: 1px solid #444;
         border-radius: 8px; 
         margin-bottom: 20px;
@@ -162,22 +163,40 @@ st.markdown(
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    /* === MARKET MOVER ARROWS (UPDATED) === */
+    /* === MARKET MOVER ARROWS === */
     .arrow-icon {
         display: inline-flex;
         justify-content: center;
         align-items: center;
-        width: 22px; /* Fixed circular size */
+        width: 22px; 
         height: 22px;
         border-radius: 50%;
         margin-right: 5px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
-    .arrow-up {
-        background-color: #00FF85; /* Neon Green Background */
-    }
-    .arrow-down {
-        background-color: #FF0055; /* Red/Pink Background */
+    .arrow-up { background-color: #00FF85; }
+    .arrow-down { background-color: #FF0055; }
+
+    /* === 📱 MOBILE OPTIMIZATION === */
+    @media (max-width: 768px) {
+        /* Shrink the huge title */
+        h1 { font-size: 1.8rem !important; }
+        
+        /* Reduce table padding to fit more data */
+        .modern-table th, .modern-table td {
+            padding: 10px 6px !important;
+            font-size: 0.8rem !important;
+        }
+        
+        /* Adjust Player Column padding */
+        .modern-table th:first-child, .modern-table td:first-child {
+            padding-left: 10px !important;
+        }
+        
+        /* Force Stacked Filters if they get squished */
+        div[data-baseweb="tab-list"] {
+            flex-wrap: wrap;
+        }
     }
     </style>
     """,
