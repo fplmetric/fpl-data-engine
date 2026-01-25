@@ -27,8 +27,7 @@ st.markdown(
         border-radius: 4px;
         margin-bottom: 20px;
         position: relative;
-        padding: 0; /* FIXED: Removes gap causing scroll bleed */
-        /* Removed background-color here to let status colors shine */
+        padding: 0; 
     }
 
     /* CONTAINER 2: Fixture Ticker (Full View) */
@@ -60,7 +59,6 @@ st.markdown(
         position: sticky;
         top: 0;
         z-index: 10;
-        /* FIXED: Stronger shadow and negative margin to seal gap */
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); 
         margin-top: -1px; 
     }
@@ -73,11 +71,9 @@ st.markdown(
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
-        /* FIXED: Force transparent so row color shows */
         background-color: transparent !important; 
     }
     .modern-table tr:hover td {
-        /* Subtle hover that doesn't hide status colors */
         background-color: rgba(255, 255, 255, 0.05) !important;
     }
     
@@ -218,16 +214,6 @@ df['avg_minutes'] = df['minutes'] / df['matches_played']
 df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
-# --- 4. STYLING FUNCTION (Legacy) ---
-def highlight_status(row):
-    status = row['status']
-    if status in ['i', 'u', 'n', 's']:
-        return ['background-color: #4A0000; color: #FFCCCC'] * len(row)
-    elif status == 'd':
-        return ['background-color: #4A3F00; color: #FFFFA0'] * len(row)
-    else:
-        return [''] * len(row)
-
 # --- 5. SIDEBAR FILTERS ---
 with st.sidebar:
     if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
@@ -257,13 +243,19 @@ with st.sidebar:
     max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
     max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
     st.subheader("⚙️ Reliability")
+    
+    # NOTE: We enforce min_avg_mins logic via specific 'minutes' check below
     min_avg_mins = st.slider("Avg Minutes per Match", 0, 90, 0) 
     min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
+    
     st.subheader("🛡️ Work Rate (Per 90)")
     min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
     show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
 
 # --- 6. FILTER DATA ---
+# GLOBAL FILTER: Exclude players with less than 90 mins played season-wide to fix per/90 skew
+df = df[df['minutes'] >= 90]
+
 filtered = df[
     (df['team_name'].isin(selected_teams)) &
     (df['position'].isin(position)) &
@@ -300,36 +292,46 @@ if not filtered.empty:
     col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
     col4.metric("🧠 AVG Points", f"{filtered['points_per_game'].mean():.2f}", "PPG")
 
-# 3. DATA TABLE
-tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate "])
-if not filtered.empty:
-    styled_df = filtered.style.apply(highlight_status, axis=1)
-else:
-    styled_df = filtered
+# --------------------------------------------------------
+# --- REUSABLE TABLE RENDERER FUNCTION ---
+# --------------------------------------------------------
+def render_modern_table(dataframe, column_config, sort_key):
+    """
+    Renders a consistent HTML table for any tab.
+    dataframe: The filtered data.
+    column_config: Dict of {col_name: 'Display Header'}
+    sort_key: Unique key for the selectbox to avoid ID conflicts.
+    """
+    if dataframe.empty:
+        st.info("No players match your filters.")
+        return
 
-# --- TAB 1: MODERN OVERVIEW TABLE ---
-with tab1:
-    # 1. Sort Controls
-    sort_cols = {
-        "Total Points": "total_points",
-        "Price": "cost",
-        "Ownership": "selected_by_percent",
-        "Matches Played": "matches_played",
-        "PPG": "points_per_game",
-        "Mins/Gm": "avg_minutes"
-    }
-    
-    col_sort, col_dummy = st.columns([1, 4])
+    # 1. Sorting
+    col_sort, _ = st.columns([1, 4])
     with col_sort:
-        sort_choice = st.selectbox("Sort Overview By:", list(sort_cols.keys()), index=0)
-    
-    # Sort the data
-    sorted_df = filtered.sort_values(sort_cols[sort_choice], ascending=False)
+        # Create a reverse lookup for sorting
+        options = list(column_config.keys())
+        labels = list(column_config.values())
+        selected_label = st.selectbox(f"Sort by:", labels, key=sort_key)
+        
+        # Find the actual column name for the selected label
+        selected_col = options[labels.index(selected_label)]
+        
+    sorted_df = dataframe.sort_values(selected_col, ascending=False)
     
     # 2. Get Team Mapping
     team_map = get_team_map()
     
-    # 3. Build HTML Table
+    # 3. Build Headers
+    # Always include: Name, Team, Pos, Price, Own% (The "Metadata" columns)
+    # Then append the specific columns passed in column_config
+    base_headers = ["Name", "Team", "Pos", "Price", "Own%"]
+    dynamic_headers = list(column_config.values())
+    all_headers = base_headers + dynamic_headers
+    
+    header_html = "".join([f"<th>{h}</th>" for h in all_headers])
+    
+    # 4. Build Rows
     html_rows = ""
     for _, row in sorted_df.iterrows():
         # -- Status Coloring --
@@ -339,12 +341,10 @@ with tab1:
         
         status = row['status']
         if status in ['i', 'u', 'n', 's']: 
-            # DARK RED background for injured
             row_style = 'background-color: #4A0000;' 
             text_color = '#FFCCCC'
             status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
         elif status == 'd':
-            # DARK YELLOW background for doubtful
             row_style = 'background-color: #4A3F00;' 
             text_color = '#FFFFA0'
             status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
@@ -352,74 +352,95 @@ with tab1:
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
+        # -- Metadata Cells (Fixed) --
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
         html_rows += f"""<td style="font-weight: bold; font-size: 1rem;">{status_dot} {row['web_name']}</td>"""
         html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
         html_rows += f"""<td><span class="pos-badge">{row['position']}</span></td>"""
         html_rows += f"""<td style="text-align: center;">£{row['cost']}</td>"""
         html_rows += f"""<td style="text-align: center;">{row['selected_by_percent']}%</td>"""
-        html_rows += f"""<td style="text-align: center; font-weight: bold;">{int(row['matches_played'])}</td>"""
-        html_rows += f"""<td style="text-align: center;">{row['total_points']}</td>"""
-        html_rows += f"""<td style="text-align: center; color: #00FF85;">{row['points_per_game']}</td>"""
-        html_rows += f"""<td style="text-align: center;">{int(row['avg_minutes'])}</td>"""
-        html_rows += f"""<td style="font-size: 0.8rem; opacity: 0.8;">{row['news']}</td>"""
+        
+        # -- Dynamic Data Cells --
+        for col_name in column_config.keys():
+            val = row[col_name]
+            
+            # Formatting logic
+            display_val = val
+            if isinstance(val, float):
+                display_val = f"{val:.2f}"
+            if col_name in ['matches_played', 'avg_minutes', 'total_points', 'goals_scored', 'assists', 'clean_sheets', 'goals_conceded']:
+                display_val = int(val)
+            
+            # Highlight 'per 90' stats slightly
+            style = "text-align: center;"
+            if "90" in col_name:
+                style += " font-weight: bold; color: #00FF85;"
+                
+            html_rows += f"""<td style="{style}">{display_val}</td>"""
+            
         html_rows += "</tr>"
 
     html_table = f"""
     <div class="player-table-container">
         <table class="modern-table">
             <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Team</th>
-                    <th>Pos</th>
-                    <th>Price</th>
-                    <th>Own%</th>
-                    <th>Matches</th>
-                    <th>Pts</th>
-                    <th>PPG</th>
-                    <th>Mins/Gm</th>
-                    <th>News</th>
-                </tr>
+                <tr>{header_html}</tr>
             </thead>
-            <tbody>
-                {html_rows}
-            </tbody>
+            <tbody>{html_rows}</tbody>
         </table>
     </div>
     """
     st.markdown(html_table, unsafe_allow_html=True)
 
-# --- OTHER TABS ---
-with tab2: 
-    st.dataframe(
-        styled_df,
-        use_container_width=True, hide_index=True,
-        column_order=['web_name', 'xg', 'xa', 'xgi', 'xgi_per_90', 'goals_scored'],
-        column_config={
-            "xg": st.column_config.NumberColumn("xG", format="%.2f"),
-            "xgi_per_90": st.column_config.NumberColumn("xGI/90", format="%.2f")
-        }
-    )
-with tab3: 
-    st.dataframe(
-        styled_df,
-        use_container_width=True, hide_index=True,
-        column_order=['web_name', 'clean_sheets', 'xgc', 'xgc_per_90'],
-        column_config={"xgc_per_90": st.column_config.NumberColumn("xGC/90", format="%.2f")}
-    )
-with tab4: 
-    st.dataframe(
-        styled_df,
-        use_container_width=True, hide_index=True,
-        column_order=['web_name', 'dc_per_match', 'dc_per_90', 'tackles_per_90', 'def_cons'],
-        column_config={
-            "def_cons": st.column_config.NumberColumn("Total DC"),
-            "dc_per_match": st.column_config.NumberColumn("DC/Match", format="%.1f"),
-            "dc_per_90": st.column_config.NumberColumn("DC/90", format="%.2f"),
-            "tackles_per_90": st.column_config.NumberColumn("Tackles/90", format="%.2f"),
-        }
-    )
+# --------------------------------------------------------
+# --- TABS LOGIC ---
+# --------------------------------------------------------
+tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate"])
+
+with tab1:
+    # Overview Config
+    cols = {
+        "matches_played": "Matches",
+        "total_points": "Pts",
+        "points_per_game": "PPG",
+        "avg_minutes": "Mins/Gm",
+        "news": "News"
+    }
+    render_modern_table(filtered, cols, "sort_overview")
+
+with tab2:
+    # Attack Config
+    cols = {
+        "xg": "xG",
+        "xa": "xA",
+        "xgi": "xGI",
+        "xgi_per_90": "xGI/90",
+        "goals_scored": "Goals",
+        "assists": "Assists"
+    }
+    render_modern_table(filtered, cols, "sort_attack")
+
+with tab3:
+    # Defense Config
+    cols = {
+        "clean_sheets": "Clean Sheets",
+        "goals_conceded": "Conceded",
+        "xgc": "xGC",
+        "xgc_per_90": "xGC/90"
+    }
+    render_modern_table(filtered, cols, "sort_defense")
+
+with tab4:
+    # Work Rate Config
+    cols = {
+        "def_cons": "Total DC",
+        "dc_per_90": "DC/90",
+        "tackles": "Tackles",
+        "tackles_per_90": "Tackles/90",
+        "cbi": "CBI"
+    }
+    render_modern_table(filtered, cols, "sort_workrate")
+
 
 # 4. FIXTURE TICKER
 st.markdown("---") 
@@ -439,7 +460,7 @@ else:
     if target_dif_col in ticker_df.columns:
         ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
 
-# --- HTML GENERATION (Flattened) ---
+# --- HTML GENERATION ---
 colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
 text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
