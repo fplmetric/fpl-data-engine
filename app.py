@@ -147,6 +147,7 @@ if not show_unavailable:
     filtered = filtered[filtered['status'] == 'a']
 
 # --- 7. DISPLAY ---
+# 1. TITLE & BADGE
 st.title("FPL Metric Scouting Dashboard")
 st.markdown(f"""
 <div style="display: flex; align-items: center; margin-bottom: 20px;">
@@ -159,8 +160,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- ORDER SECTION 1: METRICS ---
-# This block is NOW FIRST (Above the Ticker)
+# 2. METRICS (MOVED TO TOP)
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xg = filtered.sort_values('xg', ascending=False).iloc[0]
@@ -172,8 +172,7 @@ if not filtered.empty:
     col3.metric("💰 Best Value", best_val['web_name'], f"{best_val['value_season']}")
     col4.metric("🧠 AVG Points", f"{filtered['points_per_game'].mean():.2f}", "PPG")
 
-# --- ORDER SECTION 2: FIXTURE TICKER ---
-# This block is NOW SECOND (Below the Metrics)
+# 3. FIXTURE TICKER (MOVED BELOW METRICS)
 with st.expander("📅 Fixture Difficulty Ticker", expanded=True):
     ticker_df = get_fixture_ticker()
     sort_order = st.radio("Sort By:", ["🟢 Easiest Run (Buy)", "🔴 Hardest Run (Avoid)"], horizontal=True)
@@ -185,8 +184,7 @@ with st.expander("📅 Fixture Difficulty Ticker", expanded=True):
     st.dataframe(ticker_df[display_cols], use_container_width=True, hide_index=True)
     st.caption("Tip: Teams are sorted by the total difficulty of their next 5 games.")
 
-# --- ORDER SECTION 3: TABS & TABLE ---
-# This block is NOW THIRD (At the Bottom)
+# 4. DATA TABLE
 tab1, tab2, tab3, tab4 = st.tabs(["📋 Overview", "⚔️ Attack", "🛡️ Defense", "⚙️ Work Rate "])
 if not filtered.empty:
     styled_df = filtered.style.apply(highlight_status, axis=1)
