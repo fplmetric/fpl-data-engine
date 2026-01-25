@@ -147,19 +147,19 @@ st.markdown(
         box-shadow: inset 0 0 5px rgba(0,0,0,0.2); 
     }
     
-    /* === MINI FIXTURE BADGES (For Player Table) === */
+    /* === MINI FIXTURE BADGES (UPDATED SIZE) === */
     .mini-fix-container {
         display: flex;
         gap: 4px;
         justify-content: center;
     }
     .mini-fix-box {
-        width: 28px;
-        height: 18px;
+        width: 32px;  /* Increased width */
+        height: 22px; /* Increased height */
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.65rem;
+        font-size: 0.75rem; /* Increased font size */
         font-weight: 800;
         border-radius: 3px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.3);
