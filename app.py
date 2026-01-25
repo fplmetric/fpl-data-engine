@@ -33,7 +33,7 @@ st.markdown(
         margin-bottom: 20px;
         position: relative;
         padding: 0; 
-        background-color: #121212; 
+        background-color: transparent; /* FIXED: No Black Background */
         box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
     }
 
@@ -44,7 +44,7 @@ st.markdown(
         border-radius: 8px;
         overflow-x: auto;
         padding: 0;
-        background-color: #121212;
+        background-color: transparent; /* FIXED: No Black Background */
     }
 
     /* MODERN TABLE STYLING */
@@ -88,7 +88,7 @@ st.markdown(
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
-        background-color: transparent !important; /* Allows row color to show */
+        background-color: transparent !important; /* FIXED: Force Transparent */
         transition: background-color 0.2s ease; 
     }
     .modern-table tr:hover td {
@@ -298,7 +298,7 @@ if not show_unavailable:
 
 # --- 7. DISPLAY ---
 
-# === NEW VISUALLY APPEALING TITLE ===
+# === VISUALLY APPEALING TITLE ===
 st.markdown("""
 <div style="text-align: center; margin-bottom: 30px;">
     <h1 style="
