@@ -29,75 +29,89 @@ st.markdown(
         max-height: 500px; 
         overflow-y: auto; 
         border: 1px solid #444;
-        border-radius: 4px;
+        border-radius: 8px; 
         margin-bottom: 20px;
         position: relative;
         padding: 0; 
-        background-color: transparent; 
+        background-color: #121212; 
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
     }
 
     /* CONTAINER 2: Fixture Ticker (Full View) */
     .fixture-table-container {
         width: 100%;
         border: 1px solid #444;
-        border-radius: 4px;
+        border-radius: 8px;
         overflow-x: auto;
         padding: 0;
+        background-color: #121212;
     }
 
     /* MODERN TABLE STYLING */
     .modern-table {
         width: 100%;
-        border-collapse: collapse;
-        font-family: 'Source Sans Pro', sans-serif;
+        border-collapse: separate; 
         border-spacing: 0;
+        font-family: 'Source Sans Pro', sans-serif;
     }
+
+    /* === VISUALLY APPEALING HEADERS === */
     .modern-table th {
-        background-color: #37003c; /* FPL Purple Header */
-        color: #FFFFFF;
-        padding: 14px 10px;
+        background: linear-gradient(to bottom, #5e0066, #37003c);
+        color: #ffffff;
+        padding: 16px 12px;
         text-align: center;
-        border-bottom: 2px solid #555;
-        font-weight: 600;
-        font-size: 0.95rem;
-        
-        /* Sticky Header Logic */
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4); 
+        border-bottom: none;
+        border-top: 1px solid rgba(255,255,255,0.1); 
         position: sticky;
         top: 0;
         z-index: 10;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); 
-        margin-top: -1px; 
+        box-shadow: 0 5px 10px rgba(0,0,0,0.5); 
     }
+
+    /* Corner Radius for Headers */
+    .modern-table thead tr:first-child th:first-child { border-top-left-radius: 8px; }
+    .modern-table thead tr:first-child th:last-child { border-top-right-radius: 8px; }
+
     .modern-table th:first-child, .modern-table th:nth-child(2) {
         text-align: left; 
+        padding-left: 15px;
     }
     .modern-table td {
-        padding: 10px 10px;
-        border-bottom: 1px solid #333;
+        padding: 12px 12px; 
+        border-bottom: 1px solid #2c2c2c; 
         color: #E0E0E0;
         vertical-align: middle;
         font-size: 0.9rem;
-        background-color: transparent !important; 
+        background-color: transparent !important; /* Allows row color to show */
+        transition: background-color 0.2s ease; 
     }
     .modern-table tr:hover td {
-        background-color: rgba(255, 255, 255, 0.05) !important;
+        background-color: rgba(255, 255, 255, 0.07) !important; 
     }
     
     /* Badges & Pills */
     .pos-badge {
-        background-color: #333;
+        background-color: #2a2a2a;
         color: #DDD;
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
+        padding: 4px 10px;
+        border-radius: 12px; 
+        font-size: 0.75rem;
         font-weight: bold;
+        border: 1px solid #444;
     }
     .status-pill {
         display: inline-block;
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        margin-right: 6px;
+        margin-right: 8px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.5); 
     }
     
     /* Fixture Ticker Specifics */
@@ -109,6 +123,7 @@ st.markdown(
         font-weight: bold;
         font-size: 0.9rem; 
         width: 100%;
+        box-shadow: inset 0 0 5px rgba(0,0,0,0.2); 
     }
     .fdr-legend {
         display: flex;
@@ -124,6 +139,7 @@ st.markdown(
         width: 25px; height: 25px; border-radius: 4px;
         display: flex; align-items: center; justify-content: center;
         font-weight: bold; color: black;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
     </style>
     """,
@@ -281,9 +297,27 @@ if not show_unavailable:
     filtered = filtered[~filtered['status'].isin(['i', 'u', 'n', 's'])]
 
 # --- 7. DISPLAY ---
-st.title("FPL Metric Scouting Dashboard")
 
-# --- FILTER HINT BANNER (Visually Updated) ---
+# === NEW VISUALLY APPEALING TITLE ===
+st.markdown("""
+<div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="
+        font-size: 3rem;
+        font-weight: 800;
+        background: linear-gradient(to right, #00FF85, #FFFFFF);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 30px rgba(0, 255, 133, 0.3);
+        margin: 0;
+        padding-bottom: 10px;
+    ">
+        FPL Metric Scouting Dashboard
+    </h1>
+    <div style="width: 100px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div>
+</div>
+""", unsafe_allow_html=True)
+
+# --- AESTHETIC FILTER HINT BANNER ---
 st.markdown(
     """
     <div style="
@@ -311,7 +345,7 @@ st.markdown(f"""
     <span style="font-size: 1.2rem; color: #b0b0b0; margin-right: 15px;">
         Analyze live data, find differentials, and build your winning squad.
     </span>
-    <span style="background-color: #00FF85; color: black; padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9rem;">
+    <span style="background-color: #00FF85; color: black; padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 0 10px rgba(0,255,133,0.4);">
         {len(filtered)} Players Found
     </span>
 </div>
@@ -385,8 +419,8 @@ def render_modern_table(dataframe, column_config, sort_key):
         
         # --- FIXED METADATA CELLS ---
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
-        html_rows += f"""<td style="font-weight: bold; font-size: 1rem;">{status_dot} {row['web_name']}</td>"""
-        html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
+        html_rows += f"""<td style="font-weight: bold; font-size: 1rem; padding-left: 15px;">{status_dot} {row['web_name']}</td>"""
+        html_rows += f"""<td style="display: flex; align-items: center; border-bottom: none; padding-left: 15px;"><img src="{logo_img}" style="width: 20px; margin-right: 8px;">{row['team_name']}</td>"""
         html_rows += f"""<td><span class="pos-badge">{row['position']}</span></td>"""
         
         s_price = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'cost' else "text-align: center;"
@@ -398,7 +432,7 @@ def render_modern_table(dataframe, column_config, sort_key):
         s_match = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'matches_played' else "text-align: center;"
         html_rows += f"""<td style="{s_match}">{int(row['matches_played'])}</td>"""
         
-        # --- DYNAMIC TAB-SPECIFIC CELLS ---
+        # --- DYNAMIC CELLS ---
         for col_name in column_config.keys():
             val = row[col_name]
             display_val = val
@@ -469,7 +503,7 @@ text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
 html_rows = ""
 for index, row in ticker_df.iterrows():
-    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
+    team_cell = f'<td style="display: flex; align-items: center; border-bottom: 1px solid #333; padding-left: 15px;"><img src="{row["Logo"]}" style="width: 25px; margin-right: 12px; vertical-align: middle;"><span style="font-weight: bold; font-size: 1rem;">{row["Team"]}</span></td>'
     fixture_cells = ""
     for col in gw_cols:
         dif_key = f'Dif_{col}'
