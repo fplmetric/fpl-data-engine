@@ -68,7 +68,8 @@ st.markdown(
     .modern-table td {
         padding: 12px 12px; border-bottom: 1px solid #2c2c2c; color: #E0E0E0; vertical-align: middle; font-size: 0.9rem;
     }
-    .modern-table tr:hover td { background-color: rgba(255, 255, 255, 0.07) !important; }
+    /* Note: Hover effect might be overridden by status colors, which is intended */
+    .modern-table tr:hover td { background-color: rgba(255, 255, 255, 0.07); }
     
     .status-pill { display: inline-block; width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
     .diff-badge { display: block; padding: 8px 6px; border-radius: 6px; text-align: center; font-weight: bold; font-size: 0.9rem; width: 100%; }
@@ -78,7 +79,7 @@ st.markdown(
         font-size: 0.75rem; font-weight: 800; border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }
 
-    /* MATCH CARDS (Fixed Indentation Issue) */
+    /* MATCH CARDS */
     .match-grid { 
         display: grid; 
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
@@ -351,8 +352,6 @@ st.markdown("""<div style="text-align: center; margin-bottom: 20px;"><h1 style="
 gw_name, deadline_iso, fixtures_data = get_next_gw_data()
 
 if gw_name and deadline_iso:
-    # We use a pure CSS/HTML/JS block via components to ensure isolation and perfect rendering
-    # The container styling is embedded in the HTML string to guarantee it looks right
     countdown_html = f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
@@ -396,10 +395,8 @@ if gw_name and deadline_iso:
     """
     components.html(countdown_html, height=150)
 
-    # --- FIXTURE GRID EXPANDER ---
     with st.expander(f"🏟️ View {gw_name} Fixtures (Kickoff Times)", expanded=False):
         if fixtures_data:
-            # IMPORTANT: NO Indentation inside the f-string to prevent code block rendering
             cards_html = '<div class="match-grid">'
             for f in fixtures_data:
                 h_img = f"https://resources.premierleague.com/premierleague/badges/50/t{f['home_code']}.png"
@@ -417,7 +414,7 @@ if gw_name and deadline_iso:
 
 # =========================================================================
 
-# --- INFO BOX RESTORED ---
+# --- INFO BOX ---
 st.markdown(
     """
     <div class="scout-tip">
@@ -473,12 +470,21 @@ def render_modern_table(dataframe, column_config, sort_key):
     for _, row in sorted_df.iterrows():
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
+        
+        # --- HIGHLIGHTING LOGIC ---
+        status = row['status']
+        row_style = ""
+        if status in ['i', 'u', 'n', 's']: 
+            row_style = 'background-color: rgba(74, 0, 0, 0.6);' # Red tint for injured
+        elif status == 'd': 
+            row_style = 'background-color: rgba(74, 63, 0, 0.6);' # Yellow tint for doubtful
+            
         status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
-        if row['status'] in ['i', 'u', 'n', 's']: status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
-        elif row['status'] == 'd': status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
+        if status in ['i', 'u', 'n', 's']: status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
+        elif status == 'd': status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
         
         # Player Cell
-        html_rows += f"""<tr>
+        html_rows += f"""<tr style="{row_style}">
         <td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 12px;">
             <div style="width: 10px;">{status_dot}</div><img src="{logo_img}" style="width: 35px;">
             <div style="display: flex; flex-direction: column;"><span style="font-weight: bold; color: #FFF;">{row['web_name']}</span><span style="font-size: 0.8rem; color: #AAA;">{row['team_name']} | {row['position']}</span></div>
@@ -497,7 +503,10 @@ def render_modern_table(dataframe, column_config, sort_key):
         for col_name in ['cost', 'selected_by_percent', 'matches_played'] + list(column_config.keys()):
             val = row[col_name]
             if isinstance(val, float): val = f"{val:.2f}"
-            if col_name == 'cost': val = f"£{val}"
+            
+            # --- PRICE FORMAT FIX (1 decimal) ---
+            if col_name == 'cost': val = f"£{float(val):.1f}"
+            
             elif col_name == 'selected_by_percent': val = f"{val}%"
             elif col_name in ['matches_played', 'avg_minutes', 'total_points', 'goals_scored', 'assists', 'clean_sheets', 'goals_conceded']: val = int(float(val))
             
@@ -552,8 +561,9 @@ df_c = get_db_price_changes()
 if df_c.empty: st.info("No price changes detected.")
 else:
     c_r, c_f = st.columns(2)
-    icon_up = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="4"><path d="M18 15l-6-6-6 6"/></svg>'
-    icon_dn = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4"><path d="M6 9l6 6 6-6"/></svg>'
+    # --- ARROW FIX: VISIBLE COLORS ---
+    icon_up = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00FF85" stroke-width="4"><path d="M18 15l-6-6-6 6"/></svg>'
+    icon_dn = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF0055" stroke-width="4"><path d="M6 9l6 6 6-6"/></svg>'
     
     with c_r:
         st.subheader("Price Risers")
@@ -563,7 +573,8 @@ else:
             h_r = ""
             for _, r in risers.iterrows():
                 tc = get_team_map().get(r['team'], 0)
-                h_r += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_up}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']}</td><td style="text-align: center; color: #00FF85;">+£{r['change']:.1f}</td></tr>"""
+                # --- PRICE FORMAT FIX (1 decimal) ---
+                h_r += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_up}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']:.1f}</td><td style="text-align: center; color: #00FF85;">+£{r['change']:.1f}</td></tr>"""
             st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_r}</tbody></table></div>""", unsafe_allow_html=True)
             
     with c_f:
@@ -574,7 +585,8 @@ else:
             h_f = ""
             for _, r in fallers.iterrows():
                 tc = get_team_map().get(r['team'], 0)
-                h_f += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_dn}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']}</td><td style="text-align: center; color: #FF0055;">{r['change']:.1f}</td></tr>"""
+                # --- PRICE FORMAT FIX (1 decimal) ---
+                h_f += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_dn}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']:.1f}</td><td style="text-align: center; color: #FF0055;">{r['change']:.1f}</td></tr>"""
             st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_f}</tbody></table></div>""", unsafe_allow_html=True)
 
 st.markdown("---")
