@@ -97,8 +97,15 @@ with st.sidebar:
     
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply'.")
+        
+        # --- TEAMS & POSITION ---
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
+        
+        # --- NEW: EXCLUDE UNAVAILABLE ---
+        exclude_unavailable = st.checkbox("Exclude Unavailable (Red Flags)", value=False)
+        
+        # --- SLIDERS ---
         max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
         max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
         
@@ -106,6 +113,7 @@ with st.sidebar:
         min_mpg = st.slider("Min Minutes Per Game", 0, 90, 0, 5)
         min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
         min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
+        
         submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
     st.markdown("---")
@@ -113,6 +121,12 @@ with st.sidebar:
 
 # --- FILTER LOGIC ---
 df = df[df['minutes'] >= 90]
+
+# --- NEW: FILTER OUT RED FLAGS IF CHECKED ---
+if exclude_unavailable:
+    # Filter out Injured (i), Unavailable (u), Not Available (n), Suspended (s)
+    df = df[~df['status'].isin(['i', 'u', 'n', 's'])]
+
 filtered = df[
     (df['team_name'].isin(selected_teams)) & 
     (df['position'].isin(position)) &
