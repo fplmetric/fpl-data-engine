@@ -74,7 +74,7 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE */
+    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE GAP FIX) */
     .player-table-container { margin-top: 0px; }
 
     .modern-table {
@@ -100,19 +100,21 @@ st.markdown("""
         top: 0;
         z-index: 1000;
         
-        /* Base shadow: Green bottom line only */
+        /* This shadow is purely for the bottom green line */
         box-shadow: 0 2px 0 #00FF85; 
     }
-
-    /* TOP MASK: Solid block above header to hide scrolling rows */
+    
+    /* THE FIX: Use a pseudo-element to create a SOLID BLOCK above the header. 
+       This physically covers the transparent gap caused by border-spacing.
+    */
     .modern-table th::before {
         content: "";
         position: absolute;
-        top: -20px;
+        top: -20px; /* Extend upwards */
         left: 0;
         right: 0;
-        height: 20px;
-        background-color: #1a001e;
+        height: 20px; /* Height of the gap cover */
+        background-color: #1a001e; /* Solid background color */
         z-index: -1;
     }
 
@@ -121,14 +123,14 @@ st.markdown("""
         text-align: left; 
         padding-left: 20px; 
         /* 0 2px 0 #00FF85 -> Green Bottom Border */
-        /* -30px 0 0 #1a001e -> Solid Purple Left Block */
+        /* -30px 0 0 #1a001e -> Solid Purple Left Block Mask */
         box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; 
     }
 
     /* SIDE MASK (RIGHT): Solid block to the right of the last header cell */
     .modern-table th:last-child {
         /* 0 2px 0 #00FF85 -> Green Bottom Border */
-        /* 30px 0 0 #1a001e -> Solid Purple Right Block */
+        /* 30px 0 0 #1a001e -> Solid Purple Right Block Mask */
         box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; 
     }
     
@@ -256,7 +258,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET (With Flexbox Centering)
+# 📅 DEADLINE & FIXTURES WIDGET
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
@@ -519,15 +521,20 @@ with tab4: render_modern_table(filtered, { "def_cons": "Total DC", "dc_per_90": 
 st.markdown("---") 
 st.header("Fixture Difficulty Ticker")
 current_next_gw = db.get_next_gameweek_id()
-horizon_opts = ["Next 3 GWs", "Next 5 GWs"] + [f"GW {current_next_gw+i}" for i in range(5)]
+# --- UPDATED HORIZON OPTIONS ---
+horizon_opts = ["Next 2 GWs", "Next 3 GWs", "Next 4 GWs", "Next 5 GWs", "Next 6 GWs", "Next 7 GWs", "Next 8 GWs"] + [f"GW {current_next_gw+i}" for i in range(5)]
 c1, c2, c3 = st.columns(3)
 with c1: s_order = st.selectbox("Sort Order", ["Easiest", "Hardest", "Alphabetical"])
 with c2: v_type = st.selectbox("Type", ["Overall", "Attack", "Defence"])
 with c3: horizon = st.selectbox("Horizon", horizon_opts)
 
-if horizon == "Next 3 GWs": s_gw, e_gw = current_next_gw, current_next_gw + 2
-elif horizon == "Next 5 GWs": s_gw, e_gw = current_next_gw, current_next_gw + 4
-else: s_gw = e_gw = int(horizon.split(" ")[1])
+# --- DYNAMIC HORIZON PARSING ---
+if horizon.startswith("Next"):
+    n_gws = int(horizon.split(" ")[1])
+    s_gw = current_next_gw
+    e_gw = current_next_gw + n_gws - 1
+else:
+    s_gw = e_gw = int(horizon.split(" ")[1])
 
 t_df = db.get_fixture_ticker(s_gw, e_gw)
 if s_order == "Alphabetical": t_df = t_df.sort_values('Team')
