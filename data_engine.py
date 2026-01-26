@@ -169,12 +169,10 @@ def fetch_main_data():
     return pd.read_sql(query, engine)
 
 def create_deadline_widget(gw_name, deadline_iso, fixtures_data):
-    """
-    Generates the HTML string for the deadline widget.
-    This prevents indentation errors in the main app file.
-    """
     fixtures_json = json.dumps(fixtures_data)
     
+    # Removed CSS/HTML for <details> and <summary> ("sliding bar")
+    # Added CSS/HTML for a static header and permanent visibility
     return f"""
     <style>
         .widget-container {{ margin-bottom: 10px; font-family: 'Roboto', sans-serif; }}
@@ -191,11 +189,11 @@ def create_deadline_widget(gw_name, deadline_iso, fixtures_data):
             border: 1px solid #00FF85; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
             overflow: hidden; background-color: rgba(255, 255, 255, 0.02);
         }}
+        /* Static Header (No Slider/Pointer) */
         .fix-header {{
             background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
             padding: 10px 20px; font-weight: 700; color: #00FF85;
-            text-align: center; font-family: 'Roboto', sans-serif;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            text-align: center; border-top: 1px solid rgba(255,255,255,0.1);
         }}
         .content {{ padding: 20px; }}
         .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }}
@@ -220,7 +218,7 @@ def create_deadline_widget(gw_name, deadline_iso, fixtures_data):
             <div id="sub" class="sub"></div>
         </div>
         <div class="fix-container">
-            <div class="fix-header">{gw_name} Fixtures</div>
+            <div class="fix-header">View {gw_name} Fixtures (Your Local Time)</div>
             <div class="content">
                 <div class="match-grid" id="grid"></div>
             </div>
