@@ -5,6 +5,8 @@ from sqlalchemy import create_engine
 import altair as alt
 import os
 import requests
+from datetime import datetime
+import pytz
 
 # --- 1. SETUP ---
 st.set_page_config(page_title="FPL Metric", page_icon="favicon.png", layout="wide")
@@ -223,6 +225,47 @@ st.markdown(
         height: 20px;
         margin-right: 8px;
     }
+    
+    /* === DEADLINE BANNER === */
+    .deadline-banner {
+        background: linear-gradient(90deg, #37003c 0%, #5e0066 100%);
+        border: 1px solid #00FF85;
+        border-radius: 10px;
+        padding: 15px 20px;
+        margin-bottom: 25px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 4px 15px rgba(0, 255, 133, 0.15);
+    }
+    .deadline-title {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        color: #00FF85;
+    }
+    .deadline-time {
+        font-size: 1.8rem;
+        font-weight: 900;
+        letter-spacing: 1px;
+    }
+    
+    /* === FIXTURE GRID === */
+    .fix-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+    }
+    .fix-card {
+        background-color: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
+        padding: 10px;
+        text-align: center;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
 
     /* === 📱 MOBILE OPTIMIZATION === */
     @media (max-width: 768px) {
@@ -273,21 +316,48 @@ def get_expected_points_map():
             ep_map[p['id']] = 0.0
     return ep_map
 
+# --- FETCH DEADLINE & NEXT FIXTURES ---
+@st.cache_data(ttl=3600)
+def get_next_gw_info():
+    """Returns Next GW Name, Deadline (Formatted), and Fixture List"""
+    static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
+    
+    # Get Next Event
+    next_event = next((e for e in static['events'] if e['is_next']), None)
+    if not next_event:
+        return None, None, []
+        
+    gw_name = next_event['name']
+    
+    # Format Deadline (UTC -> Local/Readable)
+    deadline_str = next_event['deadline_time'] # "2023-10-27T17:30:00Z"
+    dt = datetime.strptime(deadline_str, "%Y-%m-%dT%H:%M:%SZ")
+    readable_deadline = dt.strftime("%A %d %b, %H:%M UTC") # e.g. Friday 27 Oct, 17:30 UTC
+    
+    # Get Fixtures
+    fixtures = requests.get('https://fantasy.premierleague.com/api/fixtures/?event=' + str(next_event['id'])).json()
+    teams = {t['id']: t['short_name'] for t in static['teams']}
+    
+    fix_list = []
+    for f in fixtures:
+        home = teams.get(f['team_h'], "UNK")
+        away = teams.get(f['team_a'], "UNK")
+        fix_list.append(f"{home} vs {away}")
+        
+    return gw_name, readable_deadline, fix_list
+
 # --- FETCH NEXT GW ID ---
 @st.cache_data(ttl=3600)
-def get_next_gameweek():
+def get_next_gameweek_id():
     """Returns the ID of the next Gameweek (e.g., 24)"""
     fixtures = requests.get('https://fantasy.premierleague.com/api/fixtures/?future=1').json()
     if fixtures:
         return fixtures[0]['event']
-    return 38 # Fallback if season over
+    return 38 
 
 # --- FIXTURE TICKER LOGIC (FULL & ENHANCED) ---
 @st.cache_data(ttl=3600) 
 def get_fixture_ticker(start_gw, end_gw):
-    """
-    Fetches ticker data filtered between start_gw and end_gw.
-    """
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     teams = {
         t['id']: {
@@ -306,7 +376,6 @@ def get_fixture_ticker(start_gw, end_gw):
     ticker_data = []
     
     for team_id, team_info in teams.items():
-        # Filter fixtures for this team within the requested GW range
         team_fixtures = [
             f for f in fixtures 
             if (f['team_h'] == team_id or f['team_a'] == team_id) and 
@@ -327,7 +396,6 @@ def get_fixture_ticker(start_gw, end_gw):
             is_home = f['team_h'] == team_id
             opponent_id = f['team_a'] if is_home else f['team_h']
             
-            # Difficulty & Strength Logic
             difficulty = f['team_h_difficulty'] if is_home else f['team_a_difficulty']
             opp_stats = teams[opponent_id]
             
@@ -344,7 +412,6 @@ def get_fixture_ticker(start_gw, end_gw):
             col_name = f"GW{f['event']}"
             row[col_name] = f"{opponent_short} {loc}"
             
-            # Accumulate Difficulty Scores
             row['Diff_Overall'] += difficulty
             row['Diff_Attack'] += opp_def_str
             row['Diff_Defence'] += opp_att_str
@@ -541,6 +608,23 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# --- 8. DEADLINE BANNER (NEW) ---
+gw_name, deadline, fixtures = get_next_gw_info()
+if gw_name:
+    st.markdown(f"""
+    <div class="deadline-banner">
+        <div class="deadline-title">{gw_name} Deadline</div>
+        <div class="deadline-time">{deadline}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    with st.expander(f"📅 View {gw_name} Fixtures"):
+        fix_html = '<div class="fix-grid">'
+        for f in fixtures:
+            fix_html += f'<div class="fix-card">{f}</div>'
+        fix_html += '</div>'
+        st.markdown(fix_html, unsafe_allow_html=True)
+
 st.markdown(
     """
     <div style="
@@ -723,15 +807,11 @@ with tab4:
 st.markdown("---") 
 st.header("Fixture Difficulty Ticker")
 
-# Get next GW dynamically
-current_next_gw = get_next_gameweek()
-
-# Define Horizon Options including specific GWs
+current_next_gw = get_next_gameweek_id()
 horizon_options = ["Next 3 GWs", "Next 5 GWs"]
 for i in range(5):
     horizon_options.append(f"GW {current_next_gw + i}")
 
-# --- TICKER CONTROLS ---
 col_t1, col_t2, col_t3 = st.columns(3)
 with col_t1:
     sort_order = st.selectbox("Sort Order", ["Easiest", "Hardest", "Alphabetical"])
@@ -740,7 +820,6 @@ with col_t2:
 with col_t3:
     horizon = st.selectbox("Horizon", horizon_options)
 
-# Determine Start/End GW
 if horizon == "Next 3 GWs":
     start_gw = current_next_gw
     end_gw = current_next_gw + 2
@@ -748,15 +827,12 @@ elif horizon == "Next 5 GWs":
     start_gw = current_next_gw
     end_gw = current_next_gw + 4
 else:
-    # Single GW case (e.g., "GW 24")
     gw_num = int(horizon.split(" ")[1])
     start_gw = gw_num
     end_gw = gw_num
 
-# Fetch and Process Data
 ticker_df = get_fixture_ticker(start_gw, end_gw)
 
-# Apply Sorting
 if sort_order == "Alphabetical":
     ticker_df = ticker_df.sort_values('Team', ascending=True)
 else:
@@ -769,7 +845,6 @@ else:
     is_ascending = (sort_order == "Easiest")
     ticker_df = ticker_df.sort_values(sort_col, ascending=is_ascending)
 
-# Display Ticker
 gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
 colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
 text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
