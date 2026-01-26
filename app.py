@@ -184,15 +184,7 @@ if gw_name and deadline_iso:
     </script>
     """
     
-    # --- UPDATED HEIGHT CALCULATION ---
-    # With sidebar open, the grid drops to 4 columns.
-    # 10 fixtures / 4 cols = 3 rows.
-    # Calculation: (10 + 3) // 4 = 3 rows.
-    # Row Height = 95px.
-    # Base Height (Banner+Header+Margins) = ~160px.
     n_fixtures = len(fixtures_data)
-    # Using 4 columns as the divisor ensures we assume a narrower layout (3 rows)
-    # rather than a wide layout (2 rows), guaranteeing enough height.
     n_rows = (n_fixtures + 3) // 4  
     widget_height = 160 + (n_rows * 95)
     
@@ -218,16 +210,39 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# --- REPLACED METRICS WITH CUSTOM CARDS ---
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
     best_dc = filtered.sort_values('dc_per_90', ascending=False).iloc[0]
     best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
     best_ppg = filtered.sort_values('points_per_game', ascending=False).iloc[0]
-    col1.metric("Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']}")
-    col2.metric("Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}")
-    col3.metric("Best Value", best_val['web_name'], f"{best_val['value_season']}")
-    col4.metric("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}")
+
+    def metric_card(title, name, value, icon):
+        return f"""
+        <div style="
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(0, 255, 133, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        ">
+            <div style="font-size: 1.5rem; margin-bottom: 5px;">{icon}</div>
+            <div style="color: #AAAAAA; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">{title}</div>
+            <div style="color: #FFFFFF; font-size: 1.2rem; font-weight: 900; line-height: 1.2;">{name}</div>
+            <div style="background-color: rgba(0, 255, 133, 0.15); color: #00FF85; padding: 4px 12px; border-radius: 12px; font-size: 0.9rem; font-weight: bold; margin-top: 8px; border: 1px solid rgba(0, 255, 133, 0.3);">
+                {value}
+            </div>
+        </div>
+        """
+
+    with col1: st.markdown(metric_card("Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']}", "🚀"), unsafe_allow_html=True)
+    with col2: st.markdown(metric_card("Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}", "🛡️"), unsafe_allow_html=True)
+    with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}", "💎"), unsafe_allow_html=True)
+    with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", "⭐"), unsafe_allow_html=True)
 
 def render_modern_table(dataframe, column_config, sort_key):
     if dataframe.empty:
