@@ -2,10 +2,10 @@ GLOBAL_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
 
-/* GLOBAL RESET & FONTS */
+/* GLOBAL RESET */
 span[data-baseweb="tag"] { color: black !important; font-weight: bold; }
 div[data-baseweb="select"] > div { cursor: pointer !important; }
-.block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+.block-container { padding-top: 1rem !important; padding-bottom: 2rem !important; }
 
 /* TABS */
 div[data-baseweb="tab-list"] { gap: 8px; margin-bottom: 10px; }
@@ -64,11 +64,11 @@ button[data-baseweb="tab"][aria-selected="true"] {
     font-size: 0.75rem; font-weight: 800; border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
-/* SCOUT TIP BOX (Tightened) */
+/* SCOUT TIP BOX */
 .scout-tip {
     background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
     border: 1px solid #00FF85; border-radius: 8px; padding: 10px 15px;
-    margin-top: 0px; margin-bottom: 20px; display: flex; align-items: center;
+    margin-bottom: 20px; display: flex; align-items: center;
     box-shadow: 0 4px 10px rgba(0, 255, 133, 0.1);
 }
 
