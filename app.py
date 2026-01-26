@@ -1,10 +1,6 @@
 import streamlit as st
 import pandas as pd
 import json
-import streamlit.components.v1 as components
-import os
-
-# --- LOCAL IMPORTS ---
 import styles
 import data_engine as db
 
@@ -50,13 +46,10 @@ with st.sidebar:
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
         max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
         max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
-        
-        # --- NEW FILTERS ---
         st.subheader("Performance")
         min_mpg = st.slider("Min Minutes Per Game", 0, 90, 0, 5)
         min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
         min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
-        
         submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
     st.markdown("---")
@@ -74,37 +67,31 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# --- MAIN DISPLAY ---
+# --- MAIN DISPLAY (Tight Header) ---
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
     _, col_main_logo, _ = st.columns([3, 2, 3]) 
     with col_main_logo: st.image("fpl_metric_logo.png", use_container_width=True)
 
-st.markdown("""<div style="text-align: center; margin-bottom: 20px;"><h1 style="font-size: 3rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric</h1><div style="width: 80px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div></div>""", unsafe_allow_html=True)
+st.markdown("""<div style="text-align: center; margin-bottom: 10px;"><h1 style="font-size: 3rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric</h1><div style="width: 80px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div></div>""", unsafe_allow_html=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES (JS-POWERED LOCAL TIME)
+# 📅 DEADLINE & FIXTURES (ZERO GAP VERSION)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
 if gw_name and deadline_iso:
-    # We pass the fixture data to JS as a JSON string
     fixtures_json = json.dumps(fixtures_data)
     
-    # Complete HTML/CSS/JS block
-    full_component_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
+    # Combined HTML/CSS/JS block to eliminate gaps
+    combined_html = f"""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
-        body {{ margin: 0; font-family: 'Roboto', sans-serif; background-color: transparent; }}
-        
+        .widget-container {{ margin-bottom: 10px; font-family: 'Roboto', sans-serif; }}
         /* BANNER */
         .deadline-box {{
             background: linear-gradient(135deg, #1a001e 0%, #37003c 100%);
-            border: 1px solid #00FF85; border-radius: 12px; padding: 15px;
-            text-align: center; color: white; margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0, 255, 133, 0.2);
+            border: 1px solid #00FF85; border-top-left-radius: 12px; border-top-right-radius: 12px;
+            padding: 15px; text-align: center; color: white;
+            border-bottom: none; /* Connect to next element */
         }}
         .label {{ color: #00FF85; font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }}
         .timer {{ font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; }}
@@ -112,14 +99,15 @@ if gw_name and deadline_iso:
 
         /* EXPANDER */
         details {{
-            border: 1px solid #00FF85; border-radius: 8px; overflow: hidden;
-            background-color: rgba(255, 255, 255, 0.02); transition: all 0.3s ease;
+            border: 1px solid #00FF85; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
+            overflow: hidden; background-color: rgba(255, 255, 255, 0.02); transition: all 0.3s ease;
         }}
         details[open] {{ background-color: rgba(255, 255, 255, 0.05); }}
         summary {{
             background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
-            padding: 12px 20px; cursor: pointer; font-weight: 700; color: #00FF85;
+            padding: 10px 20px; cursor: pointer; font-weight: 700; color: #00FF85;
             list-style: none; display: flex; justify-content: space-between; align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
         }}
         summary:hover {{ background: linear-gradient(90deg, rgba(75,0,80,0.9) 0%, rgba(50,50,50,0.9) 100%); }}
         summary::after {{ content: '▼'; font-size: 0.8rem; transition: transform 0.3s; }}
@@ -128,22 +116,22 @@ if gw_name and deadline_iso:
 
         /* GRID */
         .content {{ padding: 20px; border-top: 1px solid rgba(0, 255, 133, 0.3); }}
-        .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }}
+        .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }}
         .match-card {{
             background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center;
-            transition: transform 0.2s, background-color 0.2s;
+            border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
+            transition: transform 0.2s;
         }}
-        .match-card:hover {{ background-color: rgba(255,255,255,0.08); transform: translateY(-2px); border-color: #00FF85; }}
-        .team-col {{ display: flex; flex-direction: column; align-items: center; width: 80px; }}
-        .team-logo {{ width: 45px; height: 45px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }}
-        .team-name {{ font-size: 0.85rem; font-weight: 700; text-align: center; color: #FFF; line-height: 1.1; }}
+        .match-card:hover {{ border-color: #00FF85; background-color: rgba(255,255,255,0.08); }}
+        .team-col {{ display: flex; flex-direction: column; align-items: center; width: 60px; }}
+        .team-logo {{ width: 35px; height: 35px; object-fit: contain; margin-bottom: 5px; }}
+        .team-name {{ font-size: 0.75rem; font-weight: 700; text-align: center; color: #FFF; }}
         .match-info {{ display: flex; flex-direction: column; align-items: center; color: #AAA; }}
-        .match-time {{ font-size: 1.1rem; font-weight: 700; color: #00FF85; margin-bottom: 2px; }}
-        .match-date {{ font-size: 0.75rem; text-transform: uppercase; }}
+        .match-time {{ font-size: 1rem; font-weight: 700; color: #00FF85; }}
+        .match-date {{ font-size: 0.7rem; text-transform: uppercase; }}
     </style>
-    </head>
-    <body>
+    
+    <div class="widget-container">
         <div class="deadline-box">
             <div class="label">{gw_name} DEADLINE</div>
             <div id="timer" class="timer">Loading...</div>
@@ -156,34 +144,34 @@ if gw_name and deadline_iso:
                 <div class="match-grid" id="grid"></div>
             </div>
         </details>
+    </div>
 
-        <script>
-            // 1. COUNTDOWN LOGIC
-            var deadline = new Date("{deadline_iso}").getTime();
-            var dateOpts = {{ weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }};
-            document.getElementById("sub").innerText = new Date("{deadline_iso}").toLocaleDateString(undefined, dateOpts) + " (Local)";
-            
-            setInterval(function() {{
-                var now = new Date().getTime();
-                var t = deadline - now;
-                if (t < 0) {{
-                    document.getElementById("timer").innerHTML = "DEADLINE PASSED";
-                    document.getElementById("timer").style.color = "#FF0055";
-                }} else {{
-                    var d = Math.floor(t / (1000 * 60 * 60 * 24));
-                    var h = Math.floor((t % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    var m = Math.floor((t % (1000 * 60 * 60)) / (1000 * 60));
-                    var s = Math.floor((t % (1000 * 60)) / 1000);
-                    document.getElementById("timer").innerHTML = d + "d " + h + "h " + m + "m " + s + "s ";
-                }}
-            }}, 1000);
+    <script>
+        // 1. COUNTDOWN
+        var deadline = new Date("{deadline_iso}").getTime();
+        var dateOpts = {{ weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }};
+        document.getElementById("sub").innerText = new Date("{deadline_iso}").toLocaleDateString(undefined, dateOpts) + " (Local)";
+        
+        setInterval(function() {{
+            var now = new Date().getTime();
+            var t = deadline - now;
+            if (t < 0) {{
+                document.getElementById("timer").innerHTML = "DEADLINE PASSED";
+                document.getElementById("timer").style.color = "#FF0055";
+            }} else {{
+                var d = Math.floor(t / (1000 * 60 * 60 * 24));
+                var h = Math.floor((t % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                var m = Math.floor((t % (1000 * 60 * 60)) / (1000 * 60));
+                var s = Math.floor((t % (1000 * 60)) / 1000);
+                document.getElementById("timer").innerHTML = d + "d " + h + "h " + m + "m " + s + "s ";
+            }}
+        }}, 1000);
 
-            // 2. FIXTURE RENDER LOGIC (Client-Side)
-            var fixtures = {fixtures_json};
-            var grid = document.getElementById("grid");
-            
+        // 2. FIXTURES
+        var fixtures = {fixtures_json};
+        var grid = document.getElementById("grid");
+        if(grid) {{
             fixtures.forEach(f => {{
-                // Parse ISO time using User's Local Timezone
                 var d = new Date(f.iso_time);
                 var timeStr = d.toLocaleTimeString([], {{hour: '2-digit', minute:'2-digit'}});
                 var dateStr = d.toLocaleDateString([], {{weekday: 'short', day: 'numeric', month: 'short'}});
@@ -199,12 +187,10 @@ if gw_name and deadline_iso:
                 </div>`;
                 grid.innerHTML += card;
             }});
-        </script>
-    </body>
-    </html>
+        }}
+    </script>
     """
-    # Render entire block
-    components.html(full_component_html, height=450, scrolling=True)
+    st.markdown(combined_html, unsafe_allow_html=True)
 else:
     st.info("No fixtures found for next Gameweek.")
 
@@ -267,7 +253,6 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # --- HIGHLIGHTING LOGIC ---
         status = row['status']
         row_style = ""
         if status in ['i', 'u', 'n', 's']: 
@@ -350,7 +335,7 @@ df_c = db.get_db_price_changes()
 if df_c.empty: st.info("No price changes detected.")
 else:
     c_r, c_f = st.columns(2)
-    # --- ARROW FIX: FILLED CIRCLES (Green/Black & Pink/White) ---
+    # --- FILLED CIRCLES ARROWS ---
     icon_up = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#00FF85"/><path d="M7 14L12 9L17 14" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     icon_dn = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#FF0055"/><path d="M7 10L12 15L17 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     
@@ -362,7 +347,6 @@ else:
             h_r = ""
             for _, r in risers.iterrows():
                 tc = db.get_team_map().get(r['team'], 0)
-                # +£ FIX & 1 Decimal
                 h_r += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_up}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']:.1f}</td><td style="text-align: center; color: #00FF85;">+£{r['change']:.1f}</td></tr>"""
             st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_r}</tbody></table></div>""", unsafe_allow_html=True)
             
@@ -374,7 +358,6 @@ else:
             h_f = ""
             for _, r in fallers.iterrows():
                 tc = db.get_team_map().get(r['team'], 0)
-                # -£ FIX (ABS Value) & 1 Decimal
                 h_f += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_dn}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']:.1f}</td><td style="text-align: center; color: #FF0055;">-£{abs(r['change']):.1f}</td></tr>"""
             st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_f}</tbody></table></div>""", unsafe_allow_html=True)
 
