@@ -74,23 +74,23 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE */
-    /* Container to lift table up */
+    /* 6. AESTHETIC PLAYER TABLE (FIXED SCROLL & BORDER) */
     .player-table-container {
-        margin-top: -10px; 
+        /* Removes gap above table but keeps it clean */
+        margin-top: 0px; 
     }
 
     .modern-table {
         width: 100%;
         border-collapse: separate;
-        border-spacing: 0 8px;
+        border-spacing: 0 8px; /* The gap between player cards */
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
     }
     
     .modern-table th {
-        /* Solid background to prevent peeping */
-        background-color: #1a001e !important; 
+        /* CRITICAL FIXES HERE: */
+        background-color: #1a001e !important; /* Solid background hides scrolling rows */
         color: #00FF85;
         font-family: 'Orbitron', sans-serif;
         font-weight: 700;
@@ -99,23 +99,22 @@ st.markdown("""
         text-align: center;
         letter-spacing: 1px;
         
-        /* Sticky header logic */
+        /* Sticky Header Logic */
         position: sticky;
         top: 0;
-        z-index: 10000;
+        z-index: 100; /* Stays above the rows */
         
-        /* REMOVED GREEN BORDER AS REQUESTED */
-        border-bottom: none !important;
-        
-        /* Small shadow to separate header from content */
-        box-shadow: 0 4px 10px -2px rgba(0,0,0,0.5);
+        /* THE GREEN BORDER FIX: */
+        /* Using box-shadow instead of border ensures it doesn't disappear on scroll */
+        box-shadow: 0 2px 0px #00FF85; 
+        border-bottom: none; 
     }
     .modern-table th:first-child { text-align: left; padding-left: 20px; }
     
     .modern-table tbody tr {
         transition: all 0.2s ease;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        z-index: 1;
+        z-index: 1; /* Rows sit below header */
     }
     .modern-table tbody tr:hover {
         transform: scale(1.005);
@@ -235,7 +234,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET
+# 📅 DEADLINE & FIXTURES WIDGET (With Flexbox Centering)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
@@ -432,7 +431,6 @@ def render_modern_table(dataframe, column_config, sort_key):
     all_headers = base_headers + dynamic_headers
     header_html = "".join([f"<th>{h}</th>" for h in all_headers])
     
-    # IMPROVED CONTRAST FOR PILLS
     fdr_colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
     fdr_text = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
     
