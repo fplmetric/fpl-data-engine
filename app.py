@@ -10,12 +10,70 @@ import data_engine as db
 
 # --- 1. SETUP ---
 st.set_page_config(page_title="FPL Metric Dashboard", page_icon="favicon.png", layout="wide")
-st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
 
-# --- NEW: CUSTOM CSS FOR TABS TO MATCH THEME ---
+# --- GLOBAL CSS: VISUAL ENHANCEMENTS (FONTS, SCROLLBARS, SIDEBAR, INPUTS) ---
+st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
 st.markdown("""
 <style>
-    /* Tab Container */
+    /* 1. IMPORT FUTURISTIC FONT */
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@400;700&display=swap');
+
+    /* Apply Font to Headings and Tabs */
+    h1, h2, h3, .stMetricLabel, [data-baseweb="tab"], .big-font {
+        font-family: 'Orbitron', sans-serif !important;
+        letter-spacing: 1px;
+    }
+    
+    /* 2. NEON SCROLLBARS */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+        background: #1a001e;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #00FF85;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #00cc6a;
+    }
+    ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* 3. GLASSMORPHISM SIDEBAR */
+    section[data-testid="stSidebar"] {
+        background-color: rgba(20, 0, 30, 0.95);
+        border-right: 1px solid rgba(0, 255, 133, 0.2);
+    }
+    /* Fix for sidebar content container */
+    section[data-testid="stSidebar"] > div {
+        background-color: transparent;
+    }
+
+    /* 4. CUSTOM NEON INPUT STYLING */
+    /* Sliders */
+    div[data-baseweb="slider"] div[role="slider"] {
+        background-color: #00FF85 !important;
+    }
+    div[data-baseweb="slider"] div[data-testid="stTickBar"] {
+        background: linear-gradient(to right, #00FF85, #00FF85) !important;
+    }
+    /* Checkboxes */
+    span[data-baseweb="checkbox"] div[class*="checked"] {
+        background-color: #00FF85 !important;
+        border-color: #00FF85 !important;
+    }
+    /* Multiselect Tags */
+    span[data-baseweb="tag"] {
+        background-color: rgba(0, 255, 133, 0.2) !important;
+        border: 1px solid #00FF85 !important;
+    }
+    span[data-baseweb="tag"] span {
+        color: #FFFFFF !important;
+    }
+
+    /* 5. TAB STYLING (Cyberpunk Style) */
     .stTabs [data-baseweb="tab-list"] {
         background-color: rgba(255, 255, 255, 0.03);
         border-radius: 12px;
@@ -24,45 +82,31 @@ st.markdown("""
         gap: 8px;
         margin-bottom: 20px;
     }
-
-    /* Individual Tab Styles (Inactive) */
     .stTabs [data-baseweb="tab"] {
         height: auto;
         background-color: transparent;
         border: 1px solid transparent;
         color: #AAAAAA;
-        font-family: 'Roboto', sans-serif;
         font-weight: 700;
         font-size: 0.9rem;
         text-transform: uppercase;
-        letter-spacing: 1px;
         border-radius: 8px;
         padding: 12px 24px;
         transition: all 0.3s ease;
     }
-
-    /* Hover State */
     .stTabs [data-baseweb="tab"]:hover {
         background-color: rgba(255, 255, 255, 0.08);
         color: #FFFFFF;
     }
-
-    /* Active State (Selected Tab) */
     .stTabs [aria-selected="true"] {
         background-color: rgba(0, 255, 133, 0.15) !important;
         color: #00FF85 !important;
         border: 1px solid #00FF85 !important;
         box-shadow: 0 0 15px rgba(0, 255, 133, 0.2);
     }
-
-    /* Remove default Streamlit red underlines */
-    .stTabs [data-baseweb="tab-highlight"] {
-        display: none;
-    }
+    .stTabs [data-baseweb="tab-highlight"] { display: none; }
 </style>
 """, unsafe_allow_html=True)
-# ----------------------------------------------
-
 
 # --- 2. LOAD DATA ---
 df = db.fetch_main_data()
@@ -98,14 +142,12 @@ with st.sidebar:
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply'.")
         
-        # --- TEAMS & POSITION ---
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
         
-        # --- EXCLUDE UNAVAILABLE ---
-        exclude_unavailable = st.checkbox("Exclude Unavailable Players", value=False)
+        # Exclude Unavailable Checkbox
+        exclude_unavailable = st.checkbox("Exclude Unavailable (Red Flags)", value=False)
         
-        # --- SLIDERS ---
         max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
         max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
         
@@ -122,7 +164,7 @@ with st.sidebar:
 # --- FILTER LOGIC ---
 df = df[df['minutes'] >= 90]
 
-# --- FILTER OUT RED FLAGS IF CHECKED ---
+# Logic to exclude unavailable players
 if exclude_unavailable:
     df = df[~df['status'].isin(['i', 'u', 'n', 's'])]
 
@@ -143,7 +185,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET
+# 📅 DEADLINE & FIXTURES WIDGET (With 3D Hover Effect)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
@@ -152,14 +194,25 @@ if gw_name and deadline_iso:
     
     combined_html = f"""
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;700&display=swap');
+        
         .widget-container {{ margin-bottom: 0px; font-family: 'Roboto', sans-serif; }}
+        
+        /* Custom Scrollbar for Widget */
+        ::-webkit-scrollbar {{ width: 6px; }}
+        ::-webkit-scrollbar-thumb {{ background: #00FF85; border-radius: 3px; }}
+        ::-webkit-scrollbar-track {{ background: rgba(0,0,0,0.2); }}
+
         .deadline-box {{
             background: linear-gradient(135deg, #1a001e 0%, #37003c 100%);
             border: 1px solid #00FF85; border-top-left-radius: 12px; border-top-right-radius: 12px;
             padding: 15px; text-align: center; color: white; border-bottom: none;
         }}
-        .label {{ color: #00FF85; font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }}
-        .timer {{ font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; }}
+        .label {{ 
+            color: #00FF85; font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; 
+            text-transform: uppercase; margin-bottom: 5px; font-family: 'Orbitron', sans-serif; 
+        }}
+        .timer {{ font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; font-family: 'Orbitron', sans-serif; }}
         .sub {{ font-size: 0.85rem; color: #BBB; margin-top: 5px; }}
         
         .fix-container {{
@@ -169,23 +222,32 @@ if gw_name and deadline_iso:
         .fix-header {{
             background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
             padding: 10px 20px; font-weight: 700; color: #00FF85;
-            text-align: center; 
+            text-align: center; font-family: 'Orbitron', sans-serif;
             border-top: 1px solid rgba(255,255,255,0.1);
             border-bottom: 1px solid #00FF85;
         }}
         .content {{ padding: 20px; }}
-        .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }}
+        .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }}
+        
+        /* HOVER LIFT EFFECT ON CARDS */
         .match-card {{
             background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
-            transition: transform 0.2s;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smooth Lift */
+            cursor: pointer;
         }}
-        .match-card:hover {{ border-color: #00FF85; background-color: rgba(255,255,255,0.08); }}
+        .match-card:hover {{ 
+            border-color: #00FF85; 
+            background-color: rgba(0, 255, 133, 0.05);
+            transform: translateY(-5px); /* The Lift */
+            box-shadow: 0 5px 15px rgba(0, 255, 133, 0.2); /* The Glow */
+        }}
+        
         .team-col {{ display: flex; flex-direction: column; align-items: center; width: 60px; }}
         .team-logo {{ width: 35px; height: 35px; object-fit: contain; margin-bottom: 5px; }}
         .team-name {{ font-size: 0.75rem; font-weight: 700; text-align: center; color: #FFF; }}
         .match-info {{ display: flex; flex-direction: column; align-items: center; color: #AAA; }}
-        .match-time {{ font-size: 1rem; font-weight: 700; color: #00FF85; }}
+        .match-time {{ font-size: 1rem; font-weight: 700; color: #00FF85; font-family: 'Orbitron', sans-serif; }}
         .match-date {{ font-size: 0.7rem; text-transform: uppercase; }}
     </style>
     
@@ -196,7 +258,7 @@ if gw_name and deadline_iso:
             <div id="sub" class="sub"></div>
         </div>
         <div class="fix-container">
-            <div class="fix-header">{gw_name} Fixtures</div>
+            <div class="fix-header">View {gw_name} Fixtures (Your Local Time)</div>
             <div class="content">
                 <div class="match-grid" id="grid"></div>
             </div>
@@ -250,9 +312,8 @@ if gw_name and deadline_iso:
     """
     
     n_fixtures = len(fixtures_data)
-    # FIX: Use 3 columns instead of 4 for safe row calculation when sidebar is open
     n_rows = (n_fixtures + 2) // 3  
-    widget_height = 80 + (n_rows * 95) # Added slight buffer to 180
+    widget_height = 180 + (n_rows * 95) 
     
     components.html(combined_html, height=widget_height, scrolling=False)
 else:
@@ -261,7 +322,7 @@ else:
 # =========================================================================
 
 # --- TITLE ---
-st.markdown("""<div style="text-align: center; margin-bottom: 50px; margin-top: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric Scouting Dashboard</h1></div>""", unsafe_allow_html=True)
+st.markdown("""<div style="text-align: center; margin-bottom: 50px; margin-top: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; font-family: 'Orbitron', sans-serif;">FPL Metric Scouting Dashboard</h1></div>""", unsafe_allow_html=True)
 
 # --- INFO BOX ---
 st.markdown(
@@ -276,7 +337,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- REPLACED METRICS WITH CUSTOM CARDS (NO EMOJIS) ---
+# --- REPLACED METRICS WITH CUSTOM CARDS (NO EMOJIS, UPDATED FONT) ---
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
@@ -295,9 +356,10 @@ if not filtered.empty:
             height: 100%;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        ">
+            transition: all 0.3s ease;
+        " onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 5px 15px rgba(0, 255, 133, 0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.1)';">
             <div style="font-size: 1.5rem; margin-bottom: 5px;">{icon}</div>
-            <div style="color: #AAAAAA; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">{title}</div>
+            <div style="color: #AAAAAA; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-family: 'Orbitron', sans-serif;">{title}</div>
             <div style="color: #FFFFFF; font-size: 1.2rem; font-weight: 900; line-height: 1.2;">{name}</div>
             <div style="background-color: rgba(0, 255, 133, 0.15); color: #00FF85; padding: 4px 12px; border-radius: 12px; font-size: 0.9rem; font-weight: bold; margin-top: 8px; border: 1px solid rgba(0, 255, 133, 0.3);">
                 {value}
@@ -419,18 +481,8 @@ for i, r in t_df.iterrows():
 st.markdown(f"""<div class="fixture-table-container"><table class="modern-table"><thead><tr><th>Team</th>{"".join([f"<th>{c}</th>" for c in gw_cols])}</tr></thead><tbody>{h_rows}</tbody></table></div>""", unsafe_allow_html=True)
 
 st.markdown("---")
-
-# --- CUSTOM MARKET MOVERS HEADER ---
-st.markdown("""
-<div style="margin-top: 20px; margin-bottom: 20px;">
-    <h2 style="font-size: 2rem; font-weight: 700; color: #FFFFFF; font-family: 'Roboto', sans-serif; letter-spacing: 1px; margin-bottom: 10px;">
-        MARKET MOVERS <span style="font-size: 1.2rem; color: #00FF85; font-weight: 400;">(Daily Change)</span>
-    </h2>
-    <div style="width: 100%; height: 2px; background: linear-gradient(90deg, #00FF85 0%, rgba(0,255,133,0) 80%);"></div>
-    <p style="color: #AAAAAA; font-size: 0.9rem; margin-top: 5px;">Price changes over the last 24h.</p>
-</div>
-""", unsafe_allow_html=True)
-
+st.header("Market Movers (Daily Change)")
+st.caption("Price changes over the last 24h.")
 df_c = db.get_db_price_changes()
 if df_c.empty: st.info("No price changes detected.")
 else:
@@ -440,9 +492,7 @@ else:
     icon_dn = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#FF0055"/><path d="M7 10L12 15L17 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     
     with c_r:
-        # Custom Subheader for Risers
-        st.markdown("""<div style="background: rgba(0, 255, 133, 0.1); border-left: 4px solid #00FF85; padding: 8px 15px; margin-bottom: 15px; border-radius: 4px;"><h3 style="margin: 0; color: #00FF85; font-size: 1.2rem;">PRICE RISERS</h3></div>""", unsafe_allow_html=True)
-        
+        st.subheader("Price Risers")
         risers = df_c[df_c['change'] > 0].sort_values('change', ascending=False)
         if risers.empty: st.info("No risers.")
         else:
@@ -454,9 +504,7 @@ else:
             st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_r}</tbody></table></div>""", unsafe_allow_html=True)
             
     with c_f:
-        # Custom Subheader for Fallers
-        st.markdown("""<div style="background: rgba(255, 0, 85, 0.1); border-left: 4px solid #FF0055; padding: 8px 15px; margin-bottom: 15px; border-radius: 4px;"><h3 style="margin: 0; color: #FF0055; font-size: 1.2rem;">PRICE FALLERS</h3></div>""", unsafe_allow_html=True)
-        
+        st.subheader("Price Fallers")
         fallers = df_c[df_c['change'] < 0].sort_values('change')
         if fallers.empty: st.info("No fallers.")
         else:
