@@ -74,7 +74,7 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE (FIXED STICKY HEADER) */
+    /* 6. AESTHETIC PLAYER TABLE (FIXED Z-INDEX ISSUES) */
     .modern-table {
         width: 100%;
         border-collapse: separate;
@@ -84,34 +84,34 @@ st.markdown("""
     }
     
     .modern-table th {
-        /* FIXED: Solid background so rows don't "peep" through */
-        background-color: #1a001e; 
+        /* FIX: Solid background matching page theme to prevent "peeping" */
+        background-color: #1a001e !important; 
         color: #00FF85;
         font-family: 'Orbitron', sans-serif;
         font-weight: 700;
         text-transform: uppercase;
         padding: 15px;
         text-align: center;
-        
-        /* FIXED: Sticky positioning so the border stays while scrolling */
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        
         border-bottom: 2px solid #00FF85;
         letter-spacing: 1px;
-        box-shadow: 0 4px 6px -2px rgba(0,0,0,0.5); /* Shadow to separate header from content */
+        
+        /* FIX: Sticky positioning with EXTREMELY high Z-Index to stay on top */
+        position: sticky;
+        top: 0;
+        z-index: 10000; 
+        box-shadow: 0 4px 10px -2px rgba(0,0,0,0.5); /* Shadow to separate header from scrolling content */
     }
     .modern-table th:first-child { text-align: left; padding-left: 20px; }
     
     .modern-table tbody tr {
         transition: all 0.2s ease;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 1; /* Keep rows lower than header */
     }
     .modern-table tbody tr:hover {
         transform: scale(1.005);
         box-shadow: 0 5px 15px rgba(0, 255, 133, 0.15);
-        z-index: 10;
+        z-index: 10; /* Lift row slightly, but still below header's 10000 */
         position: relative;
     }
     
@@ -226,7 +226,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET (With Flexbox Centering)
+# 📅 DEADLINE & FIXTURES WIDGET
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
@@ -236,26 +236,18 @@ if gw_name and deadline_iso:
     combined_html = f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;700&display=swap');
-        
         .widget-container {{ margin-bottom: 0px; font-family: 'Roboto', sans-serif; }}
-        
-        /* Custom Scrollbar for Widget */
         ::-webkit-scrollbar {{ width: 6px; }}
         ::-webkit-scrollbar-thumb {{ background: #00FF85; border-radius: 3px; }}
         ::-webkit-scrollbar-track {{ background: rgba(0,0,0,0.2); }}
-
         .deadline-box {{
             background: linear-gradient(135deg, #1a001e 0%, #37003c 100%);
             border: 1px solid #00FF85; border-top-left-radius: 12px; border-top-right-radius: 12px;
             padding: 15px; text-align: center; color: white; border-bottom: none;
         }}
-        .label {{ 
-            color: #00FF85; font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; 
-            text-transform: uppercase; margin-bottom: 5px; font-family: 'Orbitron', sans-serif; 
-        }}
+        .label {{ color: #00FF85; font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; font-family: 'Orbitron', sans-serif; }}
         .timer {{ font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; font-family: 'Orbitron', sans-serif; }}
         .sub {{ font-size: 0.85rem; color: #BBB; margin-top: 5px; }}
-        
         .fix-container {{
             border: 1px solid #00FF85; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
             overflow: hidden; background-color: rgba(255, 255, 255, 0.02);
@@ -268,29 +260,18 @@ if gw_name and deadline_iso:
             border-bottom: 1px solid #00FF85;
         }}
         .content {{ padding: 20px; }}
-        
-        .match-grid {{ 
-            display: flex; 
-            flex-wrap: wrap; 
-            justify-content: center; 
-            gap: 12px; 
-        }}
-        
+        .match-grid {{ display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }}
         .match-card {{
             background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             cursor: pointer;
-            flex: 1 1 280px; 
-            max-width: 350px;
+            flex: 1 1 280px; max-width: 350px;
         }}
         .match-card:hover {{ 
-            border-color: #00FF85; 
-            background-color: rgba(0, 255, 133, 0.05);
-            transform: translateY(-5px); 
-            box-shadow: 0 5px 15px rgba(0, 255, 133, 0.2);
+            border-color: #00FF85; background-color: rgba(0, 255, 133, 0.05);
+            transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0, 255, 133, 0.2);
         }}
-        
         .team-col {{ display: flex; flex-direction: column; align-items: center; width: 60px; }}
         .team-logo {{ width: 35px; height: 35px; object-fit: contain; margin-bottom: 5px; }}
         .team-name {{ font-size: 0.75rem; font-weight: 700; text-align: center; color: #FFF; }}
@@ -346,7 +327,6 @@ if gw_name and deadline_iso:
                 var dateStr = d.toLocaleDateString([], {{weekday: 'short', day: 'numeric', month: 'short'}});
                 var h_img = "https://resources.premierleague.com/premierleague/badges/50/t" + f.home_code + ".png";
                 var a_img = "https://resources.premierleague.com/premierleague/badges/50/t" + f.away_code + ".png";
-                
                 var card = `
                 <div class="match-card">
                     <div class="team-col"><img src="${{h_img}}" class="team-logo"><span class="team-name">${{f.home_name}}</span></div>
@@ -358,11 +338,9 @@ if gw_name and deadline_iso:
         }}
     </script>
     """
-    
     n_fixtures = len(fixtures_data)
     n_rows = (n_fixtures + 2) // 3  
     widget_height = 180 + (n_rows * 95) 
-    
     components.html(combined_html, height=widget_height, scrolling=False)
 else:
     st.info("No fixtures found for next Gameweek.")
