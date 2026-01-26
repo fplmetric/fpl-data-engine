@@ -74,7 +74,12 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE (FIXED Z-INDEX ISSUES) */
+    /* 6. AESTHETIC PLAYER TABLE */
+    /* Container to lift table up */
+    .player-table-container {
+        margin-top: -10px; 
+    }
+
     .modern-table {
         width: 100%;
         border-collapse: separate;
@@ -84,7 +89,7 @@ st.markdown("""
     }
     
     .modern-table th {
-        /* FIX: Solid background matching page theme to prevent "peeping" */
+        /* Solid background to prevent peeping */
         background-color: #1a001e !important; 
         color: #00FF85;
         font-family: 'Orbitron', sans-serif;
@@ -92,26 +97,30 @@ st.markdown("""
         text-transform: uppercase;
         padding: 15px;
         text-align: center;
-        border-bottom: 2px solid #00FF85;
         letter-spacing: 1px;
         
-        /* FIX: Sticky positioning with EXTREMELY high Z-Index to stay on top */
+        /* Sticky header logic */
         position: sticky;
         top: 0;
-        z-index: 10000; 
-        box-shadow: 0 4px 10px -2px rgba(0,0,0,0.5); /* Shadow to separate header from scrolling content */
+        z-index: 10000;
+        
+        /* REMOVED GREEN BORDER AS REQUESTED */
+        border-bottom: none !important;
+        
+        /* Small shadow to separate header from content */
+        box-shadow: 0 4px 10px -2px rgba(0,0,0,0.5);
     }
     .modern-table th:first-child { text-align: left; padding-left: 20px; }
     
     .modern-table tbody tr {
         transition: all 0.2s ease;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        z-index: 1; /* Keep rows lower than header */
+        z-index: 1;
     }
     .modern-table tbody tr:hover {
         transform: scale(1.005);
         box-shadow: 0 5px 15px rgba(0, 255, 133, 0.15);
-        z-index: 10; /* Lift row slightly, but still below header's 10000 */
+        z-index: 10;
         position: relative;
     }
     
