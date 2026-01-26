@@ -12,6 +12,58 @@ import data_engine as db
 st.set_page_config(page_title="FPL Metric Dashboard", page_icon="favicon.png", layout="wide")
 st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
 
+# --- NEW: CUSTOM CSS FOR TABS TO MATCH THEME ---
+st.markdown("""
+<style>
+    /* Tab Container */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        padding: 8px;
+        border: 1px solid rgba(0, 255, 133, 0.2);
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    /* Individual Tab Styles (Inactive) */
+    .stTabs [data-baseweb="tab"] {
+        height: auto;
+        background-color: transparent;
+        border: 1px solid transparent;
+        color: #AAAAAA;
+        font-family: 'Roboto', sans-serif;
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-radius: 8px;
+        padding: 12px 24px;
+        transition: all 0.3s ease;
+    }
+
+    /* Hover State */
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: rgba(255, 255, 255, 0.08);
+        color: #FFFFFF;
+    }
+
+    /* Active State (Selected Tab) */
+    .stTabs [aria-selected="true"] {
+        background-color: rgba(0, 255, 133, 0.15) !important;
+        color: #00FF85 !important;
+        border: 1px solid #00FF85 !important;
+        box-shadow: 0 0 15px rgba(0, 255, 133, 0.2);
+    }
+
+    /* Remove default Streamlit red underlines */
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none;
+    }
+</style>
+""", unsafe_allow_html=True)
+# ----------------------------------------------
+
+
 # --- 2. LOAD DATA ---
 df = db.fetch_main_data()
 df = df.fillna(0)
@@ -131,7 +183,7 @@ if gw_name and deadline_iso:
             <div id="sub" class="sub"></div>
         </div>
         <div class="fix-container">
-            <div class="fix-header">{gw_name} Fixtures</div>
+            <div class="fix-header">View {gw_name} Fixtures (Your Local Time)</div>
             <div class="content">
                 <div class="match-grid" id="grid"></div>
             </div>
@@ -353,8 +405,18 @@ for i, r in t_df.iterrows():
 st.markdown(f"""<div class="fixture-table-container"><table class="modern-table"><thead><tr><th>Team</th>{"".join([f"<th>{c}</th>" for c in gw_cols])}</tr></thead><tbody>{h_rows}</tbody></table></div>""", unsafe_allow_html=True)
 
 st.markdown("---")
-st.header("Market Movers (Daily Change)")
-st.caption("Price changes over the last 24h.")
+
+# --- CUSTOM MARKET MOVERS HEADER ---
+st.markdown("""
+<div style="margin-top: 20px; margin-bottom: 20px;">
+    <h2 style="font-size: 2rem; font-weight: 700; color: #FFFFFF; font-family: 'Roboto', sans-serif; letter-spacing: 1px; margin-bottom: 10px;">
+        MARKET MOVERS <span style="font-size: 1.2rem; color: #00FF85; font-weight: 400;">(Daily Change)</span>
+    </h2>
+    <div style="width: 100%; height: 2px; background: linear-gradient(90deg, #00FF85 0%, rgba(0,255,133,0) 80%);"></div>
+    <p style="color: #AAAAAA; font-size: 0.9rem; margin-top: 5px;">Price changes over the last 24h.</p>
+</div>
+""", unsafe_allow_html=True)
+
 df_c = db.get_db_price_changes()
 if df_c.empty: st.info("No price changes detected.")
 else:
@@ -364,7 +426,9 @@ else:
     icon_dn = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#FF0055"/><path d="M7 10L12 15L17 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     
     with c_r:
-        st.subheader("Price Risers")
+        # Custom Subheader for Risers
+        st.markdown("""<div style="background: rgba(0, 255, 133, 0.1); border-left: 4px solid #00FF85; padding: 8px 15px; margin-bottom: 15px; border-radius: 4px;"><h3 style="margin: 0; color: #00FF85; font-size: 1.2rem;">PRICE RISERS</h3></div>""", unsafe_allow_html=True)
+        
         risers = df_c[df_c['change'] > 0].sort_values('change', ascending=False)
         if risers.empty: st.info("No risers.")
         else:
@@ -376,7 +440,9 @@ else:
             st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_r}</tbody></table></div>""", unsafe_allow_html=True)
             
     with c_f:
-        st.subheader("Price Fallers")
+        # Custom Subheader for Fallers
+        st.markdown("""<div style="background: rgba(255, 0, 85, 0.1); border-left: 4px solid #FF0055; padding: 8px 15px; margin-bottom: 15px; border-radius: 4px;"><h3 style="margin: 0; color: #FF0055; font-size: 1.2rem;">PRICE FALLERS</h3></div>""", unsafe_allow_html=True)
+        
         fallers = df_c[df_c['change'] < 0].sort_values('change')
         if fallers.empty: st.info("No fallers.")
         else:
