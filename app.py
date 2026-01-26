@@ -154,12 +154,12 @@ st.markdown(
         justify-content: center;
     }
     .mini-fix-box {
-        width: 32px;
-        height: 22px;
+        width: 32px;  /* Increased width */
+        height: 22px; /* Increased height */
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.75rem;
+        font-size: 0.75rem; /* Increased font size */
         font-weight: 800;
         border-radius: 3px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -273,15 +273,22 @@ def get_expected_points_map():
             ep_map[p['id']] = 0.0
     return ep_map
 
-# --- FIXTURE TICKER LOGIC (FULL) ---
+# --- FIXTURE TICKER LOGIC (FULL & ENHANCED) ---
 @st.cache_data(ttl=3600) 
-def get_fixture_ticker():
+def get_fixture_ticker(horizon=5):
+    """
+    Fetches ticker data and calculates Overall, Attack, and Defence difficulty.
+    """
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     teams = {
         t['id']: {
             'name': t['name'], 
             'short': t['short_name'],
-            'code': t['code'] 
+            'code': t['code'],
+            'str_att_h': t['strength_attack_home'],
+            'str_att_a': t['strength_attack_away'],
+            'str_def_h': t['strength_defence_home'],
+            'str_def_a': t['strength_defence_away']
         } 
         for t in static['teams']
     }
@@ -290,26 +297,52 @@ def get_fixture_ticker():
     ticker_data = []
     
     for team_id, team_info in teams.items():
-        team_fixtures = [f for f in fixtures if f['team_h'] == team_id or f['team_a'] == team_id][:5]
+        # Filter fixtures for this team (Limit by horizon)
+        team_fixtures = [f for f in fixtures if f['team_h'] == team_id or f['team_a'] == team_id][:horizon]
+        
         logo_url = f"https://resources.premierleague.com/premierleague/badges/20/t{team_info['code']}.png"
         
         row = {
             'Logo': logo_url, 
-            'Team': team_info['name'], 
-            'Total Difficulty': 0 
+            'Team': team_info['name'],
+            'Diff_Overall': 0,
+            'Diff_Attack': 0,
+            'Diff_Defence': 0
         }
         
         for i, f in enumerate(team_fixtures):
             is_home = f['team_h'] == team_id
             opponent_id = f['team_a'] if is_home else f['team_h']
+            
+            # --- 1. OVERALL FDR (Official) ---
             difficulty = f['team_h_difficulty'] if is_home else f['team_a_difficulty']
-            opponent_short = teams[opponent_id]['short']
+            
+            # --- 2. CUSTOM STRENGTH CALC ---
+            # If I am Attacking, I care about Opponent's DEFENCE strength
+            # If I am Defending, I care about Opponent's ATTACK strength
+            opp_stats = teams[opponent_id]
+            
+            if is_home:
+                # I am Home vs Opponent Away
+                opp_def_str = opp_stats['str_def_a']
+                opp_att_str = opp_stats['str_att_a']
+            else:
+                # I am Away vs Opponent Home
+                opp_def_str = opp_stats['str_def_h']
+                opp_att_str = opp_stats['str_att_h']
+            
+            opponent_short = opp_stats['short']
             loc = "(H)" if is_home else "(A)"
             
             col_name = f"GW{f['event']}"
             row[col_name] = f"{opponent_short} {loc}"
             
-            row['Total Difficulty'] += difficulty 
+            # Accumulate Difficulty Scores
+            row['Diff_Overall'] += difficulty
+            row['Diff_Attack'] += opp_def_str  # Higher Opp Def = Harder to Attack
+            row['Diff_Defence'] += opp_att_str # Higher Opp Att = Harder to Defend
+            
+            # Store badge color difficulty (Standard FDR for display)
             row[f'Dif_{col_name}'] = difficulty 
 
         ticker_data.append(row)
@@ -343,10 +376,6 @@ def get_team_upcoming_fixtures():
 
 # --- 🚀 NEW: DATABASE DRIVEN PRICE CHANGES ---
 def get_db_price_changes():
-    """
-    Fetches the last 2 snapshots for every player to calculate daily change.
-    Ignores the API's cumulative 'cost_change_event'.
-    """
     sql = """
     WITH Ranked AS (
         SELECT 
@@ -361,18 +390,13 @@ def get_db_price_changes():
         if df_hist.empty:
             return pd.DataFrame()
 
-        # Pivot to get Latest vs Previous in one row
         df_latest = df_hist[df_hist['rn'] == 1].set_index('player_id')
         df_prev = df_hist[df_hist['rn'] == 2].set_index('player_id')
         
-        # Calculate Delta
         merged = df_latest.join(df_prev, lsuffix='_now', rsuffix='_old')
         merged['change'] = merged['cost_now'] - merged['cost_old']
-        
-        # Filter for actual movers
         movers = merged[merged['change'] != 0].copy()
         
-        # Format for display
         clean_movers = []
         for pid, row in movers.iterrows():
             clean_movers.append({
@@ -383,9 +407,7 @@ def get_db_price_changes():
                 'change': row['change'],
                 'selected_by_percent': row['selected_by_percent_now']
             })
-            
         return pd.DataFrame(clean_movers)
-        
     except Exception as e:
         st.error(f"Error fetching price history: {e}")
         return pd.DataFrame()
@@ -695,21 +717,38 @@ with tab4:
 st.markdown("---") 
 st.header("Fixture Difficulty Ticker")
 
-ticker_df = get_fixture_ticker()
-gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
-sort_options = ["Total Difficulty (Next 5)"] + gw_cols
+# --- TICKER CONTROLS ---
+col_t1, col_t2, col_t3 = st.columns(3)
+with col_t1:
+    sort_order = st.selectbox("Sort Order", ["Easiest", "Hardest", "Alphabetical"])
+with col_t2:
+    view_type = st.selectbox("Type", ["Overall", "Attack", "Defence"])
+with col_t3:
+    horizon = st.selectbox("Horizon", ["Next 3 GWs", "Next 5 GWs"])
 
-col_ticker_sort, _ = st.columns([1, 4]) 
-with col_ticker_sort:
-    sort_choice = st.selectbox("Sort Table By:", sort_options)
+# Parse Horizon
+horizon_limit = 3 if horizon == "Next 3 GWs" else 5
 
-if sort_choice == "Total Difficulty (Next 5)":
-    ticker_df = ticker_df.sort_values('Total Difficulty', ascending=True)
+# Fetch and Process Data
+ticker_df = get_fixture_ticker(horizon_limit)
+
+# Apply Sorting
+if sort_order == "Alphabetical":
+    ticker_df = ticker_df.sort_values('Team', ascending=True)
 else:
-    target_dif_col = f"Dif_{sort_choice}"
-    if target_dif_col in ticker_df.columns:
-        ticker_df = ticker_df.sort_values(target_dif_col, ascending=True)
+    # Map Type to Calculation Column
+    sort_col = "Diff_Overall"
+    if view_type == "Attack":
+        sort_col = "Diff_Attack"
+    elif view_type == "Defence":
+        sort_col = "Diff_Defence"
+    
+    # Easiest = Lowest Score (Ascending) | Hardest = Highest Score (Descending)
+    is_ascending = (sort_order == "Easiest")
+    ticker_df = ticker_df.sort_values(sort_col, ascending=is_ascending)
 
+# Display Ticker
+gw_cols = [c for c in ticker_df.columns if c.startswith('GW')]
 colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
 text_colors = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
 
