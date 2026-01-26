@@ -8,7 +8,7 @@ import styles
 import data_engine as db
 
 # --- 1. SETUP ---
-st.set_page_config(page_title="FPL Metric", page_icon="favicon.png", layout="wide")
+st.set_page_config(page_title="FPL Metric Dashboard", page_icon="favicon.png", layout="wide")
 st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
 
 # --- 2. LOAD DATA ---
@@ -30,8 +30,8 @@ df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 # --- SIDEBAR ---
 with st.sidebar:
     if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-        col1, mid, col2 = st.columns([1, 5, 1]) 
-        with mid: st.image("fpl_metric_logo.png", use_container_width=True)
+        # Removed columns to allow the CSS in styles.py to manage width and contain the image
+        st.image("fpl_metric_logo.png", use_container_width=True)
     
     st.header("Filters")
     all_teams = sorted(df['team_name'].unique())
@@ -73,10 +73,12 @@ filtered = df[
 
 # --- MAIN DISPLAY ---
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-    _, col_main_logo, _ = st.columns([3, 2, 3]) 
+    # Adjusted columns to give the logo more horizontal space if needed
+    _, col_main_logo, _ = st.columns([1, 4, 1]) 
     with col_main_logo: st.image("fpl_metric_logo.png", use_container_width=True)
 
-st.markdown("""<div style="text-align: center; margin-bottom: 10px;"><h1 style="font-size: 3rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric</h1><div style="width: 80px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div></div>""", unsafe_allow_html=True)
+# UPDATED TITLE: "FPL Metric Scouting Dashboard" (with slightly smaller font for fit)
+st.markdown("""<div style="text-align: center; margin-bottom: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric Scouting Dashboard</h1><div style="width: 80px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div></div>""", unsafe_allow_html=True)
 
 # =========================================================================
 # 📅 DEADLINE & FIXTURES WIDGET
@@ -84,8 +86,6 @@ st.markdown("""<div style="text-align: center; margin-bottom: 10px;"><h1 style="
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
 if gw_name and deadline_iso:
-    # Use the clean function from data_engine to generate HTML
-    # This prevents any indentation errors in app.py
     html_widget = db.create_deadline_widget(gw_name, deadline_iso, fixtures_data)
     components.html(html_widget, height=450, scrolling=True)
 else:
