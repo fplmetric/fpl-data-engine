@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import json
 import streamlit.components.v1 as components
 
 # --- LOCAL IMPORTS ---
@@ -70,22 +71,127 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# --- MAIN DISPLAY ---
+# --- MAIN DISPLAY (CENTERED LOGO) ---
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-    col_l, col_m, col_r = st.columns([1, 1, 1]) 
+    col_l, col_m, col_r = st.columns([1, 2, 1]) 
     with col_m: 
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET
+# 📅 DEADLINE & FIXTURES WIDGET (STATIC & DYNAMIC HEIGHT)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
 if gw_name and deadline_iso:
-    # Use the clean function from data_engine to generate HTML
-    html_widget = db.create_deadline_widget(gw_name, deadline_iso, fixtures_data)
-    # FIX: Increased height to 650 and set scrolling=False to remove the grey slider
-    components.html(html_widget, height=650, scrolling=False)
+    fixtures_json = json.dumps(fixtures_data)
+    
+    # HTML Block
+    combined_html = f"""
+    <style>
+        .widget-container {{ margin-bottom: 20px; font-family: 'Roboto', sans-serif; }}
+        .deadline-box {{
+            background: linear-gradient(135deg, #1a001e 0%, #37003c 100%);
+            border: 1px solid #00FF85; border-top-left-radius: 12px; border-top-right-radius: 12px;
+            padding: 15px; text-align: center; color: white; border-bottom: none;
+        }}
+        .label {{ color: #00FF85; font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }}
+        .timer {{ font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; }}
+        .sub {{ font-size: 0.85rem; color: #BBB; margin-top: 5px; }}
+        
+        .fix-container {{
+            border: 1px solid #00FF85; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
+            overflow: hidden; background-color: rgba(255, 255, 255, 0.02);
+        }}
+        .fix-header {{
+            background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
+            padding: 10px 20px; font-weight: 700; color: #00FF85;
+            text-align: center; border-top: 1px solid rgba(255,255,255,0.1);
+        }}
+        .content {{ padding: 20px; }}
+        .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }}
+        .match-card {{
+            background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
+            transition: transform 0.2s;
+        }}
+        .match-card:hover {{ border-color: #00FF85; background-color: rgba(255,255,255,0.08); }}
+        .team-col {{ display: flex; flex-direction: column; align-items: center; width: 60px; }}
+        .team-logo {{ width: 35px; height: 35px; object-fit: contain; margin-bottom: 5px; }}
+        .team-name {{ font-size: 0.75rem; font-weight: 700; text-align: center; color: #FFF; }}
+        .match-info {{ display: flex; flex-direction: column; align-items: center; color: #AAA; }}
+        .match-time {{ font-size: 1rem; font-weight: 700; color: #00FF85; }}
+        .match-date {{ font-size: 0.7rem; text-transform: uppercase; }}
+    </style>
+    
+    <div class="widget-container">
+        <div class="deadline-box">
+            <div class="label">{gw_name} DEADLINE</div>
+            <div id="timer" class="timer">Loading...</div>
+            <div id="sub" class="sub"></div>
+        </div>
+        <div class="fix-container">
+            <div class="fix-header">View {gw_name} Fixtures (Your Local Time)</div>
+            <div class="content">
+                <div class="match-grid" id="grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var deadline = new Date("{deadline_iso}").getTime();
+        var dateOpts = {{ weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }};
+        var subEl = document.getElementById("sub");
+        if(subEl) subEl.innerText = new Date("{deadline_iso}").toLocaleDateString(undefined, dateOpts) + " (Local)";
+        
+        setInterval(function() {{
+            var now = new Date().getTime();
+            var t = deadline - now;
+            var timerEl = document.getElementById("timer");
+            if(timerEl) {{
+                if (t < 0) {{
+                    timerEl.innerHTML = "DEADLINE PASSED";
+                    timerEl.style.color = "#FF0055";
+                }} else {{
+                    var d = Math.floor(t / (1000 * 60 * 60 * 24));
+                    var h = Math.floor((t % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    var m = Math.floor((t % (1000 * 60 * 60)) / (1000 * 60));
+                    var s = Math.floor((t % (1000 * 60)) / 1000);
+                    timerEl.innerHTML = d + "d " + h + "h " + m + "m " + s + "s ";
+                }}
+            }}
+        }}, 1000);
+
+        var fixtures = {fixtures_json};
+        var grid = document.getElementById("grid");
+        if(grid) {{
+            fixtures.forEach(f => {{
+                var d = new Date(f.iso_time);
+                var timeStr = d.toLocaleTimeString([], {{hour: '2-digit', minute:'2-digit'}});
+                var dateStr = d.toLocaleDateString([], {{weekday: 'short', day: 'numeric', month: 'short'}});
+                var h_img = "https://resources.premierleague.com/premierleague/badges/50/t" + f.home_code + ".png";
+                var a_img = "https://resources.premierleague.com/premierleague/badges/50/t" + f.away_code + ".png";
+                
+                var card = `
+                <div class="match-card">
+                    <div class="team-col"><img src="${{h_img}}" class="team-logo"><span class="team-name">${{f.home_name}}</span></div>
+                    <div class="match-info"><span class="match-time">${{timeStr}}</span><span class="match-date">${{dateStr}}</span></div>
+                    <div class="team-col"><img src="${{a_img}}" class="team-logo"><span class="team-name">${{f.away_name}}</span></div>
+                </div>`;
+                grid.innerHTML += card;
+            }});
+        }}
+    </script>
+    """
+    
+    # --- DYNAMIC HEIGHT CALCULATION ---
+    # Calculates height based on fixture rows (5 cols per row assumption)
+    # Banner+Header ~ 140px. Each row ~ 100px.
+    # Standard 10 matches = 2 rows -> 140 + 200 = 340. We use 350 for safety.
+    n_fixtures = len(fixtures_data)
+    n_rows = (n_fixtures + 4) // 5  # Ceiling division for 5 columns
+    widget_height = 140 + (n_rows * 105) 
+    
+    components.html(combined_html, height=widget_height, scrolling=False)
 else:
     st.info("No fixtures found for next Gameweek.")
 
@@ -151,7 +257,6 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # --- HIGHLIGHTING LOGIC ---
         status = row['status']
         row_style = ""
         if status in ['i', 'u', 'n', 's']: 
