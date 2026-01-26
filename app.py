@@ -106,7 +106,9 @@ if gw_name and deadline_iso:
         .fix-header {{
             background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
             padding: 10px 20px; font-weight: 700; color: #00FF85;
-            text-align: center; border-top: 1px solid rgba(255,255,255,0.1);
+            text-align: center; 
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1); /* ADDED MISSING BOTTOM BORDER */
         }}
         .content {{ padding: 20px; }}
         .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }}
