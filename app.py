@@ -70,12 +70,11 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# --- MAIN DISPLAY ---
-# Use [1, 1, 1] to ensure the logo is perfectly centered and has enough space
+# --- MAIN DISPLAY (CENTERED LOGO) ---
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-    col_l, col_m, col_r = st.columns([1, 1, 1]) 
-    with col_m: 
-        st.image("fpl_metric_logo.png", use_container_width=True)
+    # Use [1, 2, 1] to give the logo more width in the center, preventing squash/crop
+    _, col_main_logo, _ = st.columns([1, 2, 1]) 
+    with col_main_logo: st.image("fpl_metric_logo.png", use_container_width=True)
 
 st.markdown("""<div style="text-align: center; margin-bottom: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric Scouting Dashboard</h1><div style="width: 80px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div></div>""", unsafe_allow_html=True)
 
@@ -85,7 +84,6 @@ st.markdown("""<div style="text-align: center; margin-bottom: 10px;"><h1 style="
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
 if gw_name and deadline_iso:
-    # Use the clean function from data_engine to generate HTML
     html_widget = db.create_deadline_widget(gw_name, deadline_iso, fixtures_data)
     components.html(html_widget, height=450, scrolling=True)
 else:
@@ -150,7 +148,6 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # --- HIGHLIGHTING LOGIC ---
         status = row['status']
         row_style = ""
         if status in ['i', 'u', 'n', 's']: 
