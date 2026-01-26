@@ -7,17 +7,20 @@ span[data-baseweb="tag"] { color: black !important; font-weight: bold; }
 div[data-baseweb="select"] > div { cursor: pointer !important; }
 .block-container { padding-top: 1rem !important; padding-bottom: 2rem !important; }
 
-/* --- LOGO VISIBILITY FIX --- */
-/* Ensure images fit within their containers without cropping */
-div[data-testid="stImage"] img {
+/* --- LOGO SIZING FIX --- */
+
+/* 1. Sidebar Logo: Keep it small and contained */
+section[data-testid="stSidebar"] div[data-testid="stImage"] img {
     object-fit: contain !important;
     width: 100% !important;
-    height: auto !important;
-    max-height: 130px; /* Maximum height for main view logo */
+    max-height: 80px !important;
 }
-/* Specific adjustment for sidebar logo to keep it compact */
-section[data-testid="stSidebar"] div[data-testid="stImage"] img {
-     max-height: 90px;
+
+/* 2. Main Area Logo: Allow it to be larger and centered */
+div[data-testid="stAppViewContainer"] div[data-testid="stImage"] img {
+    object-fit: contain !important;
+    width: 100% !important;
+    max-height: 200px !important; /* Increased height visibility */
 }
 
 /* TABS */
