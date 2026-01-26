@@ -74,7 +74,7 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE (COMPLETE MASK FIX) */
+    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE GAP FIX) */
     .player-table-container { margin-top: 0px; }
 
     .modern-table {
@@ -95,29 +95,32 @@ st.markdown("""
         text-align: center;
         letter-spacing: 1px;
         border-bottom: none !important;
-        border-radius: 0 !important; /* Force square corners to prevent peeping */
         
         position: sticky;
         top: 0;
         z-index: 1000;
         
-        /* Base Shadow: Green Bottom Border + Top Purple Mask */
-        box-shadow: 0 2px 0 #00FF85, 0 -30px 0 #1a001e;
+        /* This shadow is purely for the bottom green line */
+        box-shadow: 0 2px 0 #00FF85; 
+        
+        /* Use clip-path to ensure nothing bleeds out if needed, though usually not required with the ::before method */
     }
     
-    /* FIX: FIRST CHILD - Add LEFT Mask */
-    .modern-table th:first-child { 
-        text-align: left; 
-        padding-left: 20px;
-        /* Green Bottom + Top Mask + LEFT Mask (-30px) */
-        box-shadow: 0 2px 0 #00FF85, 0 -30px 0 #1a001e, -30px 0 0 #1a001e;
+    /* THE FIX: Use a pseudo-element to create a SOLID BLOCK above the header. 
+       This physically covers the transparent gap caused by border-spacing.
+    */
+    .modern-table th::before {
+        content: "";
+        position: absolute;
+        top: -20px; /* Extend upwards */
+        left: 0;
+        right: 0;
+        height: 20px; /* Height of the gap cover */
+        background-color: #1a001e; /* Solid background color */
+        z-index: -1;
     }
 
-    /* FIX: LAST CHILD - Add RIGHT Mask */
-    .modern-table th:last-child {
-        /* Green Bottom + Top Mask + RIGHT Mask (30px) */
-        box-shadow: 0 2px 0 #00FF85, 0 -30px 0 #1a001e, 30px 0 0 #1a001e;
-    }
+    .modern-table th:first-child { text-align: left; padding-left: 20px; }
     
     .modern-table tbody tr {
         transition: all 0.2s ease;
@@ -243,7 +246,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET
+# 📅 DEADLINE & FIXTURES WIDGET (With Flexbox Centering)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
