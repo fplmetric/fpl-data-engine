@@ -70,11 +70,12 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# --- MAIN DISPLAY (CENTERED LOGO) ---
+# --- MAIN DISPLAY ---
+# Use [1, 1, 1] to ensure the logo is perfectly centered and has enough space
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-    # [3, 2, 3] layout centers the image in the middle '2' column
-    _, col_main_logo, _ = st.columns([3, 2, 3]) 
-    with col_main_logo: st.image("fpl_metric_logo.png", use_container_width=True)
+    col_l, col_m, col_r = st.columns([1, 1, 1]) 
+    with col_m: 
+        st.image("fpl_metric_logo.png", use_container_width=True)
 
 st.markdown("""<div style="text-align: center; margin-bottom: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric Scouting Dashboard</h1><div style="width: 80px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div></div>""", unsafe_allow_html=True)
 
