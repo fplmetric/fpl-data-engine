@@ -71,7 +71,6 @@ filtered = df[
 ]
 
 # --- MAIN DISPLAY ---
-# Use [1, 1, 1] to ensure the logo is perfectly centered and has enough space
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
     col_l, col_m, col_r = st.columns([1, 1, 1]) 
     with col_m: 
@@ -83,14 +82,16 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
 if gw_name and deadline_iso:
+    # Use the clean function from data_engine to generate HTML
     html_widget = db.create_deadline_widget(gw_name, deadline_iso, fixtures_data)
-    components.html(html_widget, height=450, scrolling=True)
+    # FIX: Increased height to 650 and set scrolling=False to remove the grey slider
+    components.html(html_widget, height=650, scrolling=False)
 else:
     st.info("No fixtures found for next Gameweek.")
 
 # =========================================================================
 
-# --- TITLE MOVED HERE (Below Fixtures, Above Scout Tip) ---
+# --- TITLE MOVED HERE ---
 st.markdown("""<div style="text-align: center; margin-bottom: 20px; margin-top: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric Scouting Dashboard</h1></div>""", unsafe_allow_html=True)
 
 # --- INFO BOX ---
