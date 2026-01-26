@@ -74,44 +74,39 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE (FIXED: TALLER HEADER & SOLID BORDER) */
+    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE FIX) */
     .player-table-container { margin-top: 0px; }
 
     .modern-table {
         width: 100%;
         border-collapse: separate;
-        border-spacing: 0 8px; /* Creates the floating card effect */
+        border-spacing: 0 8px;
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
     }
     
     .modern-table th {
-        /* SOLID BACKGROUND MATCHING PAGE */
+        /* SOLID BACKGROUND */
         background-color: #1a001e !important; 
         color: #00FF85;
         font-family: 'Orbitron', sans-serif;
         font-weight: 700;
         text-transform: uppercase;
-        
-        /* FIX: INCREASED PADDING TO MAKE HEADER LARGER/TALLER */
-        padding-top: 20px;
-        padding-bottom: 20px;
-        padding-left: 15px;
-        padding-right: 15px;
-        
+        padding: 15px;
         text-align: center;
         letter-spacing: 1px;
+        border-bottom: none !important; /* Reset standard border */
         
         /* STICKY CONFIGURATION */
         position: sticky;
         top: 0;
-        z-index: 9999; /* Highest priority */
+        z-index: 1000;
         
-        /* FIX: SOLID GREEN BORDER */
-        border-bottom: 3px solid #00FF85;
-        
-        /* FIX: Top Shadow to cover any "peeping" pixels above the sticky header */
-        box-shadow: 0 -5px 0 #1a001e;
+        /* FIX APPLIED HERE: */
+        /* 1. Green border removed entirely. */
+        /* 2. A large negative top shadow (-30px) creates a tall solid purple block above the header. */
+        /* This acts as a mask, ensuring rows are hidden before they reach the visible gap. */
+        box-shadow: 0 -30px 0 0 #1a001e;
     }
     
     .modern-table th:first-child { text-align: left; padding-left: 20px; }
@@ -241,7 +236,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET (With Flexbox Centering)
+# 📅 DEADLINE & FIXTURES WIDGET
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
