@@ -154,12 +154,12 @@ st.markdown(
         justify-content: center;
     }
     .mini-fix-box {
-        width: 32px;  /* Increased width */
-        height: 22px; /* Increased height */
+        width: 32px;
+        height: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.75rem; /* Increased font size */
+        font-size: 0.75rem;
         font-weight: 800;
         border-radius: 3px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -234,13 +234,8 @@ st.markdown(
         .modern-table th:first-child, .modern-table td:first-child {
             padding-left: 10px !important;
         }
-        /* Allow mini badges to wrap or scroll if needed on very small screens */
-        .mini-fix-container {
-            flex-wrap: nowrap; 
-        }
-        div[data-baseweb="tab-list"] {
-            flex-wrap: wrap;
-        }
+        .mini-fix-container { flex-wrap: nowrap; }
+        div[data-baseweb="tab-list"] { flex-wrap: wrap; }
     }
     </style>
     """,
@@ -269,9 +264,7 @@ def get_team_map():
 # --- FETCH EXPECTED POINTS (NEW) ---
 @st.cache_data(ttl=3600)
 def get_expected_points_map():
-    """Fetches Live Expected Points (ep_next) from API"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
-    # Map ID -> ep_next
     ep_map = {}
     for p in static['elements']:
         try:
@@ -323,64 +316,81 @@ def get_fixture_ticker():
         
     return pd.DataFrame(ticker_data)
 
-# --- UPCOMING FIXTURES FOR PLAYERS (NEW MAP) ---
+# --- UPCOMING FIXTURES FOR PLAYERS ---
 @st.cache_data(ttl=3600)
 def get_team_upcoming_fixtures():
-    """Returns a Dict: Team Name -> List of next 5 fixtures [{'opp': 'ARS', 'diff': 4}, ...]"""
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     fixtures = requests.get('https://fantasy.premierleague.com/api/fixtures/?future=1').json()
     
-    # Create Team ID -> Info Map
     teams_info = {t['id']: {'name': t['name'], 'short': t['short_name']} for t in static['teams']}
-    
     team_fixtures_map = {}
     
     for team_id, info in teams_info.items():
-        # Get next 5 matches for this team
         my_fixtures = [f for f in fixtures if f['team_h'] == team_id or f['team_a'] == team_id][:5]
         fixture_list = []
-        
         for f in my_fixtures:
             is_home = f['team_h'] == team_id
             opponent_id = f['team_a'] if is_home else f['team_h']
             difficulty = f['team_h_difficulty'] if is_home else f['team_a_difficulty']
             opp_short = teams_info[opponent_id]['short']
-            
-            fixture_list.append({
-                'opp': opp_short,
-                'diff': difficulty
-            })
+            fixture_list.append({'opp': opp_short, 'diff': difficulty})
         
         team_fixtures_map[info['name']] = fixture_list
-        
-        # --- FIX: MAP "Nott'm Forest" to "Nottm Forest" ---
         if info['name'] == "Nott'm Forest":
             team_fixtures_map["Nottm Forest"] = fixture_list
         
     return team_fixtures_map
 
-# --- PRICE CHANGE LOGIC ---
-@st.cache_data(ttl=3600)
-def get_price_changes():
-    static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
-    
-    teams = {t['id']: t['name'] for t in static['teams']}
-    pos_map = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
-    
-    changes = []
-    for p in static['elements']:
-        if p['cost_change_event'] != 0:
-            changes.append({
-                'web_name': p['web_name'],
-                'team': teams[p['team']],
-                'position': pos_map.get(p['element_type'], "UNK"),
-                'cost': p['now_cost'] / 10,
-                'change': p['cost_change_event'] / 10,
-                'selected_by_percent': p['selected_by_percent']
-            })
-    return pd.DataFrame(changes)
+# --- 🚀 NEW: DATABASE DRIVEN PRICE CHANGES ---
+def get_db_price_changes():
+    """
+    Fetches the last 2 snapshots for every player to calculate daily change.
+    Ignores the API's cumulative 'cost_change_event'.
+    """
+    sql = """
+    WITH Ranked AS (
+        SELECT 
+            player_id, web_name, team_name, position, cost, selected_by_percent,
+            ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY snapshot_time DESC) as rn
+        FROM human_readable_fpl
+    )
+    SELECT * FROM Ranked WHERE rn <= 2;
+    """
+    try:
+        df_hist = pd.read_sql(sql, engine)
+        if df_hist.empty:
+            return pd.DataFrame()
 
-# --- DATABASE QUERY ---
+        # Pivot to get Latest vs Previous in one row
+        df_latest = df_hist[df_hist['rn'] == 1].set_index('player_id')
+        df_prev = df_hist[df_hist['rn'] == 2].set_index('player_id')
+        
+        # Calculate Delta
+        merged = df_latest.join(df_prev, lsuffix='_now', rsuffix='_old')
+        merged['change'] = merged['cost_now'] - merged['cost_old']
+        
+        # Filter for actual movers
+        movers = merged[merged['change'] != 0].copy()
+        
+        # Format for display
+        clean_movers = []
+        for pid, row in movers.iterrows():
+            clean_movers.append({
+                'web_name': row['web_name_now'],
+                'team': row['team_name_now'],
+                'position': row['position_now'],
+                'cost': row['cost_now'],
+                'change': row['change'],
+                'selected_by_percent': row['selected_by_percent_now']
+            })
+            
+        return pd.DataFrame(clean_movers)
+        
+    except Exception as e:
+        st.error(f"Error fetching price history: {e}")
+        return pd.DataFrame()
+
+# --- DATABASE QUERY (MAIN TABLE) ---
 query = """
 SELECT DISTINCT ON (player_id)
     player_id, web_name, team_name, position, cost, selected_by_percent, status, news,
@@ -410,7 +420,6 @@ df['avg_minutes'] = df['minutes'] / df['matches_played']
 df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 
-# MERGE LIVE EXPECTED POINTS
 ep_map = get_expected_points_map()
 df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
@@ -453,7 +462,6 @@ with st.sidebar:
         show_unavailable = st.checkbox("Show Unavailable Players (Red)", value=True)
         submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
-    # --- BUY ME A COFFEE BUTTON ---
     st.markdown("---")
     st.markdown(
         """
@@ -557,14 +565,12 @@ def render_modern_table(dataframe, column_config, sort_key):
         st.info("No players match your filters.")
         return
 
-    # --- SORTING LOGIC ---
     sort_options = {
         "cost": "Price",
         "selected_by_percent": "Ownership",
         "matches_played": "Matches"
     }
     sort_options.update(column_config)
-    
     if "news" in sort_options:
         del sort_options["news"]
 
@@ -577,17 +583,13 @@ def render_modern_table(dataframe, column_config, sort_key):
         
     sorted_df = dataframe.sort_values(selected_col, ascending=False).head(100)
     team_map = get_team_map()
-    
-    # --- FETCH FIXTURES MAP (NEW) ---
     team_fixtures = get_team_upcoming_fixtures()
     
-    # --- HEADER CONSTRUCTION (Merged Player Column + Fixtures) ---
-    base_headers = ["Player", "Next 5", "Price", "Own%", "Matches"] # ADDED 'Next 5'
+    base_headers = ["Player", "Next 5", "Price", "Own%", "Matches"]
     dynamic_headers = list(column_config.values())
     all_headers = base_headers + dynamic_headers
     header_html = "".join([f"<th>{h}</th>" for h in all_headers])
     
-    # Colors for mini badges
     fdr_colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
     fdr_text = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
     
@@ -595,7 +597,6 @@ def render_modern_table(dataframe, column_config, sort_key):
     for _, row in sorted_df.iterrows():
         row_style = ""
         text_color = "#E0E0E0"
-        # Status Dot Logic
         status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
         status = row['status']
         if status in ['i', 'u', 'n', 's']: 
@@ -610,7 +611,6 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # --- PLAYER PROFILE CELL ---
         html_rows += f"""<tr style="{row_style} color: {text_color};">"""
         html_rows += f"""
         <td style="padding-left: 20px;">
@@ -627,7 +627,6 @@ def render_modern_table(dataframe, column_config, sort_key):
         </td>
         """
         
-        # --- NEW: NEXT 5 FIXTURES COLUMN ---
         my_fixtures = team_fixtures.get(row['team_name'], [])
         fix_html = '<div class="mini-fix-container">'
         for f in my_fixtures:
@@ -637,7 +636,6 @@ def render_modern_table(dataframe, column_config, sort_key):
         fix_html += '</div>'
         html_rows += f'<td style="text-align: center;">{fix_html}</td>'
         
-        # --- STANDARD COLUMNS ---
         s_price = "text-align: center; font-weight: bold; color: #00FF85;" if selected_col == 'cost' else "text-align: center;"
         html_rows += f"""<td style="{s_price}">£{row['cost']}</td>"""
         
@@ -678,13 +676,7 @@ def render_modern_table(dataframe, column_config, sort_key):
 tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Attack", "Defense", "Work Rate"])
 
 with tab1:
-    cols = { 
-        "ep_next": "XP", 
-        "total_points": "Pts", 
-        "points_per_game": "PPG", 
-        "avg_minutes": "Mins/Gm", 
-        "news": "News" 
-    }
+    cols = { "ep_next": "XP", "total_points": "Pts", "points_per_game": "PPG", "avg_minutes": "Mins/Gm", "news": "News" }
     render_modern_table(filtered, cols, "sort_overview")
 
 with tab2:
@@ -757,16 +749,14 @@ st.markdown("""
 
 # 5. MARKET MOVERS
 st.markdown("---")
-# RENAMED to manage expectations:
-st.header("Market Movers (Current Gameweek)")
-st.caption("Note: Official API data shows cumulative price changes for the entire Gameweek, not just the last 24h.")
+st.header("Market Movers (Daily Change)")
+st.caption("Price changes over the last 24-30 hours (based on your latest database snapshots).")
 
-df_changes = get_price_changes()
+df_changes = get_db_price_changes()
 if df_changes.empty:
-    st.info("No price changes recorded today.")
+    st.info("No price changes recorded in the last daily snapshot.")
 else:
     col_risers, col_fallers = st.columns(2)
-    # --- SVG ICONS ---
     icon_up = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>'
     icon_down = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
     
@@ -794,7 +784,7 @@ else:
                         </div>
                     </td>
                     <td style="text-align: center;">£{row['cost']}</td>
-                    <td style="text-align: center; color: #00FF85; font-weight: bold;">+£{row['change']}</td>
+                    <td style="text-align: center; color: #00FF85; font-weight: bold;">+£{row['change']:.1f}</td>
                 </tr>"""
             html_table = f"""<div class="player-table-container" style="max-height: 300px;"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{html_rows}</tbody></table></div>"""
             st.markdown(html_table, unsafe_allow_html=True)
@@ -823,7 +813,7 @@ else:
                         </div>
                     </td>
                     <td style="text-align: center;">£{row['cost']}</td>
-                    <td style="text-align: center; color: #FF0055; font-weight: bold;">-£{abs(row['change'])}</td>
+                    <td style="text-align: center; color: #FF0055; font-weight: bold;">{row['change']:.1f}</td>
                 </tr>"""
             html_table = f"""<div class="player-table-container" style="max-height: 300px;"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{html_rows}</tbody></table></div>"""
             st.markdown(html_table, unsafe_allow_html=True)
