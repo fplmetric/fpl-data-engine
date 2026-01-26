@@ -5,25 +5,25 @@ GLOBAL_CSS = """
 /* GLOBAL RESET */
 span[data-baseweb="tag"] { color: black !important; font-weight: bold; }
 div[data-baseweb="select"] > div { cursor: pointer !important; }
-.block-container { padding-top: 1rem !important; padding-bottom: 2rem !important; }
+
+/* FIX: Increase top padding so Logo isn't cut off */
+.block-container { padding-top: 3rem !important; padding-bottom: 2rem !important; }
 
 /* --- LOGO FIXES --- */
 
-/* 1. Sidebar Logo: Constrain height to keep it neat */
+/* 1. Sidebar Logo: Keep it small */
 section[data-testid="stSidebar"] div[data-testid="stImage"] img {
     object-fit: contain !important;
     width: 100% !important;
     max-height: 80px !important;
 }
 
-/* 2. Main View Logo: NO max-height limit to prevent cropping. 
-      Width is controlled by the column layout in app.py */
+/* 2. Main View Logo: Full visibility, no cropping */
 div[data-testid="stAppViewContainer"] div[data-testid="stImage"] img {
     object-fit: contain !important;
     width: 100% !important;
     height: auto !important; 
-    margin-left: auto;
-    margin-right: auto;
+    margin: 0 auto;
     display: block;
 }
 
