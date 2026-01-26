@@ -103,7 +103,7 @@ with st.sidebar:
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
         
         # --- EXCLUDE UNAVAILABLE ---
-        exclude_unavailable = st.checkbox("Exclude Unavailable (Red Flags)", value=False)
+        exclude_unavailable = st.checkbox("Exclude Unavailable Players", value=False)
         
         # --- SLIDERS ---
         max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
@@ -196,7 +196,7 @@ if gw_name and deadline_iso:
             <div id="sub" class="sub"></div>
         </div>
         <div class="fix-container">
-            <div class="fix-header">View {gw_name} Fixtures (Your Local Time)</div>
+            <div class="fix-header">{gw_name} Fixtures</div>
             <div class="content">
                 <div class="match-grid" id="grid"></div>
             </div>
