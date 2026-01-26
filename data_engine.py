@@ -1,4 +1,3 @@
-# data_engine.py
 import streamlit as st
 import pandas as pd
 import requests
@@ -54,11 +53,12 @@ def get_next_gw_data():
     for f in fixtures:
         home_t = teams.get(f['team_h'])
         away_t = teams.get(f['team_a'])
-        dt_obj = datetime.strptime(f['kickoff_time'], "%Y-%m-%dT%H:%M:%SZ")
+        
+        # We now return the raw 'kickoff_time' (ISO format) for JS to handle
         processed_fixtures.append({
             'home_name': home_t['name'], 'home_code': home_t['code'],
             'away_name': away_t['name'], 'away_code': away_t['code'],
-            'time': dt_obj.strftime("%H:%M"), 'date': dt_obj.strftime("%a %d %b")
+            'iso_time': f['kickoff_time'] 
         })
     return gw_name, deadline_iso, processed_fixtures
 
