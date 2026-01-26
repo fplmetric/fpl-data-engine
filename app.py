@@ -15,213 +15,81 @@ st.set_page_config(page_title="FPL Metric", page_icon="favicon.png", layout="wid
 st.markdown(
     """
     <style>
-    /* Global Font & Reset */
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
     
-    /* Multiselect Tags */
-    span[data-baseweb="tag"] {
-        color: black !important;
-        font-weight: bold;
-    }
-    
-    /* DROPDOWN CURSOR FIX */
-    div[data-baseweb="select"] > div {
-        cursor: pointer !important;
-    }
-    
-    /* === AESTHETIC TABS === */
-    div[data-baseweb="tab-list"] {
-        gap: 8px; 
-        margin-bottom: 15px;
-    }
+    span[data-baseweb="tag"] { color: black !important; font-weight: bold; }
+    div[data-baseweb="select"] > div { cursor: pointer !important; }
+    div[data-baseweb="tab-list"] { gap: 8px; margin-bottom: 15px; }
 
     button[data-baseweb="tab"] {
-        font-size: 1rem !important; 
-        font-weight: 600 !important; 
-        padding: 8px 20px !important; 
-        background-color: transparent !important; 
-        border-radius: 30px !important; 
-        border: 1px solid rgba(255, 255, 255, 0.2) !important; 
-        color: #CCC !important; 
-        transition: all 0.3s ease;
+        font-size: 1rem !important; font-weight: 600 !important; padding: 8px 20px !important;
+        background-color: transparent !important; border-radius: 30px !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important; color: #CCC !important; transition: all 0.3s ease;
     }
-
     button[data-baseweb="tab"]:hover {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border-color: #FFF !important;
-        color: #FFF !important;
+        background-color: rgba(255, 255, 255, 0.05) !important; border-color: #FFF !important; color: #FFF !important;
     }
-
     button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #37003c !important; 
-        color: #00FF85 !important; 
-        border: 1px solid #00FF85 !important; 
-        box-shadow: 0 0 15px rgba(0, 255, 133, 0.15); 
+        background-color: #37003c !important; color: #00FF85 !important;
+        border: 1px solid #00FF85 !important; box-shadow: 0 0 15px rgba(0, 255, 133, 0.15);
     }
     
-    /* === TABLE STYLING === */
     .player-table-container, .fixture-table-container {
-        border: 1px solid #444;
-        border-radius: 8px;
-        overflow-x: auto;
-        margin-bottom: 20px;
-        background-color: transparent; 
+        border: 1px solid #444; border-radius: 8px; overflow-x: auto;
+        margin-bottom: 20px; background-color: transparent; 
     }
-
-    .modern-table {
-        width: 100%;
-        border-collapse: separate; 
-        border-spacing: 0;
-        font-family: 'Roboto', sans-serif;
-    }
-
+    .modern-table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: 'Roboto', sans-serif; }
     .modern-table th {
-        background: linear-gradient(to bottom, #5e0066, #37003c);
-        color: #ffffff;
-        padding: 16px 12px;
-        text-align: center !important; 
-        font-weight: 700;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        border-bottom: none;
-        border-top: 1px solid rgba(255,255,255,0.1); 
+        background: linear-gradient(to bottom, #5e0066, #37003c); color: #ffffff; padding: 16px 12px;
+        text-align: center !important; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;
+        border-bottom: none; border-top: 1px solid rgba(255,255,255,0.1); 
     }
-
     .modern-table th:first-child { text-align: left !important; padding-left: 20px !important; }
-
     .modern-table td {
-        padding: 12px 12px; 
-        border-bottom: 1px solid #2c2c2c; 
-        color: #E0E0E0;
-        vertical-align: middle;
-        font-size: 0.9rem;
+        padding: 12px 12px; border-bottom: 1px solid #2c2c2c; color: #E0E0E0; vertical-align: middle; font-size: 0.9rem;
     }
     .modern-table tr:hover td { background-color: rgba(255, 255, 255, 0.07) !important; }
-    
-    .status-pill {
-        display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-        box-shadow: 0 0 5px rgba(0,0,0,0.5); 
-    }
-    
-    /* === TICKER BADGES === */
-    .diff-badge {
-        display: block; padding: 8px 6px; border-radius: 6px;
-        text-align: center; font-weight: bold; font-size: 0.9rem; width: 100%;
-    }
+    .status-pill { display: inline-block; width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+    .diff-badge { display: block; padding: 8px 6px; border-radius: 6px; text-align: center; font-weight: bold; font-size: 0.9rem; width: 100%; }
     .mini-fix-container { display: flex; gap: 4px; justify-content: center; }
     .mini-fix-box {
-        width: 32px; height: 22px; display: flex; align-items: center;
-        justify-content: center; font-size: 0.75rem; font-weight: 800;
-        border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        width: 32px; height: 22px; display: flex; align-items: center; justify-content: center;
+        font-size: 0.75rem; font-weight: 800; border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }
 
-    /* === DEADLINE BANNER (CSS + JS Controlled) === */
+    /* DEADLINE BANNER */
     .deadline-container {
         background: linear-gradient(135deg, #1a001e 0%, #37003c 100%);
-        border: 1px solid #00FF85;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        text-align: center;
-        box-shadow: 0 0 20px rgba(0, 255, 133, 0.1);
-        position: relative;
-        overflow: hidden;
+        border: 1px solid #00FF85; border-radius: 12px; padding: 20px;
+        margin-bottom: 20px; text-align: center; box-shadow: 0 0 20px rgba(0, 255, 133, 0.1);
     }
-    .deadline-label {
-        color: #00FF85;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        font-size: 0.9rem;
-        font-weight: 700;
-        margin-bottom: 5px;
-    }
-    .deadline-timer {
-        font-size: 2.5rem;
-        font-weight: 900;
-        color: white;
-        font-family: 'Roboto', sans-serif;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    }
-    .deadline-date {
-        color: #BBB;
-        font-size: 0.9rem;
-        margin-top: 5px;
-    }
+    .deadline-label { color: #00FF85; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; font-weight: 700; margin-bottom: 5px; }
+    .deadline-timer { font-size: 2.5rem; font-weight: 900; color: white; font-family: 'Roboto', sans-serif; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+    .deadline-date { color: #BBB; font-size: 0.9rem; margin-top: 5px; }
 
-    /* === MATCH CARDS GRID === */
-    .match-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 15px;
-        margin-top: 15px;
-    }
+    /* MATCH CARDS */
+    .match-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
     .match-card {
-        background-color: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 8px;
-        padding: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center;
         transition: transform 0.2s, background-color 0.2s;
     }
-    .match-card:hover {
-        background-color: rgba(255,255,255,0.08);
-        transform: translateY(-2px);
-        border-color: #00FF85;
-    }
-    .team-col {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 80px;
-    }
-    .team-logo {
-        width: 45px;
-        height: 45px;
-        object-fit: contain;
-        margin-bottom: 8px;
-        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
-    }
-    .team-name {
-        font-size: 0.85rem;
-        font-weight: 700;
-        text-align: center;
-        color: #FFF;
-        line-height: 1.1;
-    }
-    .match-info {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        color: #AAA;
-    }
-    .match-time {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #00FF85;
-        margin-bottom: 2px;
-    }
-    .match-date {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-    }
+    .match-card:hover { background-color: rgba(255,255,255,0.08); transform: translateY(-2px); border-color: #00FF85; }
+    .team-col { display: flex; flex-direction: column; align-items: center; width: 80px; }
+    .team-logo { width: 45px; height: 45px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
+    .team-name { font-size: 0.85rem; font-weight: 700; text-align: center; color: #FFF; line-height: 1.1; }
+    .match-info { display: flex; flex-direction: column; align-items: center; color: #AAA; }
+    .match-time { font-size: 1.1rem; font-weight: 700; color: #00FF85; margin-bottom: 2px; }
+    .match-date { font-size: 0.75rem; text-transform: uppercase; }
     
-    /* === BUY ME A COFFEE === */
     .bmc-button {
-        display: flex; align-items: center; justify-content: center;
-        background-color: #FFDD00; color: #000000 !important;
-        font-weight: 700; padding: 10px 20px; border-radius: 30px;
+        display: flex; align-items: center; justify-content: center; background-color: #FFDD00;
+        color: #000000 !important; font-weight: 700; padding: 10px 20px; border-radius: 30px;
         margin-top: 20px; text-decoration: none; border: 2px solid #000;
     }
     .bmc-logo { width: 20px; height: 20px; margin-right: 8px; }
 
-    /* === MOBILE === */
-    @media (max-width: 768px) {
-        h1 { font-size: 1.8rem !important; }
-        .deadline-timer { font-size: 1.8rem; }
-        .match-grid { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 768px) { h1 { font-size: 1.8rem !important; } .deadline-timer { font-size: 1.8rem; } }
     </style>
     """,
     unsafe_allow_html=True
@@ -259,49 +127,25 @@ def get_expected_points_map():
 
 @st.cache_data(ttl=3600)
 def get_next_gw_data():
-    """
-    Fetches rich data for the Deadline Banner & Fixture Grid.
-    Returns: gw_name, deadline_iso, fixtures_list (dicts)
-    """
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
-    
-    # 1. Get Next GW Info
     next_event = next((e for e in static['events'] if e['is_next']), None)
-    if not next_event:
-        return None, None, []
+    if not next_event: return None, None, []
         
     gw_name = next_event['name']
-    deadline_iso = next_event['deadline_time'] # "2023-10-27T17:30:00Z" (ISO format for JS)
-    
-    # 2. Map Teams for Badges
+    deadline_iso = next_event['deadline_time']
     teams = {t['id']: {'name': t['short_name'], 'code': t['code']} for t in static['teams']}
-    
-    # 3. Get Fixtures
     fixtures = requests.get(f'https://fantasy.premierleague.com/api/fixtures/?event={next_event["id"]}').json()
     
     processed_fixtures = []
     for f in fixtures:
         home_t = teams.get(f['team_h'])
         away_t = teams.get(f['team_a'])
-        
-        # Parse Time
-        # API Time is UTC: "2023-02-04T12:30:00Z"
         dt_obj = datetime.strptime(f['kickoff_time'], "%Y-%m-%dT%H:%M:%SZ")
-        
-        # Format for display: "12:30"
-        time_str = dt_obj.strftime("%H:%M") 
-        # Format for date: "Sat 4 Feb"
-        date_str = dt_obj.strftime("%a %d %b")
-        
         processed_fixtures.append({
-            'home_name': home_t['name'],
-            'home_code': home_t['code'],
-            'away_name': away_t['name'],
-            'away_code': away_t['code'],
-            'time': time_str,
-            'date': date_str
+            'home_name': home_t['name'], 'home_code': home_t['code'],
+            'away_name': away_t['name'], 'away_code': away_t['code'],
+            'time': dt_obj.strftime("%H:%M"), 'date': dt_obj.strftime("%a %d %b")
         })
-        
     return gw_name, deadline_iso, processed_fixtures
 
 # --- 3. FIXTURE TICKER LOGIC ---
@@ -310,18 +154,12 @@ def get_fixture_ticker(start_gw, end_gw):
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     teams = {
         t['id']: {
-            'name': t['name'], 
-            'short': t['short_name'],
-            'code': t['code'],
-            'str_att_h': t['strength_attack_home'],
-            'str_att_a': t['strength_attack_away'],
-            'str_def_h': t['strength_defence_home'],
-            'str_def_a': t['strength_defence_away']
-        } 
-        for t in static['teams']
+            'name': t['name'], 'short': t['short_name'], 'code': t['code'],
+            'str_att_h': t['strength_attack_home'], 'str_att_a': t['strength_attack_away'],
+            'str_def_h': t['strength_defence_home'], 'str_def_a': t['strength_defence_away']
+        } for t in static['teams']
     }
     fixtures = requests.get('https://fantasy.premierleague.com/api/fixtures/?future=1').json()
-    
     ticker_data = []
     
     for team_id, team_info in teams.items():
@@ -355,7 +193,6 @@ def get_fixture_ticker(start_gw, end_gw):
             row[f'Dif_{col_name}'] = difficulty 
 
         ticker_data.append(row)
-        
     return pd.DataFrame(ticker_data)
 
 @st.cache_data(ttl=3600)
@@ -404,7 +241,7 @@ def get_db_price_changes():
     except Exception as e:
         return pd.DataFrame()
 
-# --- FETCH MAIN DATA ---
+# --- FETCH MAIN DATA (Restored Calculations) ---
 query = """
 SELECT DISTINCT ON (player_id)
     player_id, web_name, team_name, position, cost, selected_by_percent, status, news,
@@ -415,10 +252,16 @@ FROM human_readable_fpl ORDER BY player_id, snapshot_time DESC
 """
 df = pd.read_sql(query, engine)
 df = df.fillna(0)
+
+# --- 🚀 RE-ADDED CALCULATIONS HERE ---
 df['matches_played'] = df['matches_played'].replace(0, 1)
 df['minutes'] = df['minutes'].replace(0, 1)
+df['avg_minutes'] = df['minutes'] / df['matches_played']  # Fixed KeyError
 df['xgi_per_90'] = (df['xgi'] / df['minutes']) * 90
+df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90        # Fixed KeyError
 df['dc_per_90'] = (df['def_cons'] / df['minutes']) * 90
+df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90 # Fixed KeyError
+
 ep_map = get_expected_points_map()
 df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
@@ -470,8 +313,6 @@ gw_name, deadline_iso, fixtures_data = get_next_gw_data()
 
 if gw_name and deadline_iso:
     # --- JS COUNTDOWN INJECT ---
-    # We pass the deadline ISO string to Javascript.
-    # The script calculates remaining time and updates the 'timer-display' div.
     countdown_html = f"""
     <div class="deadline-container">
         <div class="deadline-label">{gw_name} DEADLINE</div>
@@ -481,8 +322,6 @@ if gw_name and deadline_iso:
     <script>
     (function() {{
         var deadline = new Date("{deadline_iso}").getTime();
-        
-        // Update readable date
         var dateOpts = {{ weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }};
         var readable = new Date("{deadline_iso}").toLocaleDateString('en-GB', dateOpts);
         document.getElementById("deadline-date").innerText = readable + " (Local Time)";
@@ -490,7 +329,6 @@ if gw_name and deadline_iso:
         var x = setInterval(function() {{
             var now = new Date().getTime();
             var t = deadline - now;
-            
             if (t < 0) {{
                 clearInterval(x);
                 document.getElementById("timer-display").innerHTML = "DEADLINE PASSED";
@@ -515,23 +353,12 @@ if gw_name and deadline_iso:
             for f in fixtures_data:
                 h_img = f"https://resources.premierleague.com/premierleague/badges/50/t{f['home_code']}.png"
                 a_img = f"https://resources.premierleague.com/premierleague/badges/50/t{f['away_code']}.png"
-                
                 cards_html += f"""
                 <div class="match-card">
-                    <div class="team-col">
-                        <img src="{h_img}" class="team-logo">
-                        <span class="team-name">{f['home_name']}</span>
-                    </div>
-                    <div class="match-info">
-                        <span class="match-time">{f['time']}</span>
-                        <span class="match-date">{f['date']}</span>
-                    </div>
-                    <div class="team-col">
-                        <img src="{a_img}" class="team-logo">
-                        <span class="team-name">{f['away_name']}</span>
-                    </div>
-                </div>
-                """
+                    <div class="team-col"><img src="{h_img}" class="team-logo"><span class="team-name">{f['home_name']}</span></div>
+                    <div class="match-info"><span class="match-time">{f['time']}</span><span class="match-date">{f['date']}</span></div>
+                    <div class="team-col"><img src="{a_img}" class="team-logo"><span class="team-name">{f['away_name']}</span></div>
+                </div>"""
             cards_html += '</div>'
             st.markdown(cards_html, unsafe_allow_html=True)
         else:
@@ -545,7 +372,6 @@ if not filtered.empty:
     best_dc = filtered.sort_values('dc_per_90', ascending=False).iloc[0]
     best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
     best_ppg = filtered.sort_values('points_per_game', ascending=False).iloc[0]
-    
     col1.metric("Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']}")
     col2.metric("Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}")
     col3.metric("Best Value", best_val['web_name'], f"{best_val['value_season']}")
@@ -618,7 +444,7 @@ tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Attack", "Defense", "Work Rate"])
 with tab1: render_modern_table(filtered, { "ep_next": "XP", "total_points": "Pts", "points_per_game": "PPG", "avg_minutes": "Mins/Gm" }, "sort_ov")
 with tab2: render_modern_table(filtered, { "xg": "xG", "xa": "xA", "xgi": "xGI", "xgi_per_90": "xGI/90", "goals_scored": "Goals", "assists": "Assists" }, "sort_att")
 with tab3: render_modern_table(filtered, { "clean_sheets": "Clean Sheets", "goals_conceded": "Conceded", "xgc": "xGC", "xgc_per_90": "xGC/90" }, "sort_def")
-with tab4: render_modern_table(filtered, { "def_cons": "Total DC", "dc_per_90": "DC/90", "tackles": "Tackles", "cbi": "CBI" }, "sort_wr")
+with tab4: render_modern_table(filtered, { "def_cons": "Total DC", "dc_per_90": "DC/90", "tackles": "Tackles", "tackles_per_90": "Tackles/90", "cbi": "CBI" }, "sort_wr")
 
 st.markdown("---") 
 st.header("Fixture Difficulty Ticker")
