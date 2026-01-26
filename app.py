@@ -102,7 +102,7 @@ with st.sidebar:
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
         
-        # --- NEW: EXCLUDE UNAVAILABLE ---
+        # --- EXCLUDE UNAVAILABLE ---
         exclude_unavailable = st.checkbox("Exclude Unavailable (Red Flags)", value=False)
         
         # --- SLIDERS ---
@@ -122,9 +122,8 @@ with st.sidebar:
 # --- FILTER LOGIC ---
 df = df[df['minutes'] >= 90]
 
-# --- NEW: FILTER OUT RED FLAGS IF CHECKED ---
+# --- FILTER OUT RED FLAGS IF CHECKED ---
 if exclude_unavailable:
-    # Filter out Injured (i), Unavailable (u), Not Available (n), Suspended (s)
     df = df[~df['status'].isin(['i', 'u', 'n', 's'])]
 
 filtered = df[
@@ -251,8 +250,9 @@ if gw_name and deadline_iso:
     """
     
     n_fixtures = len(fixtures_data)
-    n_rows = (n_fixtures + 3) // 4  
-    widget_height = 160 + (n_rows * 95)
+    # FIX: Use 3 columns instead of 4 for safe row calculation when sidebar is open
+    n_rows = (n_fixtures + 2) // 3  
+    widget_height = 180 + (n_rows * 95) # Added slight buffer to 180
     
     components.html(combined_html, height=widget_height, scrolling=False)
 else:
