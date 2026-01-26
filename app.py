@@ -73,6 +73,7 @@ filtered = df[
 
 # --- MAIN DISPLAY (CENTERED LOGO) ---
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
+    # Using [3, 2, 3] layout to ensure the logo is perfectly centered and compact
     col_l, col_m, col_r = st.columns([3, 2, 3]) 
     with col_m: 
         st.image("fpl_metric_logo.png", use_container_width=True)
@@ -107,7 +108,7 @@ if gw_name and deadline_iso:
             padding: 10px 20px; font-weight: 700; color: #00FF85;
             text-align: center; 
             border-top: 1px solid rgba(255,255,255,0.1);
-            border-bottom: 1px solid #00FF85; /* CHANGED TO BRIGHT GREEN TO FIX VISIBILITY */
+            border-bottom: 1px solid #00FF85; /* FIXED: Green border added here */
         }}
         .content {{ padding: 20px; }}
         .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }}
@@ -185,6 +186,7 @@ if gw_name and deadline_iso:
     </script>
     """
     
+    # --- DYNAMIC HEIGHT CALCULATION ---
     n_fixtures = len(fixtures_data)
     n_rows = (n_fixtures + 4) // 5
     widget_height = 160 + (n_rows * 95)
@@ -195,7 +197,7 @@ else:
 
 # =========================================================================
 
-# --- TITLE MOVED HERE ---
+# --- TITLE (MOVED TO BOTTOM) ---
 st.markdown("""<div style="text-align: center; margin-bottom: 20px; margin-top: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric Scouting Dashboard</h1></div>""", unsafe_allow_html=True)
 
 # --- INFO BOX ---
