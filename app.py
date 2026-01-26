@@ -77,21 +77,21 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
     with col_m: 
         st.image("fpl_metric_logo.png", use_container_width=True)
 
-st.markdown("""<div style="text-align: center; margin-bottom: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric Scouting Dashboard</h1><div style="width: 80px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div></div>""", unsafe_allow_html=True)
-
 # =========================================================================
 # 📅 DEADLINE & FIXTURES WIDGET
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
 if gw_name and deadline_iso:
-    # Use the clean function from data_engine to generate HTML
     html_widget = db.create_deadline_widget(gw_name, deadline_iso, fixtures_data)
     components.html(html_widget, height=450, scrolling=True)
 else:
     st.info("No fixtures found for next Gameweek.")
 
 # =========================================================================
+
+# --- TITLE MOVED HERE (Below Fixtures, Above Scout Tip) ---
+st.markdown("""<div style="text-align: center; margin-bottom: 20px; margin-top: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric Scouting Dashboard</h1></div>""", unsafe_allow_html=True)
 
 # --- INFO BOX ---
 st.markdown(
