@@ -74,7 +74,7 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE GAP FIX) */
+    /* 6. AESTHETIC PLAYER TABLE */
     .player-table-container { margin-top: 0px; }
 
     .modern-table {
@@ -100,27 +100,37 @@ st.markdown("""
         top: 0;
         z-index: 1000;
         
-        /* This shadow is purely for the bottom green line */
+        /* Base shadow: Green bottom line only */
         box-shadow: 0 2px 0 #00FF85; 
-        
-        /* Use clip-path to ensure nothing bleeds out if needed, though usually not required with the ::before method */
     }
-    
-    /* THE FIX: Use a pseudo-element to create a SOLID BLOCK above the header. 
-       This physically covers the transparent gap caused by border-spacing.
-    */
+
+    /* TOP MASK: Solid block above header to hide scrolling rows */
     .modern-table th::before {
         content: "";
         position: absolute;
-        top: -20px; /* Extend upwards */
+        top: -20px;
         left: 0;
         right: 0;
-        height: 20px; /* Height of the gap cover */
-        background-color: #1a001e; /* Solid background color */
+        height: 20px;
+        background-color: #1a001e;
         z-index: -1;
     }
 
-    .modern-table th:first-child { text-align: left; padding-left: 20px; }
+    /* SIDE MASK (LEFT): Solid block to the left of the first header cell */
+    .modern-table th:first-child { 
+        text-align: left; 
+        padding-left: 20px; 
+        /* 0 2px 0 #00FF85 -> Green Bottom Border */
+        /* -30px 0 0 #1a001e -> Solid Purple Left Block */
+        box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; 
+    }
+
+    /* SIDE MASK (RIGHT): Solid block to the right of the last header cell */
+    .modern-table th:last-child {
+        /* 0 2px 0 #00FF85 -> Green Bottom Border */
+        /* 30px 0 0 #1a001e -> Solid Purple Right Block */
+        box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; 
+    }
     
     .modern-table tbody tr {
         transition: all 0.2s ease;
