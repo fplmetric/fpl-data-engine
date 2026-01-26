@@ -5,25 +5,33 @@ GLOBAL_CSS = """
 /* GLOBAL RESET */
 span[data-baseweb="tag"] { color: black !important; font-weight: bold; }
 div[data-baseweb="select"] > div { cursor: pointer !important; }
-
-/* FIX: Increase top padding so Logo isn't cut off */
-.block-container { padding-top: 3rem !important; padding-bottom: 2rem !important; }
+.block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
 
 /* --- LOGO FIXES --- */
 
-/* 1. Sidebar Logo: Keep it small */
-section[data-testid="stSidebar"] div[data-testid="stImage"] img {
-    object-fit: contain !important;
-    width: 100% !important;
-    max-height: 80px !important;
+/* 1. Sidebar Logo: Center it and give it proper sizing */
+section[data-testid="stSidebar"] div[data-testid="stImage"] {
+    text-align: center; /* Centers the container */
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-/* 2. Main View Logo: Full visibility, no cropping */
+section[data-testid="stSidebar"] div[data-testid="stImage"] img {
+    object-fit: contain !important;
+    width: 80% !important; /* Slightly smaller than full width looks better in sidebar */
+    max-height: 120px !important; /* Increased height so it's not tiny */
+    margin: 0 auto !important;
+}
+
+/* 2. Main View Logo: Center and Full Visibility */
 div[data-testid="stAppViewContainer"] div[data-testid="stImage"] img {
     object-fit: contain !important;
     width: 100% !important;
     height: auto !important; 
-    margin: 0 auto;
+    max-height: 200px !important;
+    margin-left: auto;
+    margin-right: auto;
     display: block;
 }
 
