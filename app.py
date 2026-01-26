@@ -49,16 +49,26 @@ with st.sidebar:
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
         max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
         max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
+        
+        # --- NEW FILTERS ADDED HERE ---
+        st.subheader("Performance Metrics")
+        min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
+        min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
+        
         submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
     st.markdown("---")
     st.markdown("""<a href="https://www.buymeacoffee.com/fplmetric" target="_blank" class="bmc-button"><img src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg" alt="Buy me a coffee" class="bmc-logo"><span>Buy me a coffee</span></a>""", unsafe_allow_html=True)
 
-# --- FILTER LOGIC ---
+# --- FILTER LOGIC (UPDATED) ---
 df = df[df['minutes'] >= 90]
 filtered = df[
-    (df['team_name'].isin(selected_teams)) & (df['position'].isin(position)) &
-    (df['cost'] <= max_price) & (df['selected_by_percent'] <= max_owner)
+    (df['team_name'].isin(selected_teams)) & 
+    (df['position'].isin(position)) &
+    (df['cost'] <= max_price) & 
+    (df['selected_by_percent'] <= max_owner) &
+    (df['points_per_game'] >= min_ppg) &  # New Filter
+    (df['dc_per_90'] >= min_dc90)         # New Filter
 ]
 
 # --- MAIN DISPLAY ---
@@ -69,11 +79,12 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
 st.markdown("""<div style="text-align: center; margin-bottom: 20px;"><h1 style="font-size: 3rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric</h1><div style="width: 80px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div></div>""", unsafe_allow_html=True)
 
 # =========================================================================
-# 📅 DEADLINE COUNTDOWN & FIXTURES
+# 📅 DEADLINE COUNTDOWN & FIXTURES (AESTHETIC UPDATE)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
 if gw_name and deadline_iso:
+    # Countdown Timer (Using components.html for isolated JS)
     countdown_html = f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
@@ -117,22 +128,36 @@ if gw_name and deadline_iso:
     """
     components.html(countdown_html, height=150)
 
-    with st.expander(f"🏟️ View {gw_name} Fixtures (Kickoff Times)", expanded=False):
-        if fixtures_data:
-            cards_html = '<div class="match-grid">'
-            for f in fixtures_data:
-                h_img = f"https://resources.premierleague.com/premierleague/badges/50/t{f['home_code']}.png"
-                a_img = f"https://resources.premierleague.com/premierleague/badges/50/t{f['away_code']}.png"
-                cards_html += f"""
+    # --- CUSTOM AESTHETIC EXPANDER FOR FIXTURES ---
+    if fixtures_data:
+        # 1. Generate the internal cards HTML
+        cards_html = '<div class="match-grid">'
+        for f in fixtures_data:
+            h_img = f"https://resources.premierleague.com/premierleague/badges/50/t{f['home_code']}.png"
+            a_img = f"https://resources.premierleague.com/premierleague/badges/50/t{f['away_code']}.png"
+            cards_html += f"""
 <div class="match-card">
-    <div class="team-col"><img src="{h_img}" class="team-logo"><span class="team-name">{f['home_name']}</span></div>
-    <div class="match-info"><span class="match-time">{f['time']}</span><span class="match-date">{f['date']}</span></div>
-    <div class="team-col"><img src="{a_img}" class="team-logo"><span class="team-name">{f['away_name']}</span></div>
+<div class="team-col"><img src="{h_img}" class="team-logo"><span class="team-name">{f['home_name']}</span></div>
+<div class="match-info"><span class="match-time">{f['time']}</span><span class="match-date">{f['date']}</span></div>
+<div class="team-col"><img src="{a_img}" class="team-logo"><span class="team-name">{f['away_name']}</span></div>
 </div>"""
-            cards_html += '</div>'
-            st.markdown(cards_html, unsafe_allow_html=True)
-        else:
-            st.info("No fixtures found for next Gameweek.")
+        cards_html += '</div>'
+
+        # 2. Wrap in custom aesthetic expander HTML/JS structure
+        custom_expander_html = f"""
+        <div class="ae-container">
+            <div class="ae-header" onclick="this.classList.toggle('active'); var content = this.nextElementSibling; if (content.style.display === 'block') {{ content.style.display = 'none'; }} else {{ content.style.display = 'block'; }}">
+                <span>🏟️ View {gw_name} Fixtures (Kickoff Times)</span>
+                <span class="ae-icon">▼</span>
+            </div>
+            <div class="ae-content">
+                {cards_html}
+            </div>
+        </div>
+        """
+        st.markdown(custom_expander_html, unsafe_allow_html=True)
+    else:
+        st.info("No fixtures found for next Gameweek.")
 
 # =========================================================================
 
@@ -142,7 +167,7 @@ st.markdown(
     <div class="scout-tip">
         <span style="color: #E0E0E0; font-size: 1rem; font-family: 'Roboto', sans-serif;">
             <strong style="color: #00FF85;">SCOUT'S TIP:</strong> 
-            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, and Price.
+            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, Price, PPG, and Work Rate.
         </span>
     </div>
     """,
@@ -193,7 +218,7 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # --- HIGHLIGHTING LOGIC (RESTORED) ---
+        # --- HIGHLIGHTING LOGIC ---
         status = row['status']
         row_style = ""
         if status in ['i', 'u', 'n', 's']: 
