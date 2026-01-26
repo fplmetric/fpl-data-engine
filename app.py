@@ -131,7 +131,7 @@ if gw_name and deadline_iso:
             <div id="sub" class="sub"></div>
         </div>
         <div class="fix-container">
-            <div class="fix-header">{gw_name} Fixtures</div>
+            <div class="fix-header">View {gw_name} Fixtures (Your Local Time)</div>
             <div class="content">
                 <div class="match-grid" id="grid"></div>
             </div>
@@ -210,7 +210,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- REPLACED METRICS WITH CUSTOM CARDS ---
+# --- REPLACED METRICS WITH CUSTOM CARDS (NO EMOJIS) ---
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
@@ -239,10 +239,10 @@ if not filtered.empty:
         </div>
         """
 
-    with col1: st.markdown(metric_card("Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']}"), unsafe_allow_html=True)
-    with col2: st.markdown(metric_card("Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}"), unsafe_allow_html=True)
-    with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}"), unsafe_allow_html=True)
-    with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}"), unsafe_allow_html=True)
+    with col1: st.markdown(metric_card("Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']}", ""), unsafe_allow_html=True)
+    with col2: st.markdown(metric_card("Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}", ""), unsafe_allow_html=True)
+    with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}", ""), unsafe_allow_html=True)
+    with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
 
 def render_modern_table(dataframe, column_config, sort_key):
     if dataframe.empty:
