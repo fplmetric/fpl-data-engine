@@ -185,7 +185,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET (With 3D Hover Effect)
+# 📅 DEADLINE & FIXTURES WIDGET (With Flexbox Centering)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
@@ -227,20 +227,29 @@ if gw_name and deadline_iso:
             border-bottom: 1px solid #00FF85;
         }}
         .content {{ padding: 20px; }}
-        .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }}
+        
+        /* FLEXBOX FOR CENTERING ORPHANS */
+        .match-grid {{ 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 12px; 
+        }}
         
         /* HOVER LIFT EFFECT ON CARDS */
         .match-card {{
             background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smooth Lift */
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             cursor: pointer;
+            flex: 1 1 280px; /* Flexible width */
+            max-width: 350px;
         }}
         .match-card:hover {{ 
             border-color: #00FF85; 
             background-color: rgba(0, 255, 133, 0.05);
-            transform: translateY(-5px); /* The Lift */
-            box-shadow: 0 5px 15px rgba(0, 255, 133, 0.2); /* The Glow */
+            transform: translateY(-5px); 
+            box-shadow: 0 5px 15px rgba(0, 255, 133, 0.2);
         }}
         
         .team-col {{ display: flex; flex-direction: column; align-items: center; width: 60px; }}
