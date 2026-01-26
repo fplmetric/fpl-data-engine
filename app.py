@@ -273,11 +273,20 @@ def get_expected_points_map():
             ep_map[p['id']] = 0.0
     return ep_map
 
+# --- FETCH NEXT GW ID ---
+@st.cache_data(ttl=3600)
+def get_next_gameweek():
+    """Returns the ID of the next Gameweek (e.g., 24)"""
+    fixtures = requests.get('https://fantasy.premierleague.com/api/fixtures/?future=1').json()
+    if fixtures:
+        return fixtures[0]['event']
+    return 38 # Fallback if season over
+
 # --- FIXTURE TICKER LOGIC (FULL & ENHANCED) ---
 @st.cache_data(ttl=3600) 
-def get_fixture_ticker(horizon=5):
+def get_fixture_ticker(start_gw, end_gw):
     """
-    Fetches ticker data and calculates Overall, Attack, and Defence difficulty.
+    Fetches ticker data filtered between start_gw and end_gw.
     """
     static = requests.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     teams = {
@@ -297,8 +306,12 @@ def get_fixture_ticker(horizon=5):
     ticker_data = []
     
     for team_id, team_info in teams.items():
-        # Filter fixtures for this team (Limit by horizon)
-        team_fixtures = [f for f in fixtures if f['team_h'] == team_id or f['team_a'] == team_id][:horizon]
+        # Filter fixtures for this team within the requested GW range
+        team_fixtures = [
+            f for f in fixtures 
+            if (f['team_h'] == team_id or f['team_a'] == team_id) and 
+               (f['event'] >= start_gw and f['event'] <= end_gw)
+        ]
         
         logo_url = f"https://resources.premierleague.com/premierleague/badges/20/t{team_info['code']}.png"
         
@@ -314,20 +327,14 @@ def get_fixture_ticker(horizon=5):
             is_home = f['team_h'] == team_id
             opponent_id = f['team_a'] if is_home else f['team_h']
             
-            # --- 1. OVERALL FDR (Official) ---
+            # Difficulty & Strength Logic
             difficulty = f['team_h_difficulty'] if is_home else f['team_a_difficulty']
-            
-            # --- 2. CUSTOM STRENGTH CALC ---
-            # If I am Attacking, I care about Opponent's DEFENCE strength
-            # If I am Defending, I care about Opponent's ATTACK strength
             opp_stats = teams[opponent_id]
             
             if is_home:
-                # I am Home vs Opponent Away
                 opp_def_str = opp_stats['str_def_a']
                 opp_att_str = opp_stats['str_att_a']
             else:
-                # I am Away vs Opponent Home
                 opp_def_str = opp_stats['str_def_h']
                 opp_att_str = opp_stats['str_att_h']
             
@@ -339,10 +346,9 @@ def get_fixture_ticker(horizon=5):
             
             # Accumulate Difficulty Scores
             row['Diff_Overall'] += difficulty
-            row['Diff_Attack'] += opp_def_str  # Higher Opp Def = Harder to Attack
-            row['Diff_Defence'] += opp_att_str # Higher Opp Att = Harder to Defend
+            row['Diff_Attack'] += opp_def_str
+            row['Diff_Defence'] += opp_att_str
             
-            # Store badge color difficulty (Standard FDR for display)
             row[f'Dif_{col_name}'] = difficulty 
 
         ticker_data.append(row)
@@ -374,7 +380,7 @@ def get_team_upcoming_fixtures():
         
     return team_fixtures_map
 
-# --- 🚀 NEW: DATABASE DRIVEN PRICE CHANGES ---
+# --- DATABASE PRICE CHANGES ---
 def get_db_price_changes():
     sql = """
     WITH Ranked AS (
@@ -717,6 +723,14 @@ with tab4:
 st.markdown("---") 
 st.header("Fixture Difficulty Ticker")
 
+# Get next GW dynamically
+current_next_gw = get_next_gameweek()
+
+# Define Horizon Options including specific GWs
+horizon_options = ["Next 3 GWs", "Next 5 GWs"]
+for i in range(5):
+    horizon_options.append(f"GW {current_next_gw + i}")
+
 # --- TICKER CONTROLS ---
 col_t1, col_t2, col_t3 = st.columns(3)
 with col_t1:
@@ -724,26 +738,34 @@ with col_t1:
 with col_t2:
     view_type = st.selectbox("Type", ["Overall", "Attack", "Defence"])
 with col_t3:
-    horizon = st.selectbox("Horizon", ["Next 3 GWs", "Next 5 GWs"])
+    horizon = st.selectbox("Horizon", horizon_options)
 
-# Parse Horizon
-horizon_limit = 3 if horizon == "Next 3 GWs" else 5
+# Determine Start/End GW
+if horizon == "Next 3 GWs":
+    start_gw = current_next_gw
+    end_gw = current_next_gw + 2
+elif horizon == "Next 5 GWs":
+    start_gw = current_next_gw
+    end_gw = current_next_gw + 4
+else:
+    # Single GW case (e.g., "GW 24")
+    gw_num = int(horizon.split(" ")[1])
+    start_gw = gw_num
+    end_gw = gw_num
 
 # Fetch and Process Data
-ticker_df = get_fixture_ticker(horizon_limit)
+ticker_df = get_fixture_ticker(start_gw, end_gw)
 
 # Apply Sorting
 if sort_order == "Alphabetical":
     ticker_df = ticker_df.sort_values('Team', ascending=True)
 else:
-    # Map Type to Calculation Column
     sort_col = "Diff_Overall"
     if view_type == "Attack":
         sort_col = "Diff_Attack"
     elif view_type == "Defence":
         sort_col = "Diff_Defence"
     
-    # Easiest = Lowest Score (Ascending) | Hardest = Highest Score (Descending)
     is_ascending = (sort_order == "Easiest")
     ticker_df = ticker_df.sort_values(sort_col, ascending=is_ascending)
 
