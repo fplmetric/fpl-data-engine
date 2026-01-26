@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import os
+import json
 import streamlit.components.v1 as components
 
 # --- LOCAL IMPORTS ---
@@ -52,7 +52,7 @@ with st.sidebar:
         
         # --- NEW FILTERS ---
         st.subheader("Performance")
-        min_mpg = st.slider("Min Minutes Per Game", 0, 90, 0, 5) # New Slider
+        min_mpg = st.slider("Min Minutes Per Game", 0, 90, 0, 5)
         min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
         min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
         
@@ -68,7 +68,7 @@ filtered = df[
     (df['position'].isin(position)) &
     (df['cost'] <= max_price) & 
     (df['selected_by_percent'] <= max_owner) &
-    (df['avg_minutes'] >= min_mpg) &       # New Filter Applied
+    (df['avg_minutes'] >= min_mpg) & 
     (df['points_per_game'] >= min_ppg) & 
     (df['dc_per_90'] >= min_dc90)
 ]
@@ -81,79 +81,131 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
 st.markdown("""<div style="text-align: center; margin-bottom: 20px;"><h1 style="font-size: 3rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric</h1><div style="width: 80px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div></div>""", unsafe_allow_html=True)
 
 # =========================================================================
-# 📅 DEADLINE COUNTDOWN & FIXTURES
+# 📅 DEADLINE & FIXTURES (JS-POWERED LOCAL TIME)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
 if gw_name and deadline_iso:
-    # Countdown
-    countdown_html = f"""
+    # We pass the fixture data to JS as a JSON string
+    fixtures_json = json.dumps(fixtures_data)
+    
+    # Complete HTML/CSS/JS block
+    full_component_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+        body {{ margin: 0; font-family: 'Roboto', sans-serif; background-color: transparent; }}
+        
+        /* BANNER */
         .deadline-box {{
             background: linear-gradient(135deg, #1a001e 0%, #37003c 100%);
             border: 1px solid #00FF85; border-radius: 12px; padding: 15px;
-            text-align: center; font-family: 'Roboto', sans-serif; color: white;
-            box-shadow: 0 4px 15px rgba(0, 255, 133, 0.2); margin: 5px;
+            text-align: center; color: white; margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 255, 133, 0.2);
         }}
         .label {{ color: #00FF85; font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }}
         .timer {{ font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; }}
         .sub {{ font-size: 0.85rem; color: #BBB; margin-top: 5px; }}
+
+        /* EXPANDER */
+        details {{
+            border: 1px solid #00FF85; border-radius: 8px; overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.02); transition: all 0.3s ease;
+        }}
+        details[open] {{ background-color: rgba(255, 255, 255, 0.05); }}
+        summary {{
+            background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
+            padding: 12px 20px; cursor: pointer; font-weight: 700; color: #00FF85;
+            list-style: none; display: flex; justify-content: space-between; align-items: center;
+        }}
+        summary:hover {{ background: linear-gradient(90deg, rgba(75,0,80,0.9) 0%, rgba(50,50,50,0.9) 100%); }}
+        summary::after {{ content: '▼'; font-size: 0.8rem; transition: transform 0.3s; }}
+        details[open] summary::after {{ transform: rotate(180deg); }}
+        summary::-webkit-details-marker {{ display: none; }}
+
+        /* GRID */
+        .content {{ padding: 20px; border-top: 1px solid rgba(0, 255, 133, 0.3); }}
+        .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }}
+        .match-card {{
+            background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center;
+            transition: transform 0.2s, background-color 0.2s;
+        }}
+        .match-card:hover {{ background-color: rgba(255,255,255,0.08); transform: translateY(-2px); border-color: #00FF85; }}
+        .team-col {{ display: flex; flex-direction: column; align-items: center; width: 80px; }}
+        .team-logo {{ width: 45px; height: 45px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }}
+        .team-name {{ font-size: 0.85rem; font-weight: 700; text-align: center; color: #FFF; line-height: 1.1; }}
+        .match-info {{ display: flex; flex-direction: column; align-items: center; color: #AAA; }}
+        .match-time {{ font-size: 1.1rem; font-weight: 700; color: #00FF85; margin-bottom: 2px; }}
+        .match-date {{ font-size: 0.75rem; text-transform: uppercase; }}
     </style>
-    <div class="deadline-box">
-        <div class="label">{gw_name} DEADLINE</div>
-        <div id="timer" class="timer">Loading...</div>
-        <div id="sub" class="sub"></div>
-    </div>
-    <script>
-        var deadline = new Date("{deadline_iso}").getTime();
-        var dateOpts = {{ weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }};
-        var readable = new Date("{deadline_iso}").toLocaleDateString('en-GB', dateOpts);
-        document.getElementById("sub").innerText = readable + " (Local)";
-        
-        var x = setInterval(function() {{
-            var now = new Date().getTime();
-            var t = deadline - now;
-            if (t < 0) {{
-                clearInterval(x);
-                document.getElementById("timer").innerHTML = "DEADLINE PASSED";
-                document.getElementById("timer").style.color = "#FF0055";
-            }} else {{
-                var d = Math.floor(t / (1000 * 60 * 60 * 24));
-                var h = Math.floor((t % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                var m = Math.floor((t % (1000 * 60 * 60)) / (1000 * 60));
-                var s = Math.floor((t % (1000 * 60)) / 1000);
-                document.getElementById("timer").innerHTML = d + "d " + h + "h " + m + "m " + s + "s ";
-            }}
-        }}, 1000);
-    </script>
-    """
-    components.html(countdown_html, height=150)
+    </head>
+    <body>
+        <div class="deadline-box">
+            <div class="label">{gw_name} DEADLINE</div>
+            <div id="timer" class="timer">Loading...</div>
+            <div id="sub" class="sub"></div>
+        </div>
 
-    # --- NATIVE DETAILS/SUMMARY EXPANDER ---
-    if fixtures_data:
-        cards_html = '<div class="match-grid">'
-        for f in fixtures_data:
-            h_img = f"https://resources.premierleague.com/premierleague/badges/50/t{f['home_code']}.png"
-            a_img = f"https://resources.premierleague.com/premierleague/badges/50/t{f['away_code']}.png"
-            cards_html += f"""
-            <div class="match-card">
-                <div class="team-col"><img src="{h_img}" class="team-logo"><span class="team-name">{f['home_name']}</span></div>
-                <div class="match-info"><span class="match-time">{f['time']}</span><span class="match-date">{f['date']}</span></div>
-                <div class="team-col"><img src="{a_img}" class="team-logo"><span class="team-name">{f['away_name']}</span></div>
-            </div>"""
-        cards_html += '</div>'
-
-        st.markdown(f"""
-        <details class="aesthetic-expander">
-            <summary class="aesthetic-summary">🏟️ View {gw_name} Fixtures (Kickoff Times)</summary>
-            <div class="ae-content">
-                {cards_html}
+        <details>
+            <summary>🏟️ View {gw_name} Fixtures (Your Local Time)</summary>
+            <div class="content">
+                <div class="match-grid" id="grid"></div>
             </div>
         </details>
-        """, unsafe_allow_html=True)
-    else:
-        st.info("No fixtures found for next Gameweek.")
+
+        <script>
+            // 1. COUNTDOWN LOGIC
+            var deadline = new Date("{deadline_iso}").getTime();
+            var dateOpts = {{ weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }};
+            document.getElementById("sub").innerText = new Date("{deadline_iso}").toLocaleDateString(undefined, dateOpts) + " (Local)";
+            
+            setInterval(function() {{
+                var now = new Date().getTime();
+                var t = deadline - now;
+                if (t < 0) {{
+                    document.getElementById("timer").innerHTML = "DEADLINE PASSED";
+                    document.getElementById("timer").style.color = "#FF0055";
+                }} else {{
+                    var d = Math.floor(t / (1000 * 60 * 60 * 24));
+                    var h = Math.floor((t % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    var m = Math.floor((t % (1000 * 60 * 60)) / (1000 * 60));
+                    var s = Math.floor((t % (1000 * 60)) / 1000);
+                    document.getElementById("timer").innerHTML = d + "d " + h + "h " + m + "m " + s + "s ";
+                }}
+            }}, 1000);
+
+            // 2. FIXTURE RENDER LOGIC (Client-Side)
+            var fixtures = {fixtures_json};
+            var grid = document.getElementById("grid");
+            
+            fixtures.forEach(f => {{
+                // Parse ISO time using User's Local Timezone
+                var d = new Date(f.iso_time);
+                var timeStr = d.toLocaleTimeString([], {{hour: '2-digit', minute:'2-digit'}});
+                var dateStr = d.toLocaleDateString([], {{weekday: 'short', day: 'numeric', month: 'short'}});
+                
+                var h_img = "https://resources.premierleague.com/premierleague/badges/50/t" + f.home_code + ".png";
+                var a_img = "https://resources.premierleague.com/premierleague/badges/50/t" + f.away_code + ".png";
+                
+                var card = `
+                <div class="match-card">
+                    <div class="team-col"><img src="${{h_img}}" class="team-logo"><span class="team-name">${{f.home_name}}</span></div>
+                    <div class="match-info"><span class="match-time">${{timeStr}}</span><span class="match-date">${{dateStr}}</span></div>
+                    <div class="team-col"><img src="${{a_img}}" class="team-logo"><span class="team-name">${{f.away_name}}</span></div>
+                </div>`;
+                grid.innerHTML += card;
+            }});
+        </script>
+    </body>
+    </html>
+    """
+    # Render entire block
+    components.html(full_component_html, height=450, scrolling=True)
+else:
+    st.info("No fixtures found for next Gameweek.")
 
 # =========================================================================
 
