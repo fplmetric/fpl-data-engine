@@ -74,38 +74,44 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE FIX) */
+    /* 6. AESTHETIC PLAYER TABLE (FIXED: TALLER HEADER & SOLID BORDER) */
     .player-table-container { margin-top: 0px; }
 
     .modern-table {
         width: 100%;
         border-collapse: separate;
-        border-spacing: 0 8px;
+        border-spacing: 0 8px; /* Creates the floating card effect */
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
     }
     
     .modern-table th {
-        /* SOLID BACKGROUND */
+        /* SOLID BACKGROUND MATCHING PAGE */
         background-color: #1a001e !important; 
         color: #00FF85;
         font-family: 'Orbitron', sans-serif;
         font-weight: 700;
         text-transform: uppercase;
-        padding: 15px;
+        
+        /* FIX: INCREASED PADDING TO MAKE HEADER LARGER/TALLER */
+        padding-top: 20px;
+        padding-bottom: 20px;
+        padding-left: 15px;
+        padding-right: 15px;
+        
         text-align: center;
         letter-spacing: 1px;
-        border-bottom: none !important; /* Reset standard border */
         
         /* STICKY CONFIGURATION */
         position: sticky;
         top: 0;
-        z-index: 1000;
+        z-index: 9999; /* Highest priority */
         
-        /* THE MAGIC FIX: Double Box Shadow */
-        /* 1. 0 2px 0 #00FF85 -> Creates the persistent green bottom border */
-        /* 2. 0 -20px 0 #1a001e -> Creates a solid block ABOVE the header to mask scrolling rows */
-        box-shadow: 0 2px 0 #00FF85, 0 -20px 0 #1a001e;
+        /* FIX: SOLID GREEN BORDER */
+        border-bottom: 3px solid #00FF85;
+        
+        /* FIX: Top Shadow to cover any "peeping" pixels above the sticky header */
+        box-shadow: 0 -5px 0 #1a001e;
     }
     
     .modern-table th:first-child { text-align: left; padding-left: 20px; }
@@ -235,7 +241,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET
+# 📅 DEADLINE & FIXTURES WIDGET (With Flexbox Centering)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
