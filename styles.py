@@ -55,7 +55,8 @@ button[data-baseweb="tab"][aria-selected="true"] {
 .modern-table td {
     padding: 12px 12px; border-bottom: 1px solid #2c2c2c; color: #E0E0E0; vertical-align: middle; font-size: 0.9rem;
 }
-.modern-table tr:hover td { background-color: rgba(255, 255, 255, 0.07) !important; }
+/* Note: Hover effect might be overridden by status colors, which is intended */
+.modern-table tr:hover td { background-color: rgba(255, 255, 255, 0.07); }
 
 .status-pill { display: inline-block; width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
 .diff-badge { display: block; padding: 8px 6px; border-radius: 6px; text-align: center; font-weight: bold; font-size: 0.9rem; width: 100%; }
@@ -110,6 +111,39 @@ button[data-baseweb="tab"][aria-selected="true"] {
 }
 .bmc-button:hover { transform: translateY(-2px); text-decoration: none; }
 .bmc-logo { width: 20px; height: 20px; margin-right: 8px; }
+
+/* --- NEW: CUSTOM AESTHETIC EXPANDER --- */
+.ae-container { margin-bottom: 20px; }
+.ae-header {
+    background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
+    border: 1px solid #00FF85;
+    border-radius: 8px;
+    padding: 12px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #00FF85;
+    font-weight: 700;
+    font-family: 'Roboto', sans-serif;
+    transition: all 0.3s ease;
+}
+.ae-header:hover {
+     background: linear-gradient(90deg, rgba(75,0,80,0.9) 0%, rgba(50,50,50,0.9) 100%);
+     box-shadow: 0 0 15px rgba(0, 255, 133, 0.2);
+}
+.ae-icon { font-size: 1.2rem; transition: transform 0.3s ease; }
+/* Class added by JS when open */
+.ae-header.active .ae-icon { transform: rotate(180deg); }
+.ae-content {
+    display: none; /* Hidden by default */
+    padding: 15px;
+    border: 1px solid rgba(0, 255, 133, 0.3);
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    background-color: rgba(0,0,0,0.2);
+}
 
 @media (max-width: 768px) { h1 { font-size: 1.8rem !important; } }
 </style>
