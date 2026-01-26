@@ -7,6 +7,19 @@ span[data-baseweb="tag"] { color: black !important; font-weight: bold; }
 div[data-baseweb="select"] > div { cursor: pointer !important; }
 .block-container { padding-top: 1rem !important; padding-bottom: 2rem !important; }
 
+/* --- LOGO VISIBILITY FIX --- */
+/* Ensure images fit within their containers without cropping */
+div[data-testid="stImage"] img {
+    object-fit: contain !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 130px; /* Maximum height for main view logo */
+}
+/* Specific adjustment for sidebar logo to keep it compact */
+section[data-testid="stSidebar"] div[data-testid="stImage"] img {
+     max-height: 90px;
+}
+
 /* TABS */
 div[data-baseweb="tab-list"] { gap: 8px; margin-bottom: 10px; }
 button[data-baseweb="tab"] {
