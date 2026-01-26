@@ -52,6 +52,7 @@ with st.sidebar:
         
         # --- NEW FILTERS ---
         st.subheader("Performance")
+        min_mpg = st.slider("Min Minutes Per Game", 0, 90, 0, 5) # New Slider
         min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
         min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
         
@@ -67,6 +68,7 @@ filtered = df[
     (df['position'].isin(position)) &
     (df['cost'] <= max_price) & 
     (df['selected_by_percent'] <= max_owner) &
+    (df['avg_minutes'] >= min_mpg) &       # New Filter Applied
     (df['points_per_game'] >= min_ppg) & 
     (df['dc_per_90'] >= min_dc90)
 ]
@@ -79,7 +81,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
 st.markdown("""<div style="text-align: center; margin-bottom: 20px;"><h1 style="font-size: 3rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric</h1><div style="width: 80px; height: 4px; background-color: #00FF85; margin: 0 auto; border-radius: 2px;"></div></div>""", unsafe_allow_html=True)
 
 # =========================================================================
-# 📅 DEADLINE COUNTDOWN & FIXTURES (FIXED)
+# 📅 DEADLINE COUNTDOWN & FIXTURES
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
@@ -142,7 +144,6 @@ if gw_name and deadline_iso:
             </div>"""
         cards_html += '</div>'
 
-        # Using Native <details> tag for reliability
         st.markdown(f"""
         <details class="aesthetic-expander">
             <summary class="aesthetic-summary">🏟️ View {gw_name} Fixtures (Kickoff Times)</summary>
@@ -162,7 +163,7 @@ st.markdown(
     <div class="scout-tip">
         <span style="color: #E0E0E0; font-size: 1rem; font-family: 'Roboto', sans-serif;">
             <strong style="color: #00FF85;">SCOUT'S TIP:</strong> 
-            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, Price, PPG, and Work Rate.
+            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, Price, PPG, Mins/Game, and Work Rate.
         </span>
     </div>
     """,
@@ -217,9 +218,9 @@ def render_modern_table(dataframe, column_config, sort_key):
         status = row['status']
         row_style = ""
         if status in ['i', 'u', 'n', 's']: 
-            row_style = 'background-color: rgba(120, 0, 0, 0.6);' # Dark Red for Injured/Suspended
+            row_style = 'background-color: rgba(120, 0, 0, 0.6);' 
         elif status == 'd': 
-            row_style = 'background-color: rgba(120, 100, 0, 0.6);' # Dark Yellow for Doubtful
+            row_style = 'background-color: rgba(120, 100, 0, 0.6);' 
             
         status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
         if status in ['i', 'u', 'n', 's']: status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
@@ -242,10 +243,7 @@ def render_modern_table(dataframe, column_config, sort_key):
         for col_name in ['cost', 'selected_by_percent', 'matches_played'] + list(column_config.keys()):
             val = row[col_name]
             if isinstance(val, float): val = f"{val:.2f}"
-            
-            # --- PRICE FORMAT FIX (1 Decimal) ---
             if col_name == 'cost': val = f"£{float(val):.1f}"
-            
             elif col_name == 'selected_by_percent': val = f"{val}%"
             elif col_name in ['matches_played', 'avg_minutes', 'total_points', 'goals_scored', 'assists', 'clean_sheets', 'goals_conceded']: val = int(float(val))
             
