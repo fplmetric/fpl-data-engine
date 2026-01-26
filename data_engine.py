@@ -53,8 +53,7 @@ def get_next_gw_data():
     for f in fixtures:
         home_t = teams.get(f['team_h'])
         away_t = teams.get(f['team_a'])
-        
-        # We now return the raw 'kickoff_time' (ISO format) for JS to handle
+        # Return RAW ISO Time for Client-Side JS Parsing
         processed_fixtures.append({
             'home_name': home_t['name'], 'home_code': home_t['code'],
             'away_name': away_t['name'], 'away_code': away_t['code'],
