@@ -145,12 +145,12 @@ if gw_name and deadline_iso:
             <div id="sub" class="sub"></div>
         </div>
 
-        <details>
-            <summary>🏟️ View {gw_name} Fixtures (Your Local Time)</summary>
-            <div class="content">
-                <div class="match-grid" id="grid"></div>
-            </div>
-        </details>
+            <details>
+                <summary>🏟️ View {gw_name} Fixtures (Your Local Time)</summary>
+                <div class="content">
+                    <div class="match-grid" id="grid"></div>
+                </div>
+            </details>
     </div>
 
     <script>
