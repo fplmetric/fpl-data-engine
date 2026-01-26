@@ -194,11 +194,13 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
-        # Highlight Status
+        # --- HIGHLIGHTING LOGIC ---
         status = row['status']
         row_style = ""
-        if status in ['i', 'u', 'n', 's']: row_style = 'background-color: rgba(74, 0, 0, 0.6);'
-        elif status == 'd': row_style = 'background-color: rgba(74, 63, 0, 0.6);'
+        if status in ['i', 'u', 'n', 's']: 
+            row_style = 'background-color: rgba(74, 0, 0, 0.6);' # Red tint
+        elif status == 'd': 
+            row_style = 'background-color: rgba(74, 63, 0, 0.6);' # Yellow tint
             
         status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
         if status in ['i', 'u', 'n', 's']: status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
@@ -221,7 +223,10 @@ def render_modern_table(dataframe, column_config, sort_key):
         for col_name in ['cost', 'selected_by_percent', 'matches_played'] + list(column_config.keys()):
             val = row[col_name]
             if isinstance(val, float): val = f"{val:.2f}"
+            
+            # --- PRICE FORMAT FIX (1 decimal + £) ---
             if col_name == 'cost': val = f"£{float(val):.1f}"
+            
             elif col_name == 'selected_by_percent': val = f"{val}%"
             elif col_name in ['matches_played', 'avg_minutes', 'total_points', 'goals_scored', 'assists', 'clean_sheets', 'goals_conceded']: val = int(float(val))
             
@@ -275,6 +280,7 @@ df_c = db.get_db_price_changes()
 if df_c.empty: st.info("No price changes detected.")
 else:
     c_r, c_f = st.columns(2)
+    # --- ARROW FIX: VISIBLE COLORS ---
     icon_up = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00FF85" stroke-width="4"><path d="M18 15l-6-6-6 6"/></svg>'
     icon_dn = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF0055" stroke-width="4"><path d="M6 9l6 6 6-6"/></svg>'
     
@@ -286,6 +292,7 @@ else:
             h_r = ""
             for _, r in risers.iterrows():
                 tc = db.get_team_map().get(r['team'], 0)
+                # --- PRICE FORMAT FIX (1 decimal) ---
                 h_r += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_up}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']:.1f}</td><td style="text-align: center; color: #00FF85;">+£{r['change']:.1f}</td></tr>"""
             st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_r}</tbody></table></div>""", unsafe_allow_html=True)
             
@@ -297,6 +304,7 @@ else:
             h_f = ""
             for _, r in fallers.iterrows():
                 tc = db.get_team_map().get(r['team'], 0)
+                # --- PRICE FORMAT FIX (1 decimal) ---
                 h_f += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_dn}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']:.1f}</td><td style="text-align: center; color: #FF0055;">{r['change']:.1f}</td></tr>"""
             st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_f}</tbody></table></div>""", unsafe_allow_html=True)
 
