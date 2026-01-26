@@ -757,7 +757,9 @@ st.markdown("""
 
 # 5. MARKET MOVERS
 st.markdown("---")
-st.header("Market Movers (Today)")
+# RENAMED to manage expectations:
+st.header("Market Movers (Current Gameweek)")
+st.caption("Note: Official API data shows cumulative price changes for the entire Gameweek, not just the last 24h.")
 
 df_changes = get_price_changes()
 if df_changes.empty:
