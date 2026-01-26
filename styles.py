@@ -1,5 +1,3 @@
-# styles.py
-
 GLOBAL_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
@@ -112,37 +110,62 @@ button[data-baseweb="tab"][aria-selected="true"] {
 .bmc-button:hover { transform: translateY(-2px); text-decoration: none; }
 .bmc-logo { width: 20px; height: 20px; margin-right: 8px; }
 
-/* --- NEW: CUSTOM AESTHETIC EXPANDER --- */
-.ae-container { margin-bottom: 20px; }
-.ae-header {
-    background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
+/* === NATIVE AESTHETIC EXPANDER === */
+details.aesthetic-expander {
+    margin-bottom: 20px;
     border: 1px solid #00FF85;
     border-radius: 8px;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.02);
+    transition: all 0.3s ease;
+}
+
+details.aesthetic-expander[open] {
+    background-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 15px rgba(0, 255, 133, 0.1);
+}
+
+summary.aesthetic-summary {
+    background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
     padding: 12px 20px;
     cursor: pointer;
+    font-weight: 700;
+    color: #00FF85;
+    font-family: 'Roboto', sans-serif;
+    list-style: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #00FF85;
-    font-weight: 700;
-    font-family: 'Roboto', sans-serif;
-    transition: all 0.3s ease;
+    transition: background 0.2s;
 }
-.ae-header:hover {
-     background: linear-gradient(90deg, rgba(75,0,80,0.9) 0%, rgba(50,50,50,0.9) 100%);
-     box-shadow: 0 0 15px rgba(0, 255, 133, 0.2);
+
+summary.aesthetic-summary:hover {
+    background: linear-gradient(90deg, rgba(75,0,80,0.9) 0%, rgba(50,50,50,0.9) 100%);
 }
-.ae-icon { font-size: 1.2rem; transition: transform 0.3s ease; }
-/* Class added by JS when open */
-.ae-header.active .ae-icon { transform: rotate(180deg); }
+
+summary.aesthetic-summary::after {
+    content: '▼';
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+}
+
+details.aesthetic-expander[open] summary.aesthetic-summary::after {
+    transform: rotate(180deg);
+}
+
+summary.aesthetic-summary::-webkit-details-marker {
+    display: none;
+}
+
 .ae-content {
-    display: none; /* Hidden by default */
-    padding: 15px;
-    border: 1px solid rgba(0, 255, 133, 0.3);
-    border-top: none;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
-    background-color: rgba(0,0,0,0.2);
+    padding: 20px;
+    border-top: 1px solid rgba(0, 255, 133, 0.3);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 768px) { h1 { font-size: 1.8rem !important; } }
