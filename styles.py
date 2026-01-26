@@ -7,20 +7,24 @@ span[data-baseweb="tag"] { color: black !important; font-weight: bold; }
 div[data-baseweb="select"] > div { cursor: pointer !important; }
 .block-container { padding-top: 1rem !important; padding-bottom: 2rem !important; }
 
-/* --- LOGO SIZING FIX --- */
+/* --- LOGO FIXES --- */
 
-/* 1. Sidebar Logo: Keep it small and contained */
+/* 1. Sidebar Logo: Constrain height to keep it neat */
 section[data-testid="stSidebar"] div[data-testid="stImage"] img {
     object-fit: contain !important;
     width: 100% !important;
     max-height: 80px !important;
 }
 
-/* 2. Main Area Logo: Allow it to be larger and centered */
+/* 2. Main View Logo: NO max-height limit to prevent cropping. 
+      Width is controlled by the column layout in app.py */
 div[data-testid="stAppViewContainer"] div[data-testid="stImage"] img {
     object-fit: contain !important;
     width: 100% !important;
-    max-height: 200px !important; /* Increased height visibility */
+    height: auto !important; 
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
 }
 
 /* TABS */
