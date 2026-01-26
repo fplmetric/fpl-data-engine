@@ -11,7 +11,7 @@ import data_engine as db
 # --- 1. SETUP ---
 st.set_page_config(page_title="FPL Metric Dashboard", page_icon="favicon.png", layout="wide")
 
-# --- GLOBAL CSS: VISUAL ENHANCEMENTS (FONTS, SCROLLBARS, SIDEBAR, INPUTS, TABLES) ---
+# --- GLOBAL CSS: VISUAL ENHANCEMENTS ---
 st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
 st.markdown("""
 <style>
@@ -78,11 +78,10 @@ st.markdown("""
     .modern-table {
         width: 100%;
         border-collapse: separate;
-        border-spacing: 0 8px; /* Creates the floating card effect */
+        border-spacing: 0 8px;
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
     }
-    /* Header Styling */
     .modern-table th {
         background-color: rgba(0, 0, 0, 0.4);
         color: #00FF85;
@@ -96,22 +95,17 @@ st.markdown("""
     }
     .modern-table th:first-child { text-align: left; padding-left: 20px; }
     
-    /* Row Styling */
     .modern-table tbody tr {
-        background-color: rgba(255, 255, 255, 0.03);
         transition: all 0.2s ease;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
-    /* Hover Effect */
     .modern-table tbody tr:hover {
-        background-color: rgba(0, 255, 133, 0.05);
         transform: scale(1.005);
         box-shadow: 0 5px 15px rgba(0, 255, 133, 0.15);
-        border: 1px solid rgba(0, 255, 133, 0.3);
-        cursor: pointer;
+        z-index: 10;
+        position: relative;
     }
     
-    /* Cell Styling */
     .modern-table td {
         padding: 12px;
         vertical-align: middle;
@@ -121,7 +115,6 @@ st.markdown("""
     .modern-table td:first-child {
         border-top-left-radius: 8px;
         border-bottom-left-radius: 8px;
-        border-left: 1px solid rgba(255, 255, 255, 0.05);
     }
     .modern-table td:last-child {
         border-top-right-radius: 8px;
@@ -129,14 +122,21 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
     
-    /* Fixture Pills */
+    /* IMPROVED FIXTURE PILLS */
+    .mini-fix-container {
+        display: flex;
+        gap: 4px;
+        justify-content: center;
+    }
     .mini-fix-box {
-        display: inline-block;
-        padding: 4px 8px;
-        margin: 0 2px;
-        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px; /* Fixed width for consistency */
+        height: 24px;
+        border-radius: 4px;
         font-size: 0.75rem;
-        font-weight: 700;
+        font-weight: 900;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 </style>
@@ -210,7 +210,7 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# --- MAIN DISPLAY ---
+# --- MAIN DISPLAY (CENTERED LOGO) ---
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
     col_l, col_m, col_r = st.columns([3, 2, 3]) 
     with col_m: 
@@ -227,25 +227,18 @@ if gw_name and deadline_iso:
     combined_html = f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;700&display=swap');
-        
         .widget-container {{ margin-bottom: 0px; font-family: 'Roboto', sans-serif; }}
-        
         ::-webkit-scrollbar {{ width: 6px; }}
         ::-webkit-scrollbar-thumb {{ background: #00FF85; border-radius: 3px; }}
         ::-webkit-scrollbar-track {{ background: rgba(0,0,0,0.2); }}
-
         .deadline-box {{
             background: linear-gradient(135deg, #1a001e 0%, #37003c 100%);
             border: 1px solid #00FF85; border-top-left-radius: 12px; border-top-right-radius: 12px;
             padding: 15px; text-align: center; color: white; border-bottom: none;
         }}
-        .label {{ 
-            color: #00FF85; font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; 
-            text-transform: uppercase; margin-bottom: 5px; font-family: 'Orbitron', sans-serif; 
-        }}
+        .label {{ color: #00FF85; font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; font-family: 'Orbitron', sans-serif; }}
         .timer {{ font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; font-family: 'Orbitron', sans-serif; }}
         .sub {{ font-size: 0.85rem; color: #BBB; margin-top: 5px; }}
-        
         .fix-container {{
             border: 1px solid #00FF85; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
             overflow: hidden; background-color: rgba(255, 255, 255, 0.02);
@@ -258,29 +251,18 @@ if gw_name and deadline_iso:
             border-bottom: 1px solid #00FF85;
         }}
         .content {{ padding: 20px; }}
-        
-        .match-grid {{ 
-            display: flex; 
-            flex-wrap: wrap; 
-            justify-content: center; 
-            gap: 12px; 
-        }}
-        
+        .match-grid {{ display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }}
         .match-card {{
             background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             cursor: pointer;
-            flex: 1 1 280px; 
-            max-width: 350px;
+            flex: 1 1 280px; max-width: 350px;
         }}
         .match-card:hover {{ 
-            border-color: #00FF85; 
-            background-color: rgba(0, 255, 133, 0.05);
-            transform: translateY(-5px); 
-            box-shadow: 0 5px 15px rgba(0, 255, 133, 0.2);
+            border-color: #00FF85; background-color: rgba(0, 255, 133, 0.05);
+            transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0, 255, 133, 0.2);
         }}
-        
         .team-col {{ display: flex; flex-direction: column; align-items: center; width: 60px; }}
         .team-logo {{ width: 35px; height: 35px; object-fit: contain; margin-bottom: 5px; }}
         .team-name {{ font-size: 0.75rem; font-weight: 700; text-align: center; color: #FFF; }}
@@ -336,7 +318,6 @@ if gw_name and deadline_iso:
                 var dateStr = d.toLocaleDateString([], {{weekday: 'short', day: 'numeric', month: 'short'}});
                 var h_img = "https://resources.premierleague.com/premierleague/badges/50/t" + f.home_code + ".png";
                 var a_img = "https://resources.premierleague.com/premierleague/badges/50/t" + f.away_code + ".png";
-                
                 var card = `
                 <div class="match-card">
                     <div class="team-col"><img src="${{h_img}}" class="team-logo"><span class="team-name">${{f.home_name}}</span></div>
@@ -348,11 +329,9 @@ if gw_name and deadline_iso:
         }}
     </script>
     """
-    
     n_fixtures = len(fixtures_data)
     n_rows = (n_fixtures + 2) // 3  
     widget_height = 180 + (n_rows * 95) 
-    
     components.html(combined_html, height=widget_height, scrolling=False)
 else:
     st.info("No fixtures found for next Gameweek.")
@@ -375,7 +354,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- REPLACED METRICS WITH CUSTOM CARDS ---
+# --- REPLACED METRICS WITH CUSTOM CARDS (NO EMOJIS) ---
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
@@ -435,6 +414,9 @@ def render_modern_table(dataframe, column_config, sort_key):
     all_headers = base_headers + dynamic_headers
     header_html = "".join([f"<th>{h}</th>" for h in all_headers])
     
+    # IMPROVED CONTRAST FOR PILLS
+    # 2 (Easy) -> Light Green #00FF85 -> Text should be BLACK for readability
+    # 4 (Hard) -> Pink #FF0055 -> Text WHITE
     fdr_colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
     fdr_text = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
     
@@ -445,19 +427,24 @@ def render_modern_table(dataframe, column_config, sort_key):
         
         status = row['status']
         row_style = ""
-        # Improved styling for status: using border-left color instead of messy background
         border_color = "rgba(255, 255, 255, 0.05)"
+        
+        # RESTORED FULL ROW HIGHLIGHT + BORDER
         if status in ['i', 'u', 'n', 's']: 
+            row_style = 'background-color: rgba(255, 0, 85, 0.15);' # Red tint
             border_color = "#FF0055"
         elif status == 'd': 
+            row_style = 'background-color: rgba(255, 204, 0, 0.15);' # Yellow tint
             border_color = "#FFCC00"
+        else:
+            row_style = 'background-color: rgba(255, 255, 255, 0.03);' # Default dark
             
         status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
         if status in ['i', 'u', 'n', 's']: status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
         elif status == 'd': status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
         
-        # Apply the colored border to the row inline for status identification
-        html_rows += f"""<tr style="border-left: 4px solid {border_color};">
+        # Combined styles: Background tint + Neon Border
+        html_rows += f"""<tr style="{row_style} border-left: 4px solid {border_color};">
         <td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 12px;">
             <div style="width: 10px;">{status_dot}</div><img src="{logo_img}" style="width: 35px;">
             <div style="display: flex; flex-direction: column;"><span style="font-weight: bold; color: #FFF;">{row['web_name']}</span><span style="font-size: 0.8rem; color: #AAA;">{row['team_name']} | {row['position']}</span></div>
@@ -467,7 +454,8 @@ def render_modern_table(dataframe, column_config, sort_key):
         fix_html = '<div class="mini-fix-container">'
         for f in my_fixtures:
             bg, txt = fdr_colors.get(f['diff'], '#333'), fdr_text.get(f['diff'], 'white')
-            fix_html += f'<div class="mini-fix-box" style="background-color: {bg}; color: {txt};">{f["opp"]}</div>'
+            # Added min-width and centered text for visibility
+            fix_html += f'<div class="mini-fix-box" style="background-color: {bg}; color: {txt}; min-width: 38px; text-align: center;">{f["opp"]}</div>'
         fix_html += '</div>'
         html_rows += f'<td style="text-align: center;">{fix_html}</td>'
         
