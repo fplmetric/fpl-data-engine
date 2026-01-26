@@ -5,7 +5,9 @@ GLOBAL_CSS = """
 /* GLOBAL RESET */
 span[data-baseweb="tag"] { color: black !important; font-weight: bold; }
 div[data-baseweb="select"] > div { cursor: pointer !important; }
-.block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+
+/* FIX: Increase top padding so Logo isn't cut off */
+.block-container { padding-top: 3rem !important; padding-bottom: 2rem !important; }
 
 /* --- LOGO FIXES --- */
 
@@ -24,14 +26,12 @@ section[data-testid="stSidebar"] div[data-testid="stImage"] img {
     margin: 0 auto !important;
 }
 
-/* 2. Main View Logo: Center and Full Visibility */
+/* 2. Main View Logo: Full visibility, no cropping */
 div[data-testid="stAppViewContainer"] div[data-testid="stImage"] img {
     object-fit: contain !important;
     width: 100% !important;
     height: auto !important; 
-    max-height: 200px !important;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 0 auto;
     display: block;
 }
 
