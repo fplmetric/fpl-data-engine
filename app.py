@@ -252,7 +252,7 @@ if gw_name and deadline_iso:
     n_fixtures = len(fixtures_data)
     # FIX: Use 3 columns instead of 4 for safe row calculation when sidebar is open
     n_rows = (n_fixtures + 2) // 3  
-    widget_height = 160 + (n_rows * 95) # Added slight buffer to 180
+    widget_height = 130 + (n_rows * 95) # Added slight buffer to 180
     
     components.html(combined_html, height=widget_height, scrolling=False)
 else:
