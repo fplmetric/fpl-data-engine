@@ -11,7 +11,7 @@ import data_engine as db
 # --- 1. SETUP ---
 st.set_page_config(page_title="FPL Metric Dashboard", page_icon="favicon.png", layout="wide")
 
-# --- GLOBAL CSS: VISUAL ENHANCEMENTS (FONTS, SCROLLBARS, SIDEBAR, INPUTS) ---
+# --- GLOBAL CSS: VISUAL ENHANCEMENTS (FONTS, SCROLLBARS, SIDEBAR, INPUTS, TABLES) ---
 st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
 st.markdown("""
 <style>
@@ -25,55 +25,26 @@ st.markdown("""
     }
     
     /* 2. NEON SCROLLBARS */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-        background: #1a001e;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #00FF85;
-        border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #00cc6a;
-    }
-    ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.05);
-    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; background: #1a001e; }
+    ::-webkit-scrollbar-thumb { background: #00FF85; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #00cc6a; }
+    ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
 
     /* 3. GLASSMORPHISM SIDEBAR */
     section[data-testid="stSidebar"] {
         background-color: rgba(20, 0, 30, 0.95);
         border-right: 1px solid rgba(0, 255, 133, 0.2);
     }
-    /* Fix for sidebar content container */
-    section[data-testid="stSidebar"] > div {
-        background-color: transparent;
-    }
+    section[data-testid="stSidebar"] > div { background-color: transparent; }
 
     /* 4. CUSTOM NEON INPUT STYLING */
-    /* Sliders */
-    div[data-baseweb="slider"] div[role="slider"] {
-        background-color: #00FF85 !important;
-    }
-    div[data-baseweb="slider"] div[data-testid="stTickBar"] {
-        background: linear-gradient(to right, #00FF85, #00FF85) !important;
-    }
-    /* Checkboxes */
-    span[data-baseweb="checkbox"] div[class*="checked"] {
-        background-color: #00FF85 !important;
-        border-color: #00FF85 !important;
-    }
-    /* Multiselect Tags */
-    span[data-baseweb="tag"] {
-        background-color: rgba(0, 255, 133, 0.2) !important;
-        border: 1px solid #00FF85 !important;
-    }
-    span[data-baseweb="tag"] span {
-        color: #FFFFFF !important;
-    }
+    div[data-baseweb="slider"] div[role="slider"] { background-color: #00FF85 !important; }
+    div[data-baseweb="slider"] div[data-testid="stTickBar"] { background: linear-gradient(to right, #00FF85, #00FF85) !important; }
+    span[data-baseweb="checkbox"] div[class*="checked"] { background-color: #00FF85 !important; border-color: #00FF85 !important; }
+    span[data-baseweb="tag"] { background-color: rgba(0, 255, 133, 0.2) !important; border: 1px solid #00FF85 !important; }
+    span[data-baseweb="tag"] span { color: #FFFFFF !important; }
 
-    /* 5. TAB STYLING (Cyberpunk Style) */
+    /* 5. TAB STYLING */
     .stTabs [data-baseweb="tab-list"] {
         background-color: rgba(255, 255, 255, 0.03);
         border-radius: 12px;
@@ -94,10 +65,7 @@ st.markdown("""
         padding: 12px 24px;
         transition: all 0.3s ease;
     }
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: rgba(255, 255, 255, 0.08);
-        color: #FFFFFF;
-    }
+    .stTabs [data-baseweb="tab"]:hover { background-color: rgba(255, 255, 255, 0.08); color: #FFFFFF; }
     .stTabs [aria-selected="true"] {
         background-color: rgba(0, 255, 133, 0.15) !important;
         color: #00FF85 !important;
@@ -105,6 +73,72 @@ st.markdown("""
         box-shadow: 0 0 15px rgba(0, 255, 133, 0.2);
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
+
+    /* 6. AESTHETIC PLAYER TABLE */
+    .modern-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px; /* Creates the floating card effect */
+        font-family: 'Roboto', sans-serif;
+        color: #E0E0E0;
+    }
+    /* Header Styling */
+    .modern-table th {
+        background-color: rgba(0, 0, 0, 0.4);
+        color: #00FF85;
+        font-family: 'Orbitron', sans-serif;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 15px;
+        text-align: center;
+        border-bottom: 2px solid #00FF85;
+        letter-spacing: 1px;
+    }
+    .modern-table th:first-child { text-align: left; padding-left: 20px; }
+    
+    /* Row Styling */
+    .modern-table tbody tr {
+        background-color: rgba(255, 255, 255, 0.03);
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    /* Hover Effect */
+    .modern-table tbody tr:hover {
+        background-color: rgba(0, 255, 133, 0.05);
+        transform: scale(1.005);
+        box-shadow: 0 5px 15px rgba(0, 255, 133, 0.15);
+        border: 1px solid rgba(0, 255, 133, 0.3);
+        cursor: pointer;
+    }
+    
+    /* Cell Styling */
+    .modern-table td {
+        padding: 12px;
+        vertical-align: middle;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .modern-table td:first-child {
+        border-top-left-radius: 8px;
+        border-bottom-left-radius: 8px;
+        border-left: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .modern-table td:last-child {
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    /* Fixture Pills */
+    .mini-fix-box {
+        display: inline-block;
+        padding: 4px 8px;
+        margin: 0 2px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -145,7 +179,6 @@ with st.sidebar:
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
         
-        # Exclude Unavailable Checkbox
         exclude_unavailable = st.checkbox("Exclude Unavailable (Red Flags)", value=False)
         
         max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
@@ -164,7 +197,6 @@ with st.sidebar:
 # --- FILTER LOGIC ---
 df = df[df['minutes'] >= 90]
 
-# Logic to exclude unavailable players
 if exclude_unavailable:
     df = df[~df['status'].isin(['i', 'u', 'n', 's'])]
 
@@ -178,14 +210,14 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# --- MAIN DISPLAY (CENTERED LOGO) ---
+# --- MAIN DISPLAY ---
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
     col_l, col_m, col_r = st.columns([3, 2, 3]) 
     with col_m: 
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET (With Flexbox Centering)
+# 📅 DEADLINE & FIXTURES WIDGET
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
@@ -198,7 +230,6 @@ if gw_name and deadline_iso:
         
         .widget-container {{ margin-bottom: 0px; font-family: 'Roboto', sans-serif; }}
         
-        /* Custom Scrollbar for Widget */
         ::-webkit-scrollbar {{ width: 6px; }}
         ::-webkit-scrollbar-thumb {{ background: #00FF85; border-radius: 3px; }}
         ::-webkit-scrollbar-track {{ background: rgba(0,0,0,0.2); }}
@@ -228,7 +259,6 @@ if gw_name and deadline_iso:
         }}
         .content {{ padding: 20px; }}
         
-        /* FLEXBOX FOR CENTERING ORPHANS */
         .match-grid {{ 
             display: flex; 
             flex-wrap: wrap; 
@@ -236,13 +266,12 @@ if gw_name and deadline_iso:
             gap: 12px; 
         }}
         
-        /* HOVER LIFT EFFECT ON CARDS */
         .match-card {{
             background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             cursor: pointer;
-            flex: 1 1 280px; /* Flexible width */
+            flex: 1 1 280px; 
             max-width: 350px;
         }}
         .match-card:hover {{ 
@@ -346,7 +375,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- REPLACED METRICS WITH CUSTOM CARDS (NO EMOJIS, UPDATED FONT) ---
+# --- REPLACED METRICS WITH CUSTOM CARDS ---
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
@@ -416,16 +445,19 @@ def render_modern_table(dataframe, column_config, sort_key):
         
         status = row['status']
         row_style = ""
+        # Improved styling for status: using border-left color instead of messy background
+        border_color = "rgba(255, 255, 255, 0.05)"
         if status in ['i', 'u', 'n', 's']: 
-            row_style = 'background-color: rgba(120, 0, 0, 0.6);' 
+            border_color = "#FF0055"
         elif status == 'd': 
-            row_style = 'background-color: rgba(120, 100, 0, 0.6);' 
+            border_color = "#FFCC00"
             
         status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
         if status in ['i', 'u', 'n', 's']: status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
         elif status == 'd': status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
         
-        html_rows += f"""<tr style="{row_style}">
+        # Apply the colored border to the row inline for status identification
+        html_rows += f"""<tr style="border-left: 4px solid {border_color};">
         <td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 12px;">
             <div style="width: 10px;">{status_dot}</div><img src="{logo_img}" style="width: 35px;">
             <div style="display: flex; flex-direction: column;"><span style="font-weight: bold; color: #FFF;">{row['web_name']}</span><span style="font-size: 0.8rem; color: #AAA;">{row['team_name']} | {row['position']}</span></div>
