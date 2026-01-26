@@ -73,7 +73,8 @@ filtered = df[
 
 # --- MAIN DISPLAY (CENTERED LOGO) ---
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-    col_l, col_m, col_r = st.columns([1, 2, 1]) 
+    # [3, 2, 3] layout constrains the width of the middle column, keeping the logo compact and centered
+    col_l, col_m, col_r = st.columns([3, 2, 3]) 
     with col_m: 
         st.image("fpl_metric_logo.png", use_container_width=True)
 
@@ -88,7 +89,7 @@ if gw_name and deadline_iso:
     # HTML Block
     combined_html = f"""
     <style>
-        .widget-container {{ margin-bottom: 20px; font-family: 'Roboto', sans-serif; }}
+        .widget-container {{ margin-bottom: 0px; font-family: 'Roboto', sans-serif; }}
         .deadline-box {{
             background: linear-gradient(135deg, #1a001e 0%, #37003c 100%);
             border: 1px solid #00FF85; border-top-left-radius: 12px; border-top-right-radius: 12px;
@@ -183,13 +184,12 @@ if gw_name and deadline_iso:
     </script>
     """
     
-    # --- DYNAMIC HEIGHT CALCULATION ---
-    # Calculates height based on fixture rows (5 cols per row assumption)
-    # Banner+Header ~ 140px. Each row ~ 100px.
-    # Standard 10 matches = 2 rows -> 140 + 200 = 340. We use 350 for safety.
+    # --- DYNAMIC HEIGHT CALCULATION (Refined to remove gap) ---
+    # Header area (Deadline + Green Bar): approx 160px
+    # Each row of match cards: approx 95px
     n_fixtures = len(fixtures_data)
-    n_rows = (n_fixtures + 4) // 5  # Ceiling division for 5 columns
-    widget_height = 140 + (n_rows * 105) 
+    n_rows = (n_fixtures + 4) // 5
+    widget_height = 160 + (n_rows * 95)
     
     components.html(combined_html, height=widget_height, scrolling=False)
 else:
@@ -257,6 +257,7 @@ def render_modern_table(dataframe, column_config, sort_key):
         t_code = team_map.get(row['team_name'], 0)
         logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
         
+        # --- HIGHLIGHTING LOGIC ---
         status = row['status']
         row_style = ""
         if status in ['i', 'u', 'n', 's']: 
