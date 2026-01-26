@@ -85,7 +85,6 @@ gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 if gw_name and deadline_iso:
     fixtures_json = json.dumps(fixtures_data)
     
-    # HTML Block
     combined_html = f"""
     <style>
         .widget-container {{ margin-bottom: 0px; font-family: 'Roboto', sans-serif; }}
@@ -107,7 +106,7 @@ if gw_name and deadline_iso:
             padding: 10px 20px; font-weight: 700; color: #00FF85;
             text-align: center; 
             border-top: 1px solid rgba(255,255,255,0.1);
-            border-bottom: 1px solid #00FF85; /* Bright Green Bottom Border */
+            border-bottom: 1px solid #00FF85;
         }}
         .content {{ padding: 20px; }}
         .match-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }}
@@ -185,8 +184,16 @@ if gw_name and deadline_iso:
     </script>
     """
     
+    # --- UPDATED HEIGHT CALCULATION ---
+    # With sidebar open, the grid drops to 4 columns.
+    # 10 fixtures / 4 cols = 3 rows.
+    # Calculation: (10 + 3) // 4 = 3 rows.
+    # Row Height = 95px.
+    # Base Height (Banner+Header+Margins) = ~160px.
     n_fixtures = len(fixtures_data)
-    n_rows = (n_fixtures + 4) // 5
+    # Using 4 columns as the divisor ensures we assume a narrower layout (3 rows)
+    # rather than a wide layout (2 rows), guaranteeing enough height.
+    n_rows = (n_fixtures + 3) // 4  
     widget_height = 160 + (n_rows * 95)
     
     components.html(combined_html, height=widget_height, scrolling=False)
@@ -195,7 +202,7 @@ else:
 
 # =========================================================================
 
-# --- TITLE (SPACING INCREASED to 50px) ---
+# --- TITLE ---
 st.markdown("""<div style="text-align: center; margin-bottom: 50px; margin-top: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">FPL Metric Scouting Dashboard</h1></div>""", unsafe_allow_html=True)
 
 # --- INFO BOX ---
