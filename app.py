@@ -74,7 +74,7 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE FIX) */
+    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE GAP FIX) */
     .player-table-container { margin-top: 0px; }
 
     .modern-table {
@@ -86,7 +86,6 @@ st.markdown("""
     }
     
     .modern-table th {
-        /* SOLID BACKGROUND */
         background-color: #1a001e !important; 
         color: #00FF85;
         font-family: 'Orbitron', sans-serif;
@@ -95,20 +94,32 @@ st.markdown("""
         padding: 15px;
         text-align: center;
         letter-spacing: 1px;
-        border-bottom: none !important; /* Reset standard border */
+        border-bottom: none !important;
         
-        /* STICKY CONFIGURATION */
         position: sticky;
         top: 0;
         z-index: 1000;
         
-        /* FIX APPLIED HERE: */
-        /* 1. Green border removed entirely. */
-        /* 2. A large negative top shadow (-30px) creates a tall solid purple block above the header. */
-        /* This acts as a mask, ensuring rows are hidden before they reach the visible gap. */
-        box-shadow: 0 -30px 0 0 #1a001e;
+        /* This shadow is purely for the bottom green line */
+        box-shadow: 0 2px 0 #00FF85; 
+        
+        /* Use clip-path to ensure nothing bleeds out if needed, though usually not required with the ::before method */
     }
     
+    /* THE FIX: Use a pseudo-element to create a SOLID BLOCK above the header. 
+       This physically covers the transparent gap caused by border-spacing.
+    */
+    .modern-table th::before {
+        content: "";
+        position: absolute;
+        top: -20px; /* Extend upwards */
+        left: 0;
+        right: 0;
+        height: 20px; /* Height of the gap cover */
+        background-color: #1a001e; /* Solid background color */
+        z-index: -1;
+    }
+
     .modern-table th:first-child { text-align: left; padding-left: 20px; }
     
     .modern-table tbody tr {
@@ -117,7 +128,6 @@ st.markdown("""
         z-index: 1; 
     }
     
-    /* Lift on hover */
     .modern-table tbody tr:hover {
         transform: scale(1.005);
         box-shadow: 0 5px 15px rgba(0, 255, 133, 0.15);
@@ -236,7 +246,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET
+# 📅 DEADLINE & FIXTURES WIDGET (With Flexbox Centering)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
