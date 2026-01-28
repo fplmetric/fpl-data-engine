@@ -268,8 +268,7 @@ with st.sidebar:
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply'.")
         
-        # --- NEW: PLAYER SEARCH ---
-        player_search = st.text_input("Search Player Name", placeholder="e.g. Haaland, Salah")
+        # REMOVED PLAYER SEARCH FROM SIDEBAR
         
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
@@ -294,10 +293,6 @@ df = df[df['minutes'] >= 90]
 
 if exclude_unavailable:
     df = df[~df['status'].isin(['i', 'u', 'n', 's'])]
-
-# --- APPLY SEARCH FILTER ---
-if player_search:
-    df = df[df['web_name'].str.contains(player_search, case=False)]
 
 filtered = df[
     (df['team_name'].isin(selected_teams)) & 
@@ -488,6 +483,15 @@ if not filtered.empty:
     with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}", ""), unsafe_allow_html=True)
     with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
 
+# --- 2. ADDED PLAYER SEARCH HERE (Above Tabs) ---
+c_search, c_space = st.columns([1, 3])
+with c_search:
+    player_search = st.text_input("Find Player", placeholder="Search Name...", label_visibility="collapsed")
+
+# Apply Search Filter
+if player_search:
+    filtered = filtered[filtered['web_name'].str.contains(player_search, case=False)]
+
 def render_modern_table(dataframe, column_config, sort_key):
     if dataframe.empty:
         st.info("No players match your filters.")
@@ -579,14 +583,12 @@ with tab4: render_modern_table(filtered, { "def_cons": "Total DC", "dc_per_90": 
 st.markdown("---") 
 st.header("Fixture Difficulty Ticker")
 current_next_gw = db.get_next_gameweek_id()
-# --- UPDATED HORIZON OPTIONS ---
 horizon_opts = ["Next 2 GWs", "Next 3 GWs", "Next 4 GWs", "Next 5 GWs", "Next 6 GWs", "Next 7 GWs", "Next 8 GWs"] + [f"GW {current_next_gw+i}" for i in range(5)]
 c1, c2, c3 = st.columns(3)
 with c1: s_order = st.selectbox("Sort Order", ["Easiest", "Hardest", "Alphabetical"])
 with c2: v_type = st.selectbox("Type", ["Overall", "Attack", "Defence"])
 with c3: horizon = st.selectbox("Horizon", horizon_opts)
 
-# --- DYNAMIC HORIZON PARSING ---
 if horizon.startswith("Next"):
     n_gws = int(horizon.split(" ")[1])
     s_gw = current_next_gw
