@@ -483,32 +483,37 @@ if not filtered.empty:
     with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}", ""), unsafe_allow_html=True)
     with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
 
-# --- 2. ADDED PLAYER SEARCH HERE (Above Tabs) ---
-c_search, c_space = st.columns([1, 3])
-with c_search:
-    player_search = st.text_input("Find Player", placeholder="Search Name...", label_visibility="collapsed")
-
-# Apply Search Filter
-if player_search:
-    filtered = filtered[filtered['web_name'].str.contains(player_search, case=False)]
-
+# --- REFACTORED TABLE RENDERER WITH SEARCH BAR ---
 def render_modern_table(dataframe, column_config, sort_key):
-    if dataframe.empty:
-        st.info("No players match your filters.")
-        return
-
-    sort_options = {"cost": "Price", "selected_by_percent": "Ownership", "matches_played": "Matches"}
-    sort_options.update(column_config)
-    if "news" in sort_options: del sort_options["news"]
-
-    col_sort, _ = st.columns([1, 4])
-    with col_sort:
+    # 1. Layout: Sort (1/3) | Search (2/3)
+    c_sort, c_search = st.columns([1, 2])
+    
+    with c_sort:
+        sort_options = {"cost": "Price", "selected_by_percent": "Ownership", "matches_played": "Matches"}
+        sort_options.update(column_config)
+        if "news" in sort_options: del sort_options["news"]
+        
         options_keys = list(sort_options.keys())
         options_labels = list(sort_options.values())
         selected_label = st.selectbox(f"Sort by:", options_labels, key=sort_key)
         selected_col = options_keys[options_labels.index(selected_label)]
         
+    with c_search:
+        # Search input with unique key per tab to avoid conflicts
+        search_term = st.text_input("Find Player", placeholder="Search Name...", label_visibility="visible", key=f"search_{sort_key}")
+
+    # 2. Apply Search Filter
+    if search_term:
+        dataframe = dataframe[dataframe['web_name'].str.contains(search_term, case=False)]
+
+    if dataframe.empty:
+        st.info("No players match your filters.")
+        return
+
+    # 3. Apply Sorting
     sorted_df = dataframe.sort_values(selected_col, ascending=False).head(100)
+    
+    # 4. Render Table HTML (Same logic as before)
     team_map = db.get_team_map()
     team_fixtures = db.get_team_upcoming_fixtures()
     
@@ -517,7 +522,6 @@ def render_modern_table(dataframe, column_config, sort_key):
     all_headers = base_headers + dynamic_headers
     header_html = "".join([f"<th>{h}</th>" for h in all_headers])
     
-    # IMPROVED CONTRAST FOR PILLS
     fdr_colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
     fdr_text = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
     
@@ -530,21 +534,19 @@ def render_modern_table(dataframe, column_config, sort_key):
         row_style = ""
         border_color = "rgba(255, 255, 255, 0.05)"
         
-        # RESTORED FULL ROW HIGHLIGHT + BORDER
         if status in ['i', 'u', 'n', 's']: 
-            row_style = 'background-color: rgba(255, 0, 85, 0.15);' # Red tint
+            row_style = 'background-color: rgba(255, 0, 85, 0.15);' 
             border_color = "#FF0055"
         elif status == 'd': 
-            row_style = 'background-color: rgba(255, 204, 0, 0.15);' # Yellow tint
+            row_style = 'background-color: rgba(255, 204, 0, 0.15);' 
             border_color = "#FFCC00"
         else:
-            row_style = 'background-color: rgba(255, 255, 255, 0.03);' # Default dark
+            row_style = 'background-color: rgba(255, 255, 255, 0.03);' 
             
         status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
         if status in ['i', 'u', 'n', 's']: status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
         elif status == 'd': status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
         
-        # Combined styles: Background tint + Neon Border
         html_rows += f"""<tr style="{row_style} border-left: 4px solid {border_color};">
         <td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 12px;">
             <div style="width: 10px;">{status_dot}</div><img src="{logo_img}" style="width: 35px;">
@@ -555,7 +557,6 @@ def render_modern_table(dataframe, column_config, sort_key):
         fix_html = '<div class="mini-fix-container">'
         for f in my_fixtures:
             bg, txt = fdr_colors.get(f['diff'], '#333'), fdr_text.get(f['diff'], 'white')
-            # Added min-width and centered text for visibility
             fix_html += f'<div class="mini-fix-box" style="background-color: {bg}; color: {txt}; min-width: 38px; text-align: center;">{f["opp"]}</div>'
         fix_html += '</div>'
         html_rows += f'<td style="text-align: center;">{fix_html}</td>'
