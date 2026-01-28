@@ -55,6 +55,11 @@ st.markdown("""
         border-color: #00FF85 !important;
         box-shadow: 0 0 10px rgba(0, 255, 133, 0.2) !important;
     }
+    
+    /* FIX: HIDE "Press Enter to submit" INSTRUCTION */
+    div[data-testid="InputInstructions"] {
+        display: none !important;
+    }
 
     /* 5. TAB STYLING */
     .stTabs [data-baseweb="tab-list"] {
@@ -574,12 +579,14 @@ with tab4: render_modern_table(filtered, { "def_cons": "Total DC", "dc_per_90": 
 st.markdown("---") 
 st.header("Fixture Difficulty Ticker")
 current_next_gw = db.get_next_gameweek_id()
+# --- UPDATED HORIZON OPTIONS ---
 horizon_opts = ["Next 2 GWs", "Next 3 GWs", "Next 4 GWs", "Next 5 GWs", "Next 6 GWs", "Next 7 GWs", "Next 8 GWs"] + [f"GW {current_next_gw+i}" for i in range(5)]
 c1, c2, c3 = st.columns(3)
 with c1: s_order = st.selectbox("Sort Order", ["Easiest", "Hardest", "Alphabetical"])
 with c2: v_type = st.selectbox("Type", ["Overall", "Attack", "Defence"])
 with c3: horizon = st.selectbox("Horizon", horizon_opts)
 
+# --- DYNAMIC HORIZON PARSING ---
 if horizon.startswith("Next"):
     n_gws = int(horizon.split(" ")[1])
     s_gw = current_next_gw
