@@ -92,11 +92,12 @@ st.markdown("""
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
     /* 6. AESTHETIC PLAYER TABLE */
+    /* ENABLE HORIZONTAL SCROLLING FOR MOBILE */
     .player-table-container { 
         margin-top: 0px; 
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 10px;
+        overflow-x: auto !important; /* Forces scrollbar on small screens */
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        padding-bottom: 10px; /* Space for scrollbar */
     }
 
     .modern-table {
@@ -105,7 +106,7 @@ st.markdown("""
         border-spacing: 0 8px;
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
-        min-width: 800px;
+        min-width: 800px; /* Ensure table doesn't squash on mobile */
     }
     
     .modern-table th {
@@ -126,7 +127,7 @@ st.markdown("""
         box-shadow: 0 2px 0 #00FF85; 
     }
 
-    /* TOP MASK: Solid block above header to hide scrolling rows */
+    /* TOP MASK */
     .modern-table th::before {
         content: "";
         position: absolute;
@@ -138,14 +139,13 @@ st.markdown("""
         z-index: -1;
     }
 
-    /* SIDE MASK (LEFT) */
+    /* SIDE MASKS */
     .modern-table th:first-child { 
         text-align: left; 
         padding-left: 20px; 
         box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; 
     }
 
-    /* SIDE MASK (RIGHT) */
     .modern-table th:last-child {
         box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; 
     }
@@ -287,8 +287,6 @@ with st.sidebar:
     
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply'.")
-        
-        # REMOVED PLAYER SEARCH FROM SIDEBAR
         
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
@@ -504,8 +502,9 @@ if not filtered.empty:
     with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
 
 # --- 2. ADDED PLAYER SEARCH HERE (ABOVE TABS) ---
-# Removed column restrictions to allow full width and prevent misplacement
-player_search = st.text_input("Find Player", placeholder="Search Name...", label_visibility="collapsed")
+c_search, c_space = st.columns([1, 3])
+with c_search:
+    player_search = st.text_input("Find Player", placeholder="Search Name...", label_visibility="collapsed")
 
 # Apply Search Filter (Global)
 if player_search:
