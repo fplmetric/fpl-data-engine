@@ -92,12 +92,11 @@ st.markdown("""
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
     /* 6. AESTHETIC PLAYER TABLE */
-    /* ENABLE HORIZONTAL SCROLLING FOR MOBILE */
     .player-table-container { 
         margin-top: 0px; 
-        overflow-x: auto !important; /* Forces scrollbar on small screens */
-        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-        padding-bottom: 10px; /* Space for scrollbar */
+        overflow-x: auto !important; /* Mobile Scroll Fix */
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 10px;
     }
 
     .modern-table {
@@ -106,7 +105,7 @@ st.markdown("""
         border-spacing: 0 8px;
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
-        min-width: 800px; /* Ensure table doesn't squash on mobile */
+        min-width: 800px; /* Prevent squashing on mobile */
     }
     
     .modern-table th {
@@ -124,10 +123,11 @@ st.markdown("""
         top: 0;
         z-index: 1000;
         
+        /* Base shadow: Green bottom line only */
         box-shadow: 0 2px 0 #00FF85; 
     }
 
-    /* TOP MASK */
+    /* TOP MASK: Solid block above header to hide scrolling rows */
     .modern-table th::before {
         content: "";
         position: absolute;
@@ -139,13 +139,14 @@ st.markdown("""
         z-index: -1;
     }
 
-    /* SIDE MASKS */
+    /* SIDE MASK (LEFT): Solid block to the left of the first header cell */
     .modern-table th:first-child { 
         text-align: left; 
         padding-left: 20px; 
         box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; 
     }
 
+    /* SIDE MASK (RIGHT): Solid block to the right of the last header cell */
     .modern-table th:last-child {
         box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; 
     }
@@ -233,28 +234,19 @@ st.markdown("""
 
     /* --- MOBILE OPTIMIZATION --- */
     @media only screen and (max-width: 768px) {
-        /* Shrink the main title */
         h1 { font-size: 1.8rem !important; }
-        
-        /* Reduce page padding so it's not so squashed */
         .block-container {
             padding-top: 2rem !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
         }
-        
-        /* Ensure table container scrolls nicely */
         .player-table-container {
             overflow-x: scroll !important;
         }
-        
-        /* Reduce font size in table for mobile */
         .modern-table th, .modern-table td {
             padding: 8px !important;
             font-size: 0.8rem !important;
         }
-        
-        /* Reduce Logo Size */
         img[alt="fpl_metric_logo.png"] {
             width: 80% !important;
             margin: 0 auto;
@@ -511,11 +503,12 @@ if not filtered.empty:
     with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
 
 # --- 2. ADDED PLAYER SEARCH HERE (Above Tabs) ---
+# Use columns to control width if desired, or just st.text_input for full width
 c_search, c_space = st.columns([1, 3])
 with c_search:
     player_search = st.text_input("Find Player", placeholder="Search Name...", label_visibility="collapsed")
 
-# Apply Search Filter
+# Apply Search Filter (Global)
 if player_search:
     filtered = filtered[filtered['web_name'].str.contains(player_search, case=False)]
 
