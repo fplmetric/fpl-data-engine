@@ -94,7 +94,7 @@ st.markdown("""
     /* 6. AESTHETIC PLAYER TABLE */
     .player-table-container { 
         margin-top: 0px; 
-        overflow-x: auto !important; /* Mobile Scroll Fix */
+        overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
         padding-bottom: 10px;
     }
@@ -105,7 +105,7 @@ st.markdown("""
         border-spacing: 0 8px;
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
-        min-width: 800px; /* Prevent squashing on mobile */
+        min-width: 800px;
     }
     
     .modern-table th {
@@ -123,7 +123,6 @@ st.markdown("""
         top: 0;
         z-index: 1000;
         
-        /* Base shadow: Green bottom line only */
         box-shadow: 0 2px 0 #00FF85; 
     }
 
@@ -139,14 +138,14 @@ st.markdown("""
         z-index: -1;
     }
 
-    /* SIDE MASK (LEFT): Solid block to the left of the first header cell */
+    /* SIDE MASK (LEFT) */
     .modern-table th:first-child { 
         text-align: left; 
         padding-left: 20px; 
         box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; 
     }
 
-    /* SIDE MASK (RIGHT): Solid block to the right of the last header cell */
+    /* SIDE MASK (RIGHT) */
     .modern-table th:last-child {
         box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; 
     }
@@ -288,6 +287,8 @@ with st.sidebar:
     
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply'.")
+        
+        # REMOVED PLAYER SEARCH FROM SIDEBAR
         
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
@@ -502,11 +503,9 @@ if not filtered.empty:
     with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}", ""), unsafe_allow_html=True)
     with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
 
-# --- 2. ADDED PLAYER SEARCH HERE (Above Tabs) ---
-# Use columns to control width if desired, or just st.text_input for full width
-c_search, c_space = st.columns([1, 3])
-with c_search:
-    player_search = st.text_input("Find Player", placeholder="Search Name...", label_visibility="collapsed")
+# --- 2. ADDED PLAYER SEARCH HERE (ABOVE TABS) ---
+# Removed column restrictions to allow full width and prevent misplacement
+player_search = st.text_input("Find Player", placeholder="Search Name...", label_visibility="collapsed")
 
 # Apply Search Filter (Global)
 if player_search:
