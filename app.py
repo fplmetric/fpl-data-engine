@@ -43,6 +43,18 @@ st.markdown("""
     span[data-baseweb="checkbox"] div[class*="checked"] { background-color: #00FF85 !important; border-color: #00FF85 !important; }
     span[data-baseweb="tag"] { background-color: rgba(0, 255, 133, 0.2) !important; border: 1px solid #00FF85 !important; }
     span[data-baseweb="tag"] span { color: #FFFFFF !important; }
+    
+    /* TEXT INPUT STYLING (For Search) */
+    div[data-baseweb="input"] {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-color: rgba(0, 255, 133, 0.3) !important;
+        border-radius: 8px !important;
+        color: white !important;
+    }
+    div[data-baseweb="input"]:focus-within {
+        border-color: #00FF85 !important;
+        box-shadow: 0 0 10px rgba(0, 255, 133, 0.2) !important;
+    }
 
     /* 5. TAB STYLING */
     .stTabs [data-baseweb="tab-list"] {
@@ -100,21 +112,19 @@ st.markdown("""
         top: 0;
         z-index: 1000;
         
-        /* This shadow is purely for the bottom green line */
+        /* Base shadow: Green bottom line only */
         box-shadow: 0 2px 0 #00FF85; 
     }
-    
-    /* THE FIX: Use a pseudo-element to create a SOLID BLOCK above the header. 
-       This physically covers the transparent gap caused by border-spacing.
-    */
+
+    /* TOP MASK: Solid block above header to hide scrolling rows */
     .modern-table th::before {
         content: "";
         position: absolute;
-        top: -20px; /* Extend upwards */
+        top: -20px;
         left: 0;
         right: 0;
-        height: 20px; /* Height of the gap cover */
-        background-color: #1a001e; /* Solid background color */
+        height: 20px;
+        background-color: #1a001e;
         z-index: -1;
     }
 
@@ -123,14 +133,14 @@ st.markdown("""
         text-align: left; 
         padding-left: 20px; 
         /* 0 2px 0 #00FF85 -> Green Bottom Border */
-        /* -30px 0 0 #1a001e -> Solid Purple Left Block Mask */
+        /* -30px 0 0 #1a001e -> Solid Purple Left Block */
         box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; 
     }
 
     /* SIDE MASK (RIGHT): Solid block to the right of the last header cell */
     .modern-table th:last-child {
         /* 0 2px 0 #00FF85 -> Green Bottom Border */
-        /* 30px 0 0 #1a001e -> Solid Purple Right Block Mask */
+        /* 30px 0 0 #1a001e -> Solid Purple Right Block */
         box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; 
     }
     
@@ -180,6 +190,42 @@ st.markdown("""
         font-weight: 900;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
+    
+    /* Target Sidebar Buttons specifically for Neon Style */
+    div[data-testid="stSidebar"] button {
+        border-radius: 10px !important;
+        height: 3em !important;
+        font-family: 'Orbitron', sans-serif !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        transition: all 0.3s ease !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* All Teams Button (Green Glow) */
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")) {
+        background-color: rgba(0, 255, 133, 0.05) !important;
+        color: #00FF85 !important;
+        border: 1px solid #00FF85 !important;
+    }
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")):hover {
+        background-color: rgba(0, 255, 133, 0.2) !important;
+        box-shadow: 0 0 15px rgba(0, 255, 133, 0.3) !important;
+        transform: translateY(-2px);
+    }
+
+    /* Clear Teams Button (Pink Glow) */
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")) {
+        background-color: rgba(255, 0, 85, 0.05) !important;
+        color: #FF0055 !important;
+        border: 1px solid #FF0055 !important;
+    }
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")):hover {
+        background-color: rgba(255, 0, 85, 0.2) !important;
+        box-shadow: 0 0 15px rgba(255, 0, 85, 0.3) !important;
+        transform: translateY(-2px);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -211,11 +257,14 @@ with st.sidebar:
     def deselect_all_teams(): st.session_state['team_selection'] = []
     
     col_sel, col_desel = st.columns(2)
-    with col_sel: st.button("✅ All Teams", on_click=select_all_teams, use_container_width=True)
-    with col_desel: st.button("❌ Clear Teams", on_click=deselect_all_teams, use_container_width=True)
+    with col_sel: st.button("✅ All", on_click=select_all_teams, use_container_width=True)
+    with col_desel: st.button("❌ Clear", on_click=deselect_all_teams, use_container_width=True)
     
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply'.")
+        
+        # --- NEW: PLAYER SEARCH ---
+        player_search = st.text_input("Search Player Name", placeholder="e.g. Haaland, Salah")
         
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
@@ -240,6 +289,10 @@ df = df[df['minutes'] >= 90]
 
 if exclude_unavailable:
     df = df[~df['status'].isin(['i', 'u', 'n', 's'])]
+
+# --- APPLY SEARCH FILTER ---
+if player_search:
+    df = df[df['web_name'].str.contains(player_search, case=False)]
 
 filtered = df[
     (df['team_name'].isin(selected_teams)) & 
@@ -521,14 +574,12 @@ with tab4: render_modern_table(filtered, { "def_cons": "Total DC", "dc_per_90": 
 st.markdown("---") 
 st.header("Fixture Difficulty Ticker")
 current_next_gw = db.get_next_gameweek_id()
-# --- UPDATED HORIZON OPTIONS ---
 horizon_opts = ["Next 2 GWs", "Next 3 GWs", "Next 4 GWs", "Next 5 GWs", "Next 6 GWs", "Next 7 GWs", "Next 8 GWs"] + [f"GW {current_next_gw+i}" for i in range(5)]
 c1, c2, c3 = st.columns(3)
 with c1: s_order = st.selectbox("Sort Order", ["Easiest", "Hardest", "Alphabetical"])
 with c2: v_type = st.selectbox("Type", ["Overall", "Attack", "Defence"])
 with c3: horizon = st.selectbox("Horizon", horizon_opts)
 
-# --- DYNAMIC HORIZON PARSING ---
 if horizon.startswith("Next"):
     n_gws = int(horizon.split(" ")[1])
     s_gw = current_next_gw
