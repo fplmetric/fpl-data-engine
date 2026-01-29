@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import json
 import streamlit.components.v1 as components
+import random # Imported for mock history data
 
 # --- LOCAL IMPORTS ---
 import styles
@@ -10,6 +11,105 @@ import data_engine as db
 
 # --- 1. SETUP ---
 st.set_page_config(page_title="FPL Metric Dashboard", page_icon="favicon.png", layout="wide")
+
+# Initialize session state for selected player
+if 'selected_player' not in st.session_state:
+    st.session_state['selected_player'] = None
+
+# --- HELPER FUNCTIONS FOR NEW FEATURE ---
+
+# MOCK FUNCTION: Generates fake history data. Replace with a real db call.
+def get_mock_player_history(player_row):
+    team_map = db.get_team_map()
+    teams = list(team_map.keys())
+    # Remove player's own team from potential opponents
+    if player_row['team_name'] in teams:
+        teams.remove(player_row['team_name'])
+        
+    history = []
+    # Assuming a current GW for context
+    start_gw = 19
+    for i in range(5):
+        gw = start_gw + i
+        opp_name = random.choice(teams)
+        opp_code = team_map.get(opp_name, 0)
+        points = random.randint(1, 15) # Random points between 1 and 15
+        
+        # Determine pill color based on points
+        pill_color = "#00FF85" # Green for hauls
+        if points <= 3: pill_color = "#FF0055" # Red for blanks
+        elif points <= 6: pill_color = "#FFCC00" # Yellow for average
+        
+        history.append({
+            'gw': gw,
+            'opponent_name': opp_name,
+            'opponent_code': opp_code,
+            'points': points,
+            'pill_color': pill_color
+        })
+    return history
+
+# Renders the detailed player profile view
+def render_player_details(player_row):
+    history = get_mock_player_history(player_row)
+    
+    # --- HTML Construction ---
+    # Header Section
+    html = f"""
+    <div style="background: rgba(255,255,255,0.02); border: 1px solid #00FF85; border-radius: 16px; padding: 25px; margin-bottom: 30px; box-shadow: 0 0 25px rgba(0, 255, 133, 0.15);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px;">
+            <div>
+                <h2 style="margin: 0; font-size: 2.2rem; color: #FFFFFF; letter-spacing: 1px;">{player_row['web_name']}</h2>
+                <p style="margin: 8px 0 0 0; color: #00FF85; font-family: 'Roboto', sans-serif; font-weight: 700; font-size: 1rem;">{player_row['team_name']} | {player_row['position']}</p>
+            </div>
+            <div style="text-align: right; background: rgba(0, 255, 133, 0.1); padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(0, 255, 133, 0.3);">
+                <div style="color: #00FF85; font-size: 1.8rem; font-weight: 900;">£{player_row['cost']:.1f}</div>
+                <div style="color: #AAAAAA; font-size: 0.9rem; text-transform: uppercase;">Current Price</div>
+            </div>
+        </div>
+    """
+    
+    # Key Stats Section
+    html += """<div style="display: flex; gap: 15px; margin-bottom: 30px;">"""
+    # Use 'form' if it exists, otherwise 'points_per_game' as a proxy
+    form_val = player_row.get('form', f"{player_row['points_per_game']:.1f}")
+    stats = [
+        ("Total Pts", int(player_row['total_points'])),
+        ("Pts/Match", f"{player_row['points_per_game']:.1f}"),
+        ("Form", form_val),
+        ("Selected %", f"{player_row['selected_by_percent']}%")
+    ]
+    for label, value in stats:
+        html += f"""
+        <div style="flex: 1; background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%); padding: 20px 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="color: #AAAAAA; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-family: 'Orbitron', sans-serif;">{label}</div>
+            <div style="color: #FFFFFF; font-size: 1.4rem; font-weight: 900;">{value}</div>
+        </div>
+        """
+    html += "</div>"
+    
+    # History Section
+    html += """<div>
+        <h3 style="color: #00FF85; font-size: 1.2rem; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;">Last 5 Gameweeks</h3>
+        <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px; -webkit-overflow-scrolling: touch;">"""
+        
+    for gw_data in history:
+        opp_badge = f"https://resources.premierleague.com/premierleague/badges/50/t{gw_data['opponent_code']}.png"
+        # Shorten opponent name for display
+        short_name = gw_data['opponent_name'][:3].upper()
+        html += f"""
+        <div style="flex: 1; min-width: 90px; background: rgba(255,255,255,0.03); padding: 15px 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; border: 1px solid rgba(255,255,255,0.05); transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-3px)';" onmouseout="this.style.transform='translateY(0)';">
+            <div style="color: #AAAAAA; font-size: 0.8rem; margin-bottom: 10px; font-weight: 700;">GW{gw_data['gw']}</div>
+            <img src="{opp_badge}" style="width: 45px; height: 45px; margin-bottom: 8px;" title="{gw_data['opponent_name']}">
+            <div style="color: #FFFFFF; font-size: 0.8rem; margin-bottom: 10px; font-weight: 700;">{short_name}</div>
+            <div style="background-color: {gw_data['pill_color']}; color: #1a001e; padding: 6px 16px; border-radius: 20px; font-size: 1rem; font-weight: 900; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                {gw_data['points']} <span style="font-size: 0.7rem; font-weight: 700;">pts</span>
+            </div>
+        </div>
+        """
+    html += """</div></div></div>"""
+    
+    st.markdown(html, unsafe_allow_html=True)
 
 # --- GLOBAL CSS: VISUAL ENHANCEMENTS & MOBILE FIXES ---
 st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
@@ -479,12 +579,17 @@ st.markdown(
     <div class="scout-tip">
         <span style="color: #E0E0E0; font-size: 1rem; font-family: 'Roboto', sans-serif;">
             <strong style="color: #00FF85;">SCOUT'S TIP:</strong> 
-            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, Price, PPG, Mins/Game, and Work Rate.
+            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, Price, PPG, Mins/Game, and Work Rate. 
+            <br>Use the search box to view a player's detailed history.
         </span>
     </div>
     """,
     unsafe_allow_html=True
 )
+
+# --- NEW: PLAYER DETAILS VIEW ---
+if st.session_state['selected_player'] is not None:
+    render_player_details(st.session_state['selected_player'])
 
 # --- REPLACED METRICS WITH CUSTOM CARDS (NO EMOJIS) ---
 col1, col2, col3, col4 = st.columns(4)
@@ -540,9 +645,17 @@ def render_modern_table(dataframe, column_config, sort_key):
         # Search input with unique key per tab to avoid conflicts
         search_term = st.text_input("Find Player", placeholder="Search Name...", label_visibility="visible", key=f"search_{sort_key}")
 
-    # 2. Apply Search Filter
+    # 2. Apply Search Filter & Player Selection Logic
     if search_term:
         dataframe = dataframe[dataframe['web_name'].str.contains(search_term, case=False)]
+        # If search results in exactly one player, select them
+        if len(dataframe) == 1:
+            st.session_state['selected_player'] = dataframe.iloc[0]
+        else:
+            st.session_state['selected_player'] = None
+    else:
+        # If search is cleared, clear selection
+        st.session_state['selected_player'] = None
 
     if dataframe.empty:
         st.info("No players match your filters.")
