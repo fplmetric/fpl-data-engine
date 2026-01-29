@@ -11,7 +11,7 @@ import data_engine as db
 # --- 1. SETUP ---
 st.set_page_config(page_title="FPL Metric Dashboard", page_icon="favicon.png", layout="wide")
 
-# --- GLOBAL CSS: VISUAL ENHANCEMENTS ---
+# --- GLOBAL CSS: VISUAL ENHANCEMENTS & MOBILE FIXES ---
 st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
 st.markdown("""
 <style>
@@ -91,8 +91,14 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE GAP FIX) */
-    .player-table-container { margin-top: 0px; }
+    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE GAP FIX + MOBILE SCROLL) */
+    .player-table-container { 
+        margin-top: 0px; 
+        /* MOBILE FIX: Enable horizontal scrolling */
+        overflow-x: auto !important; 
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 10px;
+    }
 
     .modern-table {
         width: 100%;
@@ -100,6 +106,8 @@ st.markdown("""
         border-spacing: 0 8px;
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
+        /* MOBILE FIX: Minimum width to prevent squashing */
+        min-width: 800px; 
     }
     
     .modern-table th {
@@ -230,6 +238,36 @@ st.markdown("""
         background-color: rgba(255, 0, 85, 0.2) !important;
         box-shadow: 0 0 15px rgba(255, 0, 85, 0.3) !important;
         transform: translateY(-2px);
+    }
+
+    /* --- MOBILE OPTIMIZATION --- */
+    @media only screen and (max-width: 768px) {
+        /* Shrink the main title */
+        h1 { font-size: 1.8rem !important; }
+        
+        /* Reduce page padding so it's not so squashed */
+        .block-container {
+            padding-top: 2rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        
+        /* Ensure table container scrolls nicely */
+        .player-table-container {
+            overflow-x: scroll !important;
+        }
+        
+        /* Reduce font size in table for mobile */
+        .modern-table th, .modern-table td {
+            padding: 8px !important;
+            font-size: 0.8rem !important;
+        }
+        
+        /* Reduce Logo Size */
+        img[alt="fpl_metric_logo.png"] {
+            width: 80% !important;
+            margin: 0 auto;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
