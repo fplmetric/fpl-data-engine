@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import json
 import streamlit.components.v1 as components
+import random
 
 # --- LOCAL IMPORTS ---
 import styles
@@ -94,8 +95,7 @@ st.markdown("""
     /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE GAP FIX + MOBILE SCROLL) */
     .player-table-container { 
         margin-top: 0px; 
-        /* MOBILE FIX: Enable horizontal scrolling */
-        overflow-x: auto !important; 
+        overflow-x: auto !important; /* Forces scrollbar on small screens */
         -webkit-overflow-scrolling: touch;
         padding-bottom: 10px;
     }
@@ -106,8 +106,7 @@ st.markdown("""
         border-spacing: 0 8px;
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
-        /* MOBILE FIX: Minimum width to prevent squashing */
-        min-width: 800px; 
+        min-width: 800px; /* Ensure table doesn't squash on mobile */
     }
     
     .modern-table th {
@@ -242,7 +241,6 @@ st.markdown("""
 
     /* --- MOBILE OPTIMIZATION --- */
     @media only screen and (max-width: 768px) {
-        /* Shrink the main title */
         h1 { font-size: 1.8rem !important; }
         
         /* Reduce page padding so it's not so squashed */
@@ -288,6 +286,92 @@ df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 ep_map = db.get_expected_points_map()
 df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
+# --- MOCK HISTORY DATA GENERATOR (For Player Details) ---
+def get_mock_history(player_row):
+    # This generates fake "last 5 games" data to demonstrate the UI
+    # In production, replace this with a real DB query for player history
+    team_map = db.get_team_map()
+    opponents = list(team_map.keys())
+    if player_row['team_name'] in opponents: opponents.remove(player_row['team_name'])
+    
+    history = []
+    current_gw = 24
+    for i in range(5):
+        gw = current_gw - 5 + i
+        opp = random.choice(opponents)
+        opp_code = team_map.get(opp, 0)
+        pts = random.randint(1, 15)
+        
+        # Color logic: Green for haul (7+), Grey for blank (<3), etc.
+        color = "#F0F0F0" # Default grey/white
+        text_color = "#333"
+        if pts >= 7: 
+            color = "#00FF85" # Green
+            text_color = "#000"
+        elif pts <= 2:
+            color = "#EBEBEB" # Light Grey
+            text_color = "#333"
+        else:
+            color = "#FFCC00" # Yellow/Mid
+            text_color = "#000"
+            
+        history.append({
+            "gw": f"GW{gw}",
+            "opp_code": opp_code,
+            "opp_name": opp[:3].upper(), # Abbreviation
+            "pts": pts,
+            "color": color,
+            "text_color": text_color
+        })
+    return history
+
+def render_player_profile(player_row):
+    history = get_mock_history(player_row)
+    t_code = db.get_team_map().get(player_row['team_name'], 0)
+    
+    # HTML for History Pills
+    history_html = ""
+    for h in history:
+        opp_badge = f"https://resources.premierleague.com/premierleague/badges/50/t{h['opp_code']}.png"
+        history_html += f"""
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; min-width: 70px;">
+            <span style="color: #AAA; font-size: 0.7rem; margin-bottom: 5px;">{h['gw']}</span>
+            <img src="{opp_badge}" style="width: 30px; margin-bottom: 5px;">
+            <span style="color: #FFF; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">{h['opp_name']}</span>
+            <div style="background-color: {h['color']}; color: {h['text_color']}; border-radius: 12px; padding: 2px 10px; font-weight: 900; font-size: 0.9rem;">
+                {h['pts']}pts
+            </div>
+        </div>
+        """
+
+    # Main Profile Card HTML
+    st.markdown(f"""
+    <div style="background: linear-gradient(180deg, rgba(20,0,30,1) 0%, rgba(40,0,50,1) 100%); border: 1px solid #00FF85; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 133, 0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 2px solid #00FF85; background: #FFF;">
+                    <img src="https://resources.premierleague.com/premierleague/badges/50/t{t_code}.png" style="width: 100%; height: 100%; object-fit: cover; padding: 10px;">
+                </div>
+                <div>
+                    <h2 style="margin: 0; color: #FFF; font-size: 1.8rem;">{player_row['web_name']}</h2>
+                    <p style="margin: 0; color: #00FF85; font-size: 1rem; font-weight: bold;">{player_row['team_name']} | {player_row['position']}</p>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.9rem; color: #AAA;">Current Price</div>
+                <div style="font-size: 2rem; font-weight: 900; color: #FFF;">£{player_row['cost']}</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 25px;">
+            <h4 style="color: #FFF; font-family: 'Orbitron', sans-serif; margin-bottom: 15px;">Form (Last 5 Matches)</h4>
+            <div style="display: flex; gap: 10px; justify-content: space-between; overflow-x: auto;">
+                {history_html}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 # --- SIDEBAR ---
 with st.sidebar:
     if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
@@ -305,8 +389,6 @@ with st.sidebar:
     
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply'.")
-        
-        # REMOVED PLAYER SEARCH FROM SIDEBAR
         
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
@@ -479,12 +561,25 @@ st.markdown(
     <div class="scout-tip">
         <span style="color: #E0E0E0; font-size: 1rem; font-family: 'Roboto', sans-serif;">
             <strong style="color: #00FF85;">SCOUT'S TIP:</strong> 
-            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, Price, PPG, Mins/Game, and Work Rate.
+            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, Price, PPG, Mins/Game, and Work Rate. 
+            <br>Use the search box to view a player's detailed history.
         </span>
     </div>
     """,
     unsafe_allow_html=True
 )
+
+# --- SEARCH/SELECT PLAYER TO VIEW DETAILS (Moved ABOVE Metrics) ---
+# This serves as the global player selector
+c_search_box, _ = st.columns([1, 2])
+with c_search_box:
+    # Use selectbox for "Clicking" experience
+    player_names = ["Select a player..."] + sorted(filtered['web_name'].tolist())
+    selected_name = st.selectbox("View Player Details", player_names, index=0)
+
+if selected_name != "Select a player...":
+    player_row = filtered[filtered['web_name'] == selected_name].iloc[0]
+    render_player_profile(player_row)
 
 # --- REPLACED METRICS WITH CUSTOM CARDS (NO EMOJIS) ---
 col1, col2, col3, col4 = st.columns(4)
@@ -521,13 +616,13 @@ if not filtered.empty:
     with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}", ""), unsafe_allow_html=True)
     with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
 
-# --- REFACTORED TABLE RENDERER WITH SEARCH BAR ---
+# --- REFACTORED TABLE RENDERER ---
 def render_modern_table(dataframe, column_config, sort_key):
     # 1. Layout: Sort (1/3) | Search (2/3)
     c_sort, c_search = st.columns([1, 2])
     
     with c_sort:
-        sort_options = {"cost": "Price", "selected_by_percent": "Ownership", "matches_played": "Matches"}
+        sort_options = {"cost": "Price", "selected_by_percent": "Ownership", "matches_played": "Matches", "fixture_ease": "Fixtures"}
         sort_options.update(column_config)
         if "news" in sort_options: del sort_options["news"]
         
@@ -548,10 +643,19 @@ def render_modern_table(dataframe, column_config, sort_key):
         st.info("No players match your filters.")
         return
 
-    # 3. Apply Sorting
+    # 3. Calculate Fixture Ease if needed
+    if selected_col == 'fixture_ease':
+        team_fixtures = db.get_team_upcoming_fixtures()
+        # Sum next 5 difficulties. Lower is better.
+        # To make it work with ascending=False (which puts big numbers top), we invert it.
+        # Max difficulty for 5 games is approx 25. So 30 - difficulty = higher ease score.
+        diff_map = {team: sum(f['diff'] for f in fixtures[:5]) for team, fixtures in team_fixtures.items()}
+        dataframe['fixture_ease'] = 30 - dataframe['team_name'].map(diff_map).fillna(25)
+
+    # 4. Apply Sorting
     sorted_df = dataframe.sort_values(selected_col, ascending=False).head(100)
     
-    # 4. Render Table HTML (Same logic as before)
+    # 5. Render Table HTML (Same logic as before)
     team_map = db.get_team_map()
     team_fixtures = db.get_team_upcoming_fixtures()
     
