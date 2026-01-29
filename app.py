@@ -12,14 +12,14 @@ import data_engine as db
 # --- 1. SETUP ---
 st.set_page_config(page_title="FPL Metric Dashboard", page_icon="favicon.png", layout="wide")
 
-# --- GLOBAL CSS: VISUAL ENHANCEMENTS & MOBILE FIXES ---
+# --- GLOBAL CSS ---
 st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
 st.markdown("""
 <style>
     /* 1. IMPORT FUTURISTIC FONT */
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@400;700&display=swap');
 
-    /* Apply Font to Headings and Tabs */
+    /* Typography */
     h1, h2, h3, .stMetricLabel, [data-baseweb="tab"], .big-font {
         font-family: 'Orbitron', sans-serif !important;
         letter-spacing: 1px;
@@ -31,38 +31,28 @@ st.markdown("""
     ::-webkit-scrollbar-thumb:hover { background: #00cc6a; }
     ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
 
-    /* 3. GLASSMORPHISM SIDEBAR */
+    /* 3. SIDEBAR */
     section[data-testid="stSidebar"] {
         background-color: rgba(20, 0, 30, 0.95);
         border-right: 1px solid rgba(0, 255, 133, 0.2);
     }
     section[data-testid="stSidebar"] > div { background-color: transparent; }
 
-    /* 4. CUSTOM NEON INPUT STYLING */
+    /* 4. INPUTS */
     div[data-baseweb="slider"] div[role="slider"] { background-color: #00FF85 !important; }
     div[data-baseweb="slider"] div[data-testid="stTickBar"] { background: linear-gradient(to right, #00FF85, #00FF85) !important; }
     span[data-baseweb="checkbox"] div[class*="checked"] { background-color: #00FF85 !important; border-color: #00FF85 !important; }
     span[data-baseweb="tag"] { background-color: rgba(0, 255, 133, 0.2) !important; border: 1px solid #00FF85 !important; }
     span[data-baseweb="tag"] span { color: #FFFFFF !important; }
     
-    /* TEXT INPUT STYLING (For Search) */
     div[data-baseweb="input"] {
         background-color: rgba(255, 255, 255, 0.05) !important;
         border-color: rgba(0, 255, 133, 0.3) !important;
         border-radius: 8px !important;
         color: white !important;
     }
-    div[data-baseweb="input"]:focus-within {
-        border-color: #00FF85 !important;
-        box-shadow: 0 0 10px rgba(0, 255, 133, 0.2) !important;
-    }
     
-    /* FIX: HIDE "Press Enter to submit" INSTRUCTION */
-    div[data-testid="InputInstructions"] {
-        display: none !important;
-    }
-
-    /* 5. TAB STYLING */
+    /* 5. TABS */
     .stTabs [data-baseweb="tab-list"] {
         background-color: rgba(255, 255, 255, 0.03);
         border-radius: 12px;
@@ -92,23 +82,21 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE GAP FIX + MOBILE SCROLL) */
+    /* 6. TABLE STYLING */
     .player-table-container { 
         margin-top: 0px; 
-        overflow-x: auto !important; /* Forces scrollbar on small screens */
+        overflow-x: auto !important; 
         -webkit-overflow-scrolling: touch;
         padding-bottom: 10px;
     }
-
     .modern-table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0 8px;
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
-        min-width: 800px; /* Ensure table doesn't squash on mobile */
+        min-width: 800px; 
     }
-    
     .modern-table th {
         background-color: #1a001e !important; 
         color: #00FF85;
@@ -119,153 +107,40 @@ st.markdown("""
         text-align: center;
         letter-spacing: 1px;
         border-bottom: none !important;
-        
         position: sticky;
         top: 0;
         z-index: 1000;
-        
-        /* Base shadow: Green bottom line only */
         box-shadow: 0 2px 0 #00FF85; 
     }
-
-    /* TOP MASK: Solid block above header to hide scrolling rows */
-    .modern-table th::before {
-        content: "";
-        position: absolute;
-        top: -20px;
-        left: 0;
-        right: 0;
-        height: 20px;
-        background-color: #1a001e;
-        z-index: -1;
-    }
-
-    /* SIDE MASK (LEFT): Solid block to the left of the first header cell */
-    .modern-table th:first-child { 
-        text-align: left; 
-        padding-left: 20px; 
-        /* 0 2px 0 #00FF85 -> Green Bottom Border */
-        /* -30px 0 0 #1a001e -> Solid Purple Left Block */
-        box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; 
-    }
-
-    /* SIDE MASK (RIGHT): Solid block to the right of the last header cell */
-    .modern-table th:last-child {
-        /* 0 2px 0 #00FF85 -> Green Bottom Border */
-        /* 30px 0 0 #1a001e -> Solid Purple Right Block */
-        box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; 
-    }
+    /* MASKS */
+    .modern-table th::before { content: ""; position: absolute; top: -20px; left: 0; right: 0; height: 20px; background-color: #1a001e; z-index: -1; }
+    .modern-table th:first-child { text-align: left; padding-left: 20px; box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; }
+    .modern-table th:last-child { box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; }
     
-    .modern-table tbody tr {
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        z-index: 1; 
-    }
+    .modern-table tbody tr { transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1; }
+    .modern-table tbody tr:hover { transform: scale(1.005); box-shadow: 0 5px 15px rgba(0, 255, 133, 0.15); position: relative; z-index: 10; }
+    .modern-table td { padding: 12px; vertical-align: middle; border-top: 1px solid rgba(255, 255, 255, 0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .modern-table td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+    .modern-table td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: 1px solid rgba(255, 255, 255, 0.05); }
     
-    .modern-table tbody tr:hover {
-        transform: scale(1.005);
-        box-shadow: 0 5px 15px rgba(0, 255, 133, 0.15);
-        position: relative; 
-        z-index: 10;
-    }
+    /* PILLS */
+    .mini-fix-container { display: flex; gap: 4px; justify-content: center; }
+    .mini-fix-box { display: flex; align-items: center; justify-content: center; width: 38px; height: 24px; border-radius: 4px; font-size: 0.75rem; font-weight: 900; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
     
-    .modern-table td {
-        padding: 12px;
-        vertical-align: middle;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .modern-table td:first-child {
-        border-top-left-radius: 8px;
-        border-bottom-left-radius: 8px;
-    }
-    .modern-table td:last-child {
-        border-top-right-radius: 8px;
-        border-bottom-right-radius: 8px;
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    
-    /* IMPROVED FIXTURE PILLS */
-    .mini-fix-container {
-        display: flex;
-        gap: 4px;
-        justify-content: center;
-    }
-    .mini-fix-box {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 38px;
-        height: 24px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 900;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    
-    /* Target Sidebar Buttons specifically for Neon Style */
-    div[data-testid="stSidebar"] button {
-        border-radius: 10px !important;
-        height: 3em !important;
-        font-family: 'Orbitron', sans-serif !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 1px !important;
-        transition: all 0.3s ease !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
+    /* SIDEBAR BUTTONS */
+    div[data-testid="stSidebar"] button { border-radius: 10px !important; height: 3em !important; font-family: 'Orbitron', sans-serif !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 1px !important; transition: all 0.3s ease !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")) { background-color: rgba(0, 255, 133, 0.05) !important; color: #00FF85 !important; border: 1px solid #00FF85 !important; }
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")):hover { background-color: rgba(0, 255, 133, 0.2) !important; box-shadow: 0 0 15px rgba(0, 255, 133, 0.3) !important; transform: translateY(-2px); }
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")) { background-color: rgba(255, 0, 85, 0.05) !important; color: #FF0055 !important; border: 1px solid #FF0055 !important; }
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")):hover { background-color: rgba(255, 0, 85, 0.2) !important; box-shadow: 0 0 15px rgba(255, 0, 85, 0.3) !important; transform: translateY(-2px); }
 
-    /* All Teams Button (Green Glow) */
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")) {
-        background-color: rgba(0, 255, 133, 0.05) !important;
-        color: #00FF85 !important;
-        border: 1px solid #00FF85 !important;
-    }
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")):hover {
-        background-color: rgba(0, 255, 133, 0.2) !important;
-        box-shadow: 0 0 15px rgba(0, 255, 133, 0.3) !important;
-        transform: translateY(-2px);
-    }
-
-    /* Clear Teams Button (Pink Glow) */
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")) {
-        background-color: rgba(255, 0, 85, 0.05) !important;
-        color: #FF0055 !important;
-        border: 1px solid #FF0055 !important;
-    }
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")):hover {
-        background-color: rgba(255, 0, 85, 0.2) !important;
-        box-shadow: 0 0 15px rgba(255, 0, 85, 0.3) !important;
-        transform: translateY(-2px);
-    }
-
-    /* --- MOBILE OPTIMIZATION --- */
+    /* MOBILE */
     @media only screen and (max-width: 768px) {
         h1 { font-size: 1.8rem !important; }
-        
-        /* Reduce page padding so it's not so squashed */
-        .block-container {
-            padding-top: 2rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-        
-        /* Ensure table container scrolls nicely */
-        .player-table-container {
-            overflow-x: scroll !important;
-        }
-        
-        /* Reduce font size in table for mobile */
-        .modern-table th, .modern-table td {
-            padding: 8px !important;
-            font-size: 0.8rem !important;
-        }
-        
-        /* Reduce Logo Size */
-        img[alt="fpl_metric_logo.png"] {
-            width: 80% !important;
-            margin: 0 auto;
-        }
+        .block-container { padding-top: 2rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
+        .player-table-container { overflow-x: scroll !important; }
+        .modern-table th, .modern-table td { padding: 8px !important; font-size: 0.8rem !important; }
+        img[alt="fpl_metric_logo.png"] { width: 80% !important; margin: 0 auto; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -286,10 +161,8 @@ df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 ep_map = db.get_expected_points_map()
 df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
-# --- MOCK HISTORY DATA GENERATOR (For Player Details) ---
+# --- MOCK HISTORY DATA GENERATOR ---
 def get_mock_history(player_row):
-    # This generates fake "last 5 games" data to demonstrate the UI
-    # In production, replace this with a real DB query for player history
     team_map = db.get_team_map()
     opponents = list(team_map.keys())
     if player_row['team_name'] in opponents: opponents.remove(player_row['team_name'])
@@ -302,23 +175,22 @@ def get_mock_history(player_row):
         opp_code = team_map.get(opp, 0)
         pts = random.randint(1, 15)
         
-        # Color logic: Green for haul (7+), Grey for blank (<3), etc.
-        color = "#F0F0F0" # Default grey/white
+        color = "#F0F0F0" 
         text_color = "#333"
         if pts >= 7: 
-            color = "#00FF85" # Green
+            color = "#00FF85" 
             text_color = "#000"
         elif pts <= 2:
-            color = "#EBEBEB" # Light Grey
+            color = "#EBEBEB" 
             text_color = "#333"
         else:
-            color = "#FFCC00" # Yellow/Mid
+            color = "#FFCC00" 
             text_color = "#000"
             
         history.append({
             "gw": f"GW{gw}",
             "opp_code": opp_code,
-            "opp_name": opp[:3].upper(), # Abbreviation
+            "opp_name": opp[:3].upper(), 
             "pts": pts,
             "color": color,
             "text_color": text_color
@@ -329,7 +201,6 @@ def render_player_profile(player_row):
     history = get_mock_history(player_row)
     t_code = db.get_team_map().get(player_row['team_name'], 0)
     
-    # HTML for History Pills
     history_html = ""
     for h in history:
         opp_badge = f"https://resources.premierleague.com/premierleague/badges/50/t{h['opp_code']}.png"
@@ -344,7 +215,6 @@ def render_player_profile(player_row):
         </div>
         """
 
-    # Main Profile Card HTML
     st.markdown(f"""
     <div style="background: linear-gradient(180deg, rgba(20,0,30,1) 0%, rgba(40,0,50,1) 100%); border: 1px solid #00FF85; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 133, 0.2);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
@@ -362,7 +232,6 @@ def render_player_profile(player_row):
                 <div style="font-size: 2rem; font-weight: 900; color: #FFF;">£{player_row['cost']}</div>
             </div>
         </div>
-        
         <div style="margin-top: 25px;">
             <h4 style="color: #FFF; font-family: 'Orbitron', sans-serif; margin-bottom: 15px;">Form (Last 5 Matches)</h4>
             <div style="display: flex; gap: 10px; justify-content: space-between; overflow-x: auto;">
@@ -392,17 +261,13 @@ with st.sidebar:
         
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
-        
         exclude_unavailable = st.checkbox("Exclude Unavailable (Red Flags)", value=False)
-        
         max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
         max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
-        
         st.subheader("Performance")
         min_mpg = st.slider("Min Minutes Per Game", 0, 90, 0, 5)
         min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
         min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
-        
         submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
     st.markdown("---")
@@ -410,7 +275,6 @@ with st.sidebar:
 
 # --- FILTER LOGIC ---
 df = df[df['minutes'] >= 90]
-
 if exclude_unavailable:
     df = df[~df['status'].isin(['i', 'u', 'n', 's'])]
 
@@ -424,7 +288,7 @@ filtered = df[
     (df['dc_per_90'] >= min_dc90)
 ]
 
-# --- MAIN DISPLAY (CENTERED LOGO) ---
+# --- MAIN DISPLAY ---
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
     col_l, col_m, col_r = st.columns([3, 2, 3]) 
     with col_m: 
@@ -437,7 +301,6 @@ gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
 if gw_name and deadline_iso:
     fixtures_json = json.dumps(fixtures_data)
-    
     combined_html = f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;700&display=swap');
@@ -504,7 +367,6 @@ if gw_name and deadline_iso:
         var dateOpts = {{ weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }};
         var subEl = document.getElementById("sub");
         if(subEl) subEl.innerText = new Date("{deadline_iso}").toLocaleDateString(undefined, dateOpts) + " (Local)";
-        
         setInterval(function() {{
             var now = new Date().getTime();
             var t = deadline - now;
@@ -522,7 +384,6 @@ if gw_name and deadline_iso:
                 }}
             }}
         }}, 1000);
-
         var fixtures = {fixtures_json};
         var grid = document.getElementById("grid");
         if(grid) {{
@@ -550,12 +411,8 @@ if gw_name and deadline_iso:
 else:
     st.info("No fixtures found for next Gameweek.")
 
-# =========================================================================
-
-# --- TITLE ---
 st.markdown("""<div style="text-align: center; margin-bottom: 50px; margin-top: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; font-family: 'Orbitron', sans-serif;">FPL Metric Scouting Dashboard</h1></div>""", unsafe_allow_html=True)
 
-# --- INFO BOX ---
 st.markdown(
     """
     <div class="scout-tip">
@@ -569,19 +426,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- SEARCH/SELECT PLAYER TO VIEW DETAILS (Moved ABOVE Metrics) ---
-# This serves as the global player selector
-c_search_box, _ = st.columns([1, 2])
-with c_search_box:
-    # Use selectbox for "Clicking" experience
-    player_names = ["Select a player..."] + sorted(filtered['web_name'].tolist())
-    selected_name = st.selectbox("View Player Details", player_names, index=0)
-
-if selected_name != "Select a player...":
-    player_row = filtered[filtered['web_name'] == selected_name].iloc[0]
-    render_player_profile(player_row)
-
-# --- REPLACED METRICS WITH CUSTOM CARDS (NO EMOJIS) ---
 col1, col2, col3, col4 = st.columns(4)
 if not filtered.empty:
     best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
@@ -616,10 +460,10 @@ if not filtered.empty:
     with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}", ""), unsafe_allow_html=True)
     with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
 
-# --- REFACTORED TABLE RENDERER ---
+# --- REFACTORED RENDER FUNCTION (CONTROLS IN ONE PLACE) ---
 def render_modern_table(dataframe, column_config, sort_key):
-    # 1. Layout: Sort (1/3) | Search (2/3)
-    c_sort, c_search = st.columns([1, 2])
+    # 1. Layout: Sort (Left) | Search (Middle) | View Details (Right)
+    c_sort, c_search, c_view = st.columns([1, 1.5, 1.5])
     
     with c_sort:
         sort_options = {"cost": "Price", "selected_by_percent": "Ownership", "matches_played": "Matches", "fixture_ease": "Fixtures"}
@@ -632,30 +476,46 @@ def render_modern_table(dataframe, column_config, sort_key):
         selected_col = options_keys[options_labels.index(selected_label)]
         
     with c_search:
-        # Search input with unique key per tab to avoid conflicts
-        search_term = st.text_input("Find Player", placeholder="Search Name...", label_visibility="visible", key=f"search_{sort_key}")
+        search_term = st.text_input("Find Player", placeholder="Type name...", label_visibility="visible", key=f"search_{sort_key}")
 
-    # 2. Apply Search Filter
+    # 2. Filter Data
     if search_term:
         dataframe = dataframe[dataframe['web_name'].str.contains(search_term, case=False)]
+
+    with c_view:
+        # Populate based on filtered dataframe
+        if dataframe.empty:
+            player_opts = ["No players found"]
+        else:
+            player_opts = ["Select to view details..."] + sorted(dataframe['web_name'].unique().tolist())
+        
+        # If search matches exactly 1 player, default to them
+        idx = 0
+        if len(dataframe) == 1:
+            idx = 1
+            
+        selected_player_name = st.selectbox("View Player Details", player_opts, index=idx, key=f"view_{sort_key}")
+
+    # 3. Render Profile (If selected)
+    if selected_player_name != "Select to view details..." and selected_player_name != "No players found":
+        # Get the row for the selected player
+        p_row = dataframe[dataframe['web_name'] == selected_player_name]
+        if not p_row.empty:
+            render_player_profile(p_row.iloc[0])
 
     if dataframe.empty:
         st.info("No players match your filters.")
         return
 
-    # 3. Calculate Fixture Ease if needed
+    # 4. Sorting Logic
     if selected_col == 'fixture_ease':
         team_fixtures = db.get_team_upcoming_fixtures()
-        # Sum next 5 difficulties. Lower is better.
-        # To make it work with ascending=False (which puts big numbers top), we invert it.
-        # Max difficulty for 5 games is approx 25. So 30 - difficulty = higher ease score.
         diff_map = {team: sum(f['diff'] for f in fixtures[:5]) for team, fixtures in team_fixtures.items()}
         dataframe['fixture_ease'] = 30 - dataframe['team_name'].map(diff_map).fillna(25)
 
-    # 4. Apply Sorting
     sorted_df = dataframe.sort_values(selected_col, ascending=False).head(100)
     
-    # 5. Render Table HTML (Same logic as before)
+    # 5. Render Table
     team_map = db.get_team_map()
     team_fixtures = db.get_team_upcoming_fixtures()
     
