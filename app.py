@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import json
 import streamlit.components.v1 as components
-import random # Imported for mock history data
+import random
 
 # --- LOCAL IMPORTS ---
 import styles
@@ -12,113 +12,14 @@ import data_engine as db
 # --- 1. SETUP ---
 st.set_page_config(page_title="FPL Metric Dashboard", page_icon="favicon.png", layout="wide")
 
-# Initialize session state for selected player
-if 'selected_player' not in st.session_state:
-    st.session_state['selected_player'] = None
-
-# --- HELPER FUNCTIONS FOR NEW FEATURE ---
-
-# MOCK FUNCTION: Generates fake history data. Replace with a real db call.
-def get_mock_player_history(player_row):
-    team_map = db.get_team_map()
-    teams = list(team_map.keys())
-    # Remove player's own team from potential opponents
-    if player_row['team_name'] in teams:
-        teams.remove(player_row['team_name'])
-        
-    history = []
-    # Assuming a current GW for context
-    start_gw = 19
-    for i in range(5):
-        gw = start_gw + i
-        opp_name = random.choice(teams)
-        opp_code = team_map.get(opp_name, 0)
-        points = random.randint(1, 15) # Random points between 1 and 15
-        
-        # Determine pill color based on points
-        pill_color = "#00FF85" # Green for hauls
-        if points <= 3: pill_color = "#FF0055" # Red for blanks
-        elif points <= 6: pill_color = "#FFCC00" # Yellow for average
-        
-        history.append({
-            'gw': gw,
-            'opponent_name': opp_name,
-            'opponent_code': opp_code,
-            'points': points,
-            'pill_color': pill_color
-        })
-    return history
-
-# Renders the detailed player profile view
-def render_player_details(player_row):
-    history = get_mock_player_history(player_row)
-    
-    # --- HTML Construction ---
-    # Header Section
-    html = f"""
-    <div style="background: rgba(255,255,255,0.02); border: 1px solid #00FF85; border-radius: 16px; padding: 25px; margin-bottom: 30px; box-shadow: 0 0 25px rgba(0, 255, 133, 0.15);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px;">
-            <div>
-                <h2 style="margin: 0; font-size: 2.2rem; color: #FFFFFF; letter-spacing: 1px;">{player_row['web_name']}</h2>
-                <p style="margin: 8px 0 0 0; color: #00FF85; font-family: 'Roboto', sans-serif; font-weight: 700; font-size: 1rem;">{player_row['team_name']} | {player_row['position']}</p>
-            </div>
-            <div style="text-align: right; background: rgba(0, 255, 133, 0.1); padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(0, 255, 133, 0.3);">
-                <div style="color: #00FF85; font-size: 1.8rem; font-weight: 900;">£{player_row['cost']:.1f}</div>
-                <div style="color: #AAAAAA; font-size: 0.9rem; text-transform: uppercase;">Current Price</div>
-            </div>
-        </div>
-    """
-    
-    # Key Stats Section
-    html += """<div style="display: flex; gap: 15px; margin-bottom: 30px;">"""
-    # Use 'form' if it exists, otherwise 'points_per_game' as a proxy
-    form_val = player_row.get('form', f"{player_row['points_per_game']:.1f}")
-    stats = [
-        ("Total Pts", int(player_row['total_points'])),
-        ("Pts/Match", f"{player_row['points_per_game']:.1f}"),
-        ("Form", form_val),
-        ("Selected %", f"{player_row['selected_by_percent']}%")
-    ]
-    for label, value in stats:
-        html += f"""
-        <div style="flex: 1; background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%); padding: 20px 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-            <div style="color: #AAAAAA; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-family: 'Orbitron', sans-serif;">{label}</div>
-            <div style="color: #FFFFFF; font-size: 1.4rem; font-weight: 900;">{value}</div>
-        </div>
-        """
-    html += "</div>"
-    
-    # History Section
-    html += """<div>
-        <h3 style="color: #00FF85; font-size: 1.2rem; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;">Last 5 Gameweeks</h3>
-        <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px; -webkit-overflow-scrolling: touch;">"""
-        
-    for gw_data in history:
-        opp_badge = f"https://resources.premierleague.com/premierleague/badges/50/t{gw_data['opponent_code']}.png"
-        # Shorten opponent name for display
-        short_name = gw_data['opponent_name'][:3].upper()
-        html += f"""
-        <div style="flex: 1; min-width: 90px; background: rgba(255,255,255,0.03); padding: 15px 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; border: 1px solid rgba(255,255,255,0.05); transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-3px)';" onmouseout="this.style.transform='translateY(0)';">
-            <div style="color: #AAAAAA; font-size: 0.8rem; margin-bottom: 10px; font-weight: 700;">GW{gw_data['gw']}</div>
-            <img src="{opp_badge}" style="width: 45px; height: 45px; margin-bottom: 8px;" title="{gw_data['opponent_name']}">
-            <div style="color: #FFFFFF; font-size: 0.8rem; margin-bottom: 10px; font-weight: 700;">{short_name}</div>
-            <div style="background-color: {gw_data['pill_color']}; color: #1a001e; padding: 6px 16px; border-radius: 20px; font-size: 1rem; font-weight: 900; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
-                {gw_data['points']} <span style="font-size: 0.7rem; font-weight: 700;">pts</span>
-            </div>
-        </div>
-        """
-    html += """</div></div></div>"""
-    
-    st.markdown(html, unsafe_allow_html=True)
-
-# --- GLOBAL CSS: VISUAL ENHANCEMENTS & MOBILE FIXES ---
+# --- GLOBAL CSS ---
 st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
 st.markdown("""
 <style>
     /* 1. IMPORT FUTURISTIC FONT */
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@400;700&display=swap');
 
-    /* Apply Font to Headings and Tabs */
+    /* Typography */
     h1, h2, h3, .stMetricLabel, [data-baseweb="tab"], .big-font {
         font-family: 'Orbitron', sans-serif !important;
         letter-spacing: 1px;
@@ -130,38 +31,28 @@ st.markdown("""
     ::-webkit-scrollbar-thumb:hover { background: #00cc6a; }
     ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
 
-    /* 3. GLASSMORPHISM SIDEBAR */
+    /* 3. SIDEBAR */
     section[data-testid="stSidebar"] {
         background-color: rgba(20, 0, 30, 0.95);
         border-right: 1px solid rgba(0, 255, 133, 0.2);
     }
     section[data-testid="stSidebar"] > div { background-color: transparent; }
 
-    /* 4. CUSTOM NEON INPUT STYLING */
+    /* 4. INPUTS */
     div[data-baseweb="slider"] div[role="slider"] { background-color: #00FF85 !important; }
     div[data-baseweb="slider"] div[data-testid="stTickBar"] { background: linear-gradient(to right, #00FF85, #00FF85) !important; }
     span[data-baseweb="checkbox"] div[class*="checked"] { background-color: #00FF85 !important; border-color: #00FF85 !important; }
     span[data-baseweb="tag"] { background-color: rgba(0, 255, 133, 0.2) !important; border: 1px solid #00FF85 !important; }
     span[data-baseweb="tag"] span { color: #FFFFFF !important; }
     
-    /* TEXT INPUT STYLING (For Search) */
     div[data-baseweb="input"] {
         background-color: rgba(255, 255, 255, 0.05) !important;
         border-color: rgba(0, 255, 133, 0.3) !important;
         border-radius: 8px !important;
         color: white !important;
     }
-    div[data-baseweb="input"]:focus-within {
-        border-color: #00FF85 !important;
-        box-shadow: 0 0 10px rgba(0, 255, 133, 0.2) !important;
-    }
     
-    /* FIX: HIDE "Press Enter to submit" INSTRUCTION */
-    div[data-testid="InputInstructions"] {
-        display: none !important;
-    }
-
-    /* 5. TAB STYLING */
+    /* 5. TABS */
     .stTabs [data-baseweb="tab-list"] {
         background-color: rgba(255, 255, 255, 0.03);
         border-radius: 12px;
@@ -191,25 +82,21 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. AESTHETIC PLAYER TABLE (DEFINITIVE GAP FIX + MOBILE SCROLL) */
+    /* 6. TABLE STYLING */
     .player-table-container { 
         margin-top: 0px; 
-        /* MOBILE FIX: Enable horizontal scrolling */
         overflow-x: auto !important; 
         -webkit-overflow-scrolling: touch;
         padding-bottom: 10px;
     }
-
     .modern-table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0 8px;
         font-family: 'Roboto', sans-serif;
         color: #E0E0E0;
-        /* MOBILE FIX: Minimum width to prevent squashing */
         min-width: 800px; 
     }
-    
     .modern-table th {
         background-color: #1a001e !important; 
         color: #00FF85;
@@ -220,154 +107,40 @@ st.markdown("""
         text-align: center;
         letter-spacing: 1px;
         border-bottom: none !important;
-        
         position: sticky;
         top: 0;
         z-index: 1000;
-        
-        /* Base shadow: Green bottom line only */
         box-shadow: 0 2px 0 #00FF85; 
     }
-
-    /* TOP MASK: Solid block above header to hide scrolling rows */
-    .modern-table th::before {
-        content: "";
-        position: absolute;
-        top: -20px;
-        left: 0;
-        right: 0;
-        height: 20px;
-        background-color: #1a001e;
-        z-index: -1;
-    }
-
-    /* SIDE MASK (LEFT): Solid block to the left of the first header cell */
-    .modern-table th:first-child { 
-        text-align: left; 
-        padding-left: 20px; 
-        /* 0 2px 0 #00FF85 -> Green Bottom Border */
-        /* -30px 0 0 #1a001e -> Solid Purple Left Block */
-        box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; 
-    }
-
-    /* SIDE MASK (RIGHT): Solid block to the right of the last header cell */
-    .modern-table th:last-child {
-        /* 0 2px 0 #00FF85 -> Green Bottom Border */
-        /* 30px 0 0 #1a001e -> Solid Purple Right Block */
-        box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; 
-    }
+    /* MASKS */
+    .modern-table th::before { content: ""; position: absolute; top: -20px; left: 0; right: 0; height: 20px; background-color: #1a001e; z-index: -1; }
+    .modern-table th:first-child { text-align: left; padding-left: 20px; box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; }
+    .modern-table th:last-child { box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; }
     
-    .modern-table tbody tr {
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        z-index: 1; 
-    }
+    .modern-table tbody tr { transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1; }
+    .modern-table tbody tr:hover { transform: scale(1.005); box-shadow: 0 5px 15px rgba(0, 255, 133, 0.15); position: relative; z-index: 10; }
+    .modern-table td { padding: 12px; vertical-align: middle; border-top: 1px solid rgba(255, 255, 255, 0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .modern-table td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+    .modern-table td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: 1px solid rgba(255, 255, 255, 0.05); }
     
-    .modern-table tbody tr:hover {
-        transform: scale(1.005);
-        box-shadow: 0 5px 15px rgba(0, 255, 133, 0.15);
-        position: relative; 
-        z-index: 10;
-    }
+    /* PILLS */
+    .mini-fix-container { display: flex; gap: 4px; justify-content: center; }
+    .mini-fix-box { display: flex; align-items: center; justify-content: center; width: 38px; height: 24px; border-radius: 4px; font-size: 0.75rem; font-weight: 900; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
     
-    .modern-table td {
-        padding: 12px;
-        vertical-align: middle;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .modern-table td:first-child {
-        border-top-left-radius: 8px;
-        border-bottom-left-radius: 8px;
-    }
-    .modern-table td:last-child {
-        border-top-right-radius: 8px;
-        border-bottom-right-radius: 8px;
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    
-    /* IMPROVED FIXTURE PILLS */
-    .mini-fix-container {
-        display: flex;
-        gap: 4px;
-        justify-content: center;
-    }
-    .mini-fix-box {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 38px;
-        height: 24px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 900;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    
-    /* Target Sidebar Buttons specifically for Neon Style */
-    div[data-testid="stSidebar"] button {
-        border-radius: 10px !important;
-        height: 3em !important;
-        font-family: 'Orbitron', sans-serif !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 1px !important;
-        transition: all 0.3s ease !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
+    /* SIDEBAR BUTTONS */
+    div[data-testid="stSidebar"] button { border-radius: 10px !important; height: 3em !important; font-family: 'Orbitron', sans-serif !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 1px !important; transition: all 0.3s ease !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")) { background-color: rgba(0, 255, 133, 0.05) !important; color: #00FF85 !important; border: 1px solid #00FF85 !important; }
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")):hover { background-color: rgba(0, 255, 133, 0.2) !important; box-shadow: 0 0 15px rgba(0, 255, 133, 0.3) !important; transform: translateY(-2px); }
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")) { background-color: rgba(255, 0, 85, 0.05) !important; color: #FF0055 !important; border: 1px solid #FF0055 !important; }
+    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")):hover { background-color: rgba(255, 0, 85, 0.2) !important; box-shadow: 0 0 15px rgba(255, 0, 85, 0.3) !important; transform: translateY(-2px); }
 
-    /* All Teams Button (Green Glow) */
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")) {
-        background-color: rgba(0, 255, 133, 0.05) !important;
-        color: #00FF85 !important;
-        border: 1px solid #00FF85 !important;
-    }
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")):hover {
-        background-color: rgba(0, 255, 133, 0.2) !important;
-        box-shadow: 0 0 15px rgba(0, 255, 133, 0.3) !important;
-        transform: translateY(-2px);
-    }
-
-    /* Clear Teams Button (Pink Glow) */
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")) {
-        background-color: rgba(255, 0, 85, 0.05) !important;
-        color: #FF0055 !important;
-        border: 1px solid #FF0055 !important;
-    }
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")):hover {
-        background-color: rgba(255, 0, 85, 0.2) !important;
-        box-shadow: 0 0 15px rgba(255, 0, 85, 0.3) !important;
-        transform: translateY(-2px);
-    }
-
-    /* --- MOBILE OPTIMIZATION --- */
+    /* MOBILE */
     @media only screen and (max-width: 768px) {
-        /* Shrink the main title */
         h1 { font-size: 1.8rem !important; }
-        
-        /* Reduce page padding so it's not so squashed */
-        .block-container {
-            padding-top: 2rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-        
-        /* Ensure table container scrolls nicely */
-        .player-table-container {
-            overflow-x: scroll !important;
-        }
-        
-        /* Reduce font size in table for mobile */
-        .modern-table th, .modern-table td {
-            padding: 8px !important;
-            font-size: 0.8rem !important;
-        }
-        
-        /* Reduce Logo Size */
-        img[alt="fpl_metric_logo.png"] {
-            width: 80% !important;
-            margin: 0 auto;
-        }
+        .block-container { padding-top: 2rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
+        .player-table-container { overflow-x: scroll !important; }
+        .modern-table th, .modern-table td { padding: 8px !important; font-size: 0.8rem !important; }
+        img[alt="fpl_metric_logo.png"] { width: 80% !important; margin: 0 auto; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -388,6 +161,93 @@ df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 ep_map = db.get_expected_points_map()
 df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
+# --- MOCK HISTORY DATA GENERATOR (For Player Details) ---
+def get_mock_history(player_row):
+    # This generates fake "last 5 games" data to demonstrate the UI
+    # In production, replace this with a real DB query for player history
+    team_map = db.get_team_map()
+    opponents = list(team_map.keys())
+    if player_row['team_name'] in opponents: opponents.remove(player_row['team_name'])
+    
+    history = []
+    current_gw = 24
+    for i in range(5):
+        gw = current_gw - 5 + i
+        opp = random.choice(opponents)
+        opp_code = team_map.get(opp, 0)
+        pts = random.randint(1, 15)
+        
+        # Color logic: Green for haul (7+), Grey for blank (<3), etc.
+        color = "#F0F0F0" # Default grey/white
+        text_color = "#333"
+        if pts >= 7: 
+            color = "#00FF85" # Green
+            text_color = "#000"
+        elif pts <= 2:
+            color = "#EBEBEB" # Light Grey
+            text_color = "#333"
+        else:
+            color = "#FFCC00" # Yellow/Mid
+            text_color = "#000"
+            
+        history.append({
+            "gw": f"GW{gw}",
+            "opp_code": opp_code,
+            "opp_name": opp[:3].upper(), # Abbreviation
+            "pts": pts,
+            "color": color,
+            "text_color": text_color
+        })
+    return history
+
+def render_player_profile(player_row):
+    history = get_mock_history(player_row)
+    t_code = db.get_team_map().get(player_row['team_name'], 0)
+    player_img = f"https://resources.premierleague.com/premierleague/photos/players/110x140/p{int(player_row['player_id'])}.png" # Placeholder ID logic
+    
+    # HTML for History Pills
+    history_html = ""
+    for h in history:
+        opp_badge = f"https://resources.premierleague.com/premierleague/badges/50/t{h['opp_code']}.png"
+        history_html += f"""
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; min-width: 70px;">
+            <span style="color: #AAA; font-size: 0.7rem; margin-bottom: 5px;">{h['gw']}</span>
+            <img src="{opp_badge}" style="width: 30px; margin-bottom: 5px;">
+            <span style="color: #FFF; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">{h['opp_name']}</span>
+            <div style="background-color: {h['color']}; color: {h['text_color']}; border-radius: 12px; padding: 2px 10px; font-weight: 900; font-size: 0.9rem;">
+                {h['pts']}pts
+            </div>
+        </div>
+        """
+
+    # Main Profile Card HTML
+    st.markdown(f"""
+    <div style="background: linear-gradient(180deg, rgba(20,0,30,1) 0%, rgba(40,0,50,1) 100%); border: 1px solid #00FF85; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 133, 0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 2px solid #00FF85; background: #FFF;">
+                    <img src="https://resources.premierleague.com/premierleague/badges/50/t{t_code}.png" style="width: 100%; height: 100%; object-fit: cover; padding: 10px;">
+                </div>
+                <div>
+                    <h2 style="margin: 0; color: #FFF; font-size: 1.8rem;">{player_row['web_name']}</h2>
+                    <p style="margin: 0; color: #00FF85; font-size: 1rem; font-weight: bold;">{player_row['team_name']} | {player_row['position']}</p>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.9rem; color: #AAA;">Current Price</div>
+                <div style="font-size: 2rem; font-weight: 900; color: #FFF;">£{player_row['cost']}</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 25px;">
+            <h4 style="color: #FFF; font-family: 'Orbitron', sans-serif; margin-bottom: 15px;">Form (Last 5 Matches)</h4>
+            <div style="display: flex; gap: 10px; justify-content: space-between; overflow-x: auto;">
+                {history_html}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 # --- SIDEBAR ---
 with st.sidebar:
     if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
@@ -405,8 +265,6 @@ with st.sidebar:
     
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply'.")
-        
-        # REMOVED PLAYER SEARCH FROM SIDEBAR
         
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
@@ -579,17 +437,12 @@ st.markdown(
     <div class="scout-tip">
         <span style="color: #E0E0E0; font-size: 1rem; font-family: 'Roboto', sans-serif;">
             <strong style="color: #00FF85;">SCOUT'S TIP:</strong> 
-            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, Price, PPG, Mins/Game, and Work Rate. 
-            <br>Use the search box to view a player's detailed history.
+            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, Price, PPG, Mins/Game, and Work Rate.
         </span>
     </div>
     """,
     unsafe_allow_html=True
 )
-
-# --- NEW: PLAYER DETAILS VIEW ---
-if st.session_state['selected_player'] is not None:
-    render_player_details(st.session_state['selected_player'])
 
 # --- REPLACED METRICS WITH CUSTOM CARDS (NO EMOJIS) ---
 col1, col2, col3, col4 = st.columns(4)
@@ -626,10 +479,21 @@ if not filtered.empty:
     with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}", ""), unsafe_allow_html=True)
     with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
 
-# --- REFACTORED TABLE RENDERER WITH SEARCH BAR ---
+# --- SEARCH/SELECT PLAYER TO VIEW DETAILS ---
+# Placing this ABOVE the tabs, distinct from the table
+c_search_box, _ = st.columns([1, 2])
+with c_search_box:
+    # Use selectbox for "Clicking" experience
+    player_names = ["Select a player..."] + sorted(filtered['web_name'].tolist())
+    selected_name = st.selectbox("View Player Details", player_names, index=0)
+
+if selected_name != "Select a player...":
+    player_row = filtered[filtered['web_name'] == selected_name].iloc[0]
+    render_player_profile(player_row)
+
 def render_modern_table(dataframe, column_config, sort_key):
-    # 1. Layout: Sort (1/3) | Search (2/3)
-    c_sort, c_search = st.columns([1, 2])
+    # Layout: Sort (Left) - No Search here as it's global above
+    c_sort, _ = st.columns([1, 3])
     
     with c_sort:
         sort_options = {"cost": "Price", "selected_by_percent": "Ownership", "matches_played": "Matches"}
@@ -641,30 +505,14 @@ def render_modern_table(dataframe, column_config, sort_key):
         selected_label = st.selectbox(f"Sort by:", options_labels, key=sort_key)
         selected_col = options_keys[options_labels.index(selected_label)]
         
-    with c_search:
-        # Search input with unique key per tab to avoid conflicts
-        search_term = st.text_input("Find Player", placeholder="Search Name...", label_visibility="visible", key=f"search_{sort_key}")
-
-    # 2. Apply Search Filter & Player Selection Logic
-    if search_term:
-        dataframe = dataframe[dataframe['web_name'].str.contains(search_term, case=False)]
-        # If search results in exactly one player, select them
-        if len(dataframe) == 1:
-            st.session_state['selected_player'] = dataframe.iloc[0]
-        else:
-            st.session_state['selected_player'] = None
-    else:
-        # If search is cleared, clear selection
-        st.session_state['selected_player'] = None
-
     if dataframe.empty:
         st.info("No players match your filters.")
         return
 
-    # 3. Apply Sorting
+    # Apply Sorting
     sorted_df = dataframe.sort_values(selected_col, ascending=False).head(100)
     
-    # 4. Render Table HTML (Same logic as before)
+    # Render Table HTML (Same logic as before)
     team_map = db.get_team_map()
     team_fixtures = db.get_team_upcoming_fixtures()
     
