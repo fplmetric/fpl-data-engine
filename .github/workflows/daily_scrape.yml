@@ -2,7 +2,8 @@ name: Daily FPL Scraper
 
 on:
   schedule:
-    - cron: '15 2 * * *'
+    # Runs at 02:17 UTC (approx 7:47 AM IST)
+    - cron: '17 2 * * *'
   workflow_dispatch:    # Allows manual testing
 
 jobs:
