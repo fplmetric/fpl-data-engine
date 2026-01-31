@@ -295,7 +295,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET
+# 📅 DEADLINE & FIXTURES WIDGET (UPDATED FOR MOBILE SCROLL)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
@@ -328,13 +328,17 @@ if gw_name and deadline_iso:
             border-bottom: 1px solid #00FF85;
         }}
         .content {{ padding: 20px; }}
+        /* DEFAULT: GRID WRAP FOR DESKTOP */
         .match-grid {{ display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }}
+        
         .match-card {{
             background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             cursor: pointer;
             flex: 1 1 280px; max-width: 350px;
+            /* Prevents shrinking in flex row mode */
+            min-width: 280px; 
         }}
         .match-card:hover {{ 
             border-color: #00FF85; background-color: rgba(0, 255, 133, 0.05);
@@ -346,6 +350,17 @@ if gw_name and deadline_iso:
         .match-info {{ display: flex; flex-direction: column; align-items: center; color: #AAA; }}
         .match-time {{ font-size: 1rem; font-weight: 700; color: #00FF85; font-family: 'Orbitron', sans-serif; }}
         .match-date {{ font-size: 0.7rem; text-transform: uppercase; }}
+
+        /* MOBILE FIX: SWITCH TO SCROLLABLE ROW */
+        @media only screen and (max-width: 768px) {{
+            .match-grid {{
+                flex-wrap: nowrap; /* Forces single row */
+                overflow-x: auto;  /* Enables scrolling */
+                justify-content: flex-start; /* Aligns to start for scrolling */
+                padding-bottom: 10px; /* Space for scrollbar */
+                -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
+            }}
+        }}
     </style>
     
     <div class="widget-container">
@@ -355,7 +370,7 @@ if gw_name and deadline_iso:
             <div id="sub" class="sub"></div>
         </div>
         <div class="fix-container">
-            <div class="fix-header">{gw_name} Fixtures</div>
+            <div class="fix-header">View {gw_name} Fixtures (Your Local Time)</div>
             <div class="content">
                 <div class="match-grid" id="grid"></div>
             </div>
@@ -460,9 +475,10 @@ if not filtered.empty:
     with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}", ""), unsafe_allow_html=True)
     with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
 
-# --- REFACTORED RENDER FUNCTION (CONTROLS IN ONE PLACE) ---
+# --- REFACTORED RENDER FUNCTION (CONTROLS IN ONE ROW) ---
 def render_modern_table(dataframe, column_config, sort_key):
     # 1. Layout: Sort (Left) | Search (Middle) | View Details (Right)
+    # Ratios: 1 : 1.5 : 1.5 makes search and view details slightly wider
     c_sort, c_search, c_view = st.columns([1, 1.5, 1.5])
     
     with c_sort:
@@ -476,6 +492,7 @@ def render_modern_table(dataframe, column_config, sort_key):
         selected_col = options_keys[options_labels.index(selected_label)]
         
     with c_search:
+        # Search Box
         search_term = st.text_input("Find Player", placeholder="Type name...", label_visibility="visible", key=f"search_{sort_key}")
 
     # 2. Filter Data
@@ -483,7 +500,7 @@ def render_modern_table(dataframe, column_config, sort_key):
         dataframe = dataframe[dataframe['web_name'].str.contains(search_term, case=False)]
 
     with c_view:
-        # Populate based on filtered dataframe
+        # Populate View Details Dropdown
         if dataframe.empty:
             player_opts = ["No players found"]
         else:
@@ -498,7 +515,6 @@ def render_modern_table(dataframe, column_config, sort_key):
 
     # 3. Render Profile (If selected)
     if selected_player_name != "Select to view details..." and selected_player_name != "No players found":
-        # Get the row for the selected player
         p_row = dataframe[dataframe['web_name'] == selected_player_name]
         if not p_row.empty:
             render_player_profile(p_row.iloc[0])
