@@ -355,7 +355,7 @@ if gw_name and deadline_iso:
             <div id="sub" class="sub"></div>
         </div>
         <div class="fix-container">
-            <div class="fix-header">View {gw_name} Fixtures (Your Local Time)</div>
+            <div class="fix-header">{gw_name} Fixtures</div>
             <div class="content">
                 <div class="match-grid" id="grid"></div>
             </div>
