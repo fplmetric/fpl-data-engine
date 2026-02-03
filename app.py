@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import json
 import streamlit.components.v1 as components
-import requests  # Added to fetch real history
+import requests
 
 # --- LOCAL IMPORTS ---
 import styles
@@ -154,17 +154,6 @@ st.markdown("""
 df = db.fetch_main_data()
 df = df.fillna(0)
 
-# Create Mappings for Real Data Fetching
-# Map Team ID (1-20) -> Team Name & Team Code (for badges)
-# We assume 'team' column in df is the Team ID (1-20)
-if 'team_code' in df.columns:
-    id_to_code_map = df[['team', 'team_code']].drop_duplicates().set_index('team')['team_code'].to_dict()
-    id_to_name_map = df[['team', 'team_name']].drop_duplicates().set_index('team')['team_name'].to_dict()
-else:
-    # Fallback if team_code missing (unlikely from FPL API data)
-    id_to_code_map = {}
-    id_to_name_map = {}
-
 # Calculate Metrics
 df['matches_played'] = df['matches_played'].replace(0, 1)
 df['minutes'] = df['minutes'].replace(0, 1)
@@ -177,9 +166,26 @@ df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 ep_map = db.get_expected_points_map()
 df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
+# --- ROBUST TEAM MAPPING FETCHER ---
+@st.cache_data(ttl=86400) # Cache for 24 hours
+def get_fpl_team_map():
+    try:
+        url = "https://fantasy.premierleague.com/api/bootstrap-static/"
+        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+        if r.status_code == 200:
+            data = r.json()
+            # Map Team ID -> {Code (Badge), ShortName}
+            mapping = {}
+            for t in data['teams']:
+                mapping[t['id']] = {'code': t['code'], 'short_name': t['short_name']}
+            return mapping
+    except:
+        pass
+    return {}
+
 # --- REAL HISTORY DATA FETCHER ---
-@st.cache_data(ttl=3600) # Cache for 1 hour to prevent spamming API
-def get_real_player_history(player_id, _id_to_name_map, _id_to_code_map):
+@st.cache_data(ttl=3600) # Cache for 1 hour
+def get_real_player_history(player_id, team_map):
     try:
         url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -190,9 +196,6 @@ def get_real_player_history(player_id, _id_to_name_map, _id_to_code_map):
             
         data = r.json()
         history = data.get('history', [])
-        
-        # Get last 5 completed matches
-        # FPL API 'history' contains past matches. We take the last 5.
         last_5 = history[-5:]
         
         formatted_history = []
@@ -201,22 +204,22 @@ def get_real_player_history(player_id, _id_to_name_map, _id_to_code_map):
             opp_id = match['opponent_team']
             pts = match['total_points']
             
-            # Map Opponent ID to Name/Code
-            opp_name = _id_to_name_map.get(opp_id, "UNK")[:3].upper()
-            opp_code = _id_to_code_map.get(opp_id, 0)
+            # Use Robust Map for Badge/Name
+            team_info = team_map.get(opp_id, {'code': 0, 'short_name': 'UNK'})
+            opp_name = team_info['short_name']
+            opp_code = team_info['code']
             
             # Color Logic
             color = "#F0F0F0" # Default Grey
             text_color = "#333"
-            
-            if pts >= 7: # Haul
-                color = "#00FF85" # Green
+            if pts >= 7: 
+                color = "#00FF85" 
                 text_color = "#000"
-            elif pts <= 2: # Blank
-                color = "#EBEBEB" # Light Grey
+            elif pts <= 2: 
+                color = "#EBEBEB" 
                 text_color = "#333"
-            else: # Average (3-6)
-                color = "#FFCC00" # Yellow
+            else: 
+                color = "#FFCC00" 
                 text_color = "#000"
                 
             formatted_history.append({
@@ -227,26 +230,24 @@ def get_real_player_history(player_id, _id_to_name_map, _id_to_code_map):
                 "color": color,
                 "text_color": text_color
             })
-            
         return formatted_history
-        
     except Exception as e:
-        st.error(f"Error fetching history: {e}")
         return []
 
 def render_player_profile(player_row):
-    # Fetch REAL history instead of mock
-    history = get_real_player_history(player_row['player_id'], id_to_name_map, id_to_code_map)
+    # Get robust map
+    fpl_team_map = get_fpl_team_map()
+    # Fetch REAL history
+    history = get_real_player_history(player_row['player_id'], fpl_team_map)
     t_code = db.get_team_map().get(player_row['team_name'], 0)
     
-    # HTML for History Pills (Flattened for Markdown safety)
     history_html = ""
     if history:
         for h in history:
             opp_badge = f"https://resources.premierleague.com/premierleague/badges/50/t{h['opp_code']}.png"
             history_html += f"""<div style="flex: 1; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; min-width: 70px;"><span style="color: #AAA; font-size: 0.7rem; margin-bottom: 5px;">{h['gw']}</span><img src="{opp_badge}" style="width: 30px; margin-bottom: 5px;"><span style="color: #FFF; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">{h['opp_name']}</span><div style="background-color: {h['color']}; color: {h['text_color']}; border-radius: 12px; padding: 2px 10px; font-weight: 900; font-size: 0.9rem;">{h['pts']}pts</div></div>"""
     else:
-        history_html = "<div style='color: #AAA; padding: 10px;'>No match history available yet.</div>"
+        history_html = "<div style='color: #AAA; padding: 10px;'>No match history available.</div>"
 
     st.markdown(f"""
     <div style="background: linear-gradient(180deg, rgba(20,0,30,1) 0%, rgba(40,0,50,1) 100%); border: 1px solid #00FF85; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 133, 0.2);">
@@ -386,13 +387,13 @@ if gw_name and deadline_iso:
         /* MOBILE FIX: VERTICAL SCROLL BOX */
         @media only screen and (max-width: 768px) {{
             .fix-container .content {{
-                max-height: 500px; /* Vertically scrollable */
+                max-height: 500px;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
                 padding-bottom: 15px; 
             }}
             .match-grid {{
-                flex-direction: column; /* Down by down */
+                flex-direction: column;
                 align-items: stretch;
                 flex-wrap: nowrap;
                 gap: 10px;
