@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import json
 import streamlit.components.v1 as components
-import random
+import requests  # Added to fetch real history
 
 # --- LOCAL IMPORTS ---
 import styles
@@ -154,6 +154,17 @@ st.markdown("""
 df = db.fetch_main_data()
 df = df.fillna(0)
 
+# Create Mappings for Real Data Fetching
+# Map Team ID (1-20) -> Team Name & Team Code (for badges)
+# We assume 'team' column in df is the Team ID (1-20)
+if 'team_code' in df.columns:
+    id_to_code_map = df[['team', 'team_code']].drop_duplicates().set_index('team')['team_code'].to_dict()
+    id_to_name_map = df[['team', 'team_name']].drop_duplicates().set_index('team')['team_name'].to_dict()
+else:
+    # Fallback if team_code missing (unlikely from FPL API data)
+    id_to_code_map = {}
+    id_to_name_map = {}
+
 # Calculate Metrics
 df['matches_played'] = df['matches_played'].replace(0, 1)
 df['minutes'] = df['minutes'].replace(0, 1)
@@ -166,51 +177,76 @@ df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 ep_map = db.get_expected_points_map()
 df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
-# --- MOCK HISTORY DATA GENERATOR ---
-def get_mock_history(player_row):
-    team_map = db.get_team_map()
-    opponents = list(team_map.keys())
-    if player_row['team_name'] in opponents: opponents.remove(player_row['team_name'])
-    
-    history = []
-    current_gw = 24
-    for i in range(5):
-        gw = current_gw - 5 + i
-        opp = random.choice(opponents)
-        opp_code = team_map.get(opp, 0)
-        pts = random.randint(1, 15)
+# --- REAL HISTORY DATA FETCHER ---
+@st.cache_data(ttl=3600) # Cache for 1 hour to prevent spamming API
+def get_real_player_history(player_id, _id_to_name_map, _id_to_code_map):
+    try:
+        url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        r = requests.get(url, headers=headers)
         
-        color = "#F0F0F0" 
-        text_color = "#333"
-        if pts >= 7: 
-            color = "#00FF85" 
-            text_color = "#000"
-        elif pts <= 2:
-            color = "#EBEBEB" 
-            text_color = "#333"
-        else:
-            color = "#FFCC00" 
-            text_color = "#000"
+        if r.status_code != 200:
+            return []
             
-        history.append({
-            "gw": f"GW{gw}",
-            "opp_code": opp_code,
-            "opp_name": opp[:3].upper(), 
-            "pts": pts,
-            "color": color,
-            "text_color": text_color
-        })
-    return history
+        data = r.json()
+        history = data.get('history', [])
+        
+        # Get last 5 completed matches
+        # FPL API 'history' contains past matches. We take the last 5.
+        last_5 = history[-5:]
+        
+        formatted_history = []
+        for match in last_5:
+            gw = match['round']
+            opp_id = match['opponent_team']
+            pts = match['total_points']
+            
+            # Map Opponent ID to Name/Code
+            opp_name = _id_to_name_map.get(opp_id, "UNK")[:3].upper()
+            opp_code = _id_to_code_map.get(opp_id, 0)
+            
+            # Color Logic
+            color = "#F0F0F0" # Default Grey
+            text_color = "#333"
+            
+            if pts >= 7: # Haul
+                color = "#00FF85" # Green
+                text_color = "#000"
+            elif pts <= 2: # Blank
+                color = "#EBEBEB" # Light Grey
+                text_color = "#333"
+            else: # Average (3-6)
+                color = "#FFCC00" # Yellow
+                text_color = "#000"
+                
+            formatted_history.append({
+                "gw": f"GW{gw}",
+                "opp_code": opp_code,
+                "opp_name": opp_name,
+                "pts": pts,
+                "color": color,
+                "text_color": text_color
+            })
+            
+        return formatted_history
+        
+    except Exception as e:
+        st.error(f"Error fetching history: {e}")
+        return []
 
 def render_player_profile(player_row):
-    history = get_mock_history(player_row)
+    # Fetch REAL history instead of mock
+    history = get_real_player_history(player_row['player_id'], id_to_name_map, id_to_code_map)
     t_code = db.get_team_map().get(player_row['team_name'], 0)
     
-    # FIXED: HTML generation is now flattened to prevent Markdown interpretation as code blocks
+    # HTML for History Pills (Flattened for Markdown safety)
     history_html = ""
-    for h in history:
-        opp_badge = f"https://resources.premierleague.com/premierleague/badges/50/t{h['opp_code']}.png"
-        history_html += f"""<div style="flex: 1; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; min-width: 70px;"><span style="color: #AAA; font-size: 0.7rem; margin-bottom: 5px;">{h['gw']}</span><img src="{opp_badge}" style="width: 30px; margin-bottom: 5px;"><span style="color: #FFF; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">{h['opp_name']}</span><div style="background-color: {h['color']}; color: {h['text_color']}; border-radius: 12px; padding: 2px 10px; font-weight: 900; font-size: 0.9rem;">{h['pts']}pts</div></div>"""
+    if history:
+        for h in history:
+            opp_badge = f"https://resources.premierleague.com/premierleague/badges/50/t{h['opp_code']}.png"
+            history_html += f"""<div style="flex: 1; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; min-width: 70px;"><span style="color: #AAA; font-size: 0.7rem; margin-bottom: 5px;">{h['gw']}</span><img src="{opp_badge}" style="width: 30px; margin-bottom: 5px;"><span style="color: #FFF; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">{h['opp_name']}</span><div style="background-color: {h['color']}; color: {h['text_color']}; border-radius: 12px; padding: 2px 10px; font-weight: 900; font-size: 0.9rem;">{h['pts']}pts</div></div>"""
+    else:
+        history_html = "<div style='color: #AAA; padding: 10px;'>No match history available yet.</div>"
 
     st.markdown(f"""
     <div style="background: linear-gradient(180deg, rgba(20,0,30,1) 0%, rgba(40,0,50,1) 100%); border: 1px solid #00FF85; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 133, 0.2);">
@@ -292,7 +328,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET (MOBILE VERTICAL SCROLL FIX)
+# 📅 DEADLINE & FIXTURES WIDGET
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
@@ -349,21 +385,18 @@ if gw_name and deadline_iso:
 
         /* MOBILE FIX: VERTICAL SCROLL BOX */
         @media only screen and (max-width: 768px) {{
-            /* Content area becomes scrollable with fixed height */
             .fix-container .content {{
-                max-height: 500px; /* Shows approx 5 cards */
+                max-height: 500px; /* Vertically scrollable */
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
-                padding-bottom: 15px; /* Prevent last card cutoff */
+                padding-bottom: 15px; 
             }}
-            /* Matches stack nicely in a column */
             .match-grid {{
                 flex-direction: column; /* Down by down */
                 align-items: stretch;
                 flex-wrap: nowrap;
                 gap: 10px;
             }}
-            /* Cards take full width */
             .match-card {{
                 width: 100%;
                 min-width: 0;
