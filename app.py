@@ -52,6 +52,11 @@ st.markdown("""
         color: white !important;
     }
     
+    /* FIX: HIDE "Press Enter to submit" INSTRUCTION */
+    div[data-testid="InputInstructions"] {
+        display: none !important;
+    }
+
     /* 5. TABS */
     .stTabs [data-baseweb="tab-list"] {
         background-color: rgba(255, 255, 255, 0.03);
@@ -295,7 +300,7 @@ if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]:
         st.image("fpl_metric_logo.png", use_container_width=True)
 
 # =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET (UPDATED FOR MOBILE SCROLL)
+# 📅 DEADLINE & FIXTURES WIDGET (MOBILE VERTICAL SCROLL FIX)
 # =========================================================================
 gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
 
@@ -337,7 +342,6 @@ if gw_name and deadline_iso:
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             cursor: pointer;
             flex: 1 1 280px; max-width: 350px;
-            /* Prevents shrinking in flex row mode */
             min-width: 280px; 
         }}
         .match-card:hover {{ 
@@ -351,14 +355,27 @@ if gw_name and deadline_iso:
         .match-time {{ font-size: 1rem; font-weight: 700; color: #00FF85; font-family: 'Orbitron', sans-serif; }}
         .match-date {{ font-size: 0.7rem; text-transform: uppercase; }}
 
-        /* MOBILE FIX: SWITCH TO SCROLLABLE ROW */
+        /* MOBILE FIX: VERTICAL SCROLL BOX */
         @media only screen and (max-width: 768px) {{
+            /* Content area becomes scrollable with fixed height */
+            .fix-container .content {{
+                max-height: 500px; /* Shows approx 5 cards */
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 15px; /* Prevent last card cutoff */
+            }}
+            /* Matches stack nicely in a column */
             .match-grid {{
-                flex-wrap: nowrap; /* Forces single row */
-                overflow-x: auto;  /* Enables scrolling */
-                justify-content: flex-start; /* Aligns to start for scrolling */
-                padding-bottom: 10px; /* Space for scrollbar */
-                -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
+                flex-direction: column; /* Down by down */
+                align-items: stretch;
+                flex-wrap: nowrap;
+                gap: 10px;
+            }}
+            /* Cards take full width */
+            .match-card {{
+                width: 100%;
+                min-width: 0;
+                max-width: none;
             }}
         }}
     </style>
