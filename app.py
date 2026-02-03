@@ -206,19 +206,11 @@ def render_player_profile(player_row):
     history = get_mock_history(player_row)
     t_code = db.get_team_map().get(player_row['team_name'], 0)
     
+    # FIXED: HTML generation is now flattened to prevent Markdown interpretation as code blocks
     history_html = ""
     for h in history:
         opp_badge = f"https://resources.premierleague.com/premierleague/badges/50/t{h['opp_code']}.png"
-        history_html += f"""
-        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; min-width: 70px;">
-            <span style="color: #AAA; font-size: 0.7rem; margin-bottom: 5px;">{h['gw']}</span>
-            <img src="{opp_badge}" style="width: 30px; margin-bottom: 5px;">
-            <span style="color: #FFF; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">{h['opp_name']}</span>
-            <div style="background-color: {h['color']}; color: {h['text_color']}; border-radius: 12px; padding: 2px 10px; font-weight: 900; font-size: 0.9rem;">
-                {h['pts']}pts
-            </div>
-        </div>
-        """
+        history_html += f"""<div style="flex: 1; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; min-width: 70px;"><span style="color: #AAA; font-size: 0.7rem; margin-bottom: 5px;">{h['gw']}</span><img src="{opp_badge}" style="width: 30px; margin-bottom: 5px;"><span style="color: #FFF; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">{h['opp_name']}</span><div style="background-color: {h['color']}; color: {h['text_color']}; border-radius: 12px; padding: 2px 10px; font-weight: 900; font-size: 0.9rem;">{h['pts']}pts</div></div>"""
 
     st.markdown(f"""
     <div style="background: linear-gradient(180deg, rgba(20,0,30,1) 0%, rgba(40,0,50,1) 100%); border: 1px solid #00FF85; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 133, 0.2);">
@@ -495,7 +487,6 @@ if not filtered.empty:
 # --- REFACTORED RENDER FUNCTION (CONTROLS IN ONE ROW) ---
 def render_modern_table(dataframe, column_config, sort_key):
     # 1. Layout: Sort (Left) | Search (Middle) | View Details (Right)
-    # Ratios: 1 : 1.5 : 1.5 makes search and view details slightly wider
     c_sort, c_search, c_view = st.columns([1, 1.5, 1.5])
     
     with c_sort:
