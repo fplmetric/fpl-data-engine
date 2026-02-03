@@ -154,6 +154,14 @@ st.markdown("""
 df = db.fetch_main_data()
 df = df.fillna(0)
 
+# Create Mappings for Real Data Fetching
+if 'team_code' in df.columns:
+    id_to_code_map = df[['team', 'team_code']].drop_duplicates().set_index('team')['team_code'].to_dict()
+    id_to_name_map = df[['team', 'team_name']].drop_duplicates().set_index('team')['team_name'].to_dict()
+else:
+    id_to_code_map = {}
+    id_to_name_map = {}
+
 # Calculate Metrics
 df['matches_played'] = df['matches_played'].replace(0, 1)
 df['minutes'] = df['minutes'].replace(0, 1)
@@ -167,14 +175,13 @@ ep_map = db.get_expected_points_map()
 df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
 # --- ROBUST TEAM MAPPING FETCHER ---
-@st.cache_data(ttl=86400) # Cache for 24 hours
+@st.cache_data(ttl=86400)
 def get_fpl_team_map():
     try:
         url = "https://fantasy.premierleague.com/api/bootstrap-static/"
         r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
         if r.status_code == 200:
             data = r.json()
-            # Map Team ID -> {Code (Badge), ShortName}
             mapping = {}
             for t in data['teams']:
                 mapping[t['id']] = {'code': t['code'], 'short_name': t['short_name']}
@@ -184,7 +191,7 @@ def get_fpl_team_map():
     return {}
 
 # --- REAL HISTORY DATA FETCHER ---
-@st.cache_data(ttl=3600) # Cache for 1 hour
+@st.cache_data(ttl=3600)
 def get_real_player_history(player_id, team_map):
     try:
         url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
@@ -204,13 +211,11 @@ def get_real_player_history(player_id, team_map):
             opp_id = match['opponent_team']
             pts = match['total_points']
             
-            # Use Robust Map for Badge/Name
             team_info = team_map.get(opp_id, {'code': 0, 'short_name': 'UNK'})
             opp_name = team_info['short_name']
             opp_code = team_info['code']
             
-            # Color Logic
-            color = "#F0F0F0" # Default Grey
+            color = "#F0F0F0"
             text_color = "#333"
             if pts >= 7: 
                 color = "#00FF85" 
@@ -235,9 +240,7 @@ def get_real_player_history(player_id, team_map):
         return []
 
 def render_player_profile(player_row):
-    # Get robust map
     fpl_team_map = get_fpl_team_map()
-    # Fetch REAL history
     history = get_real_player_history(player_row['player_id'], fpl_team_map)
     t_code = db.get_team_map().get(player_row['team_name'], 0)
     
@@ -292,7 +295,6 @@ with st.sidebar:
     
     with st.form("filter_form"):
         st.caption("Adjust filters and click 'Apply'.")
-        
         selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
         position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
         exclude_unavailable = st.checkbox("Exclude Unavailable (Red Flags)", value=False)
@@ -362,9 +364,7 @@ if gw_name and deadline_iso:
             border-bottom: 1px solid #00FF85;
         }}
         .content {{ padding: 20px; }}
-        /* DEFAULT: GRID WRAP FOR DESKTOP */
         .match-grid {{ display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }}
-        
         .match-card {{
             background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
@@ -384,7 +384,6 @@ if gw_name and deadline_iso:
         .match-time {{ font-size: 1rem; font-weight: 700; color: #00FF85; font-family: 'Orbitron', sans-serif; }}
         .match-date {{ font-size: 0.7rem; text-transform: uppercase; }}
 
-        /* MOBILE FIX: VERTICAL SCROLL BOX */
         @media only screen and (max-width: 768px) {{
             .fix-container .content {{
                 max-height: 500px;
@@ -534,44 +533,44 @@ def render_modern_table(dataframe, column_config, sort_key):
         selected_col = options_keys[options_labels.index(selected_label)]
         
     with c_search:
-        # Search Box
         search_term = st.text_input("Find Player", placeholder="Type name...", label_visibility="visible", key=f"search_{sort_key}")
 
     # 2. Filter Data
     if search_term:
         dataframe = dataframe[dataframe['web_name'].str.contains(search_term, case=False)]
 
-    with c_view:
-        # Populate View Details Dropdown
-        if dataframe.empty:
-            player_opts = ["No players found"]
-        else:
-            player_opts = ["Select to view details..."] + sorted(dataframe['web_name'].unique().tolist())
-        
-        # If search matches exactly 1 player, default to them
-        idx = 0
-        if len(dataframe) == 1:
-            idx = 1
-            
-        selected_player_name = st.selectbox("View Player Details", player_opts, index=idx, key=f"view_{sort_key}")
-
-    # 3. Render Profile (If selected)
-    if selected_player_name != "Select to view details..." and selected_player_name != "No players found":
-        p_row = dataframe[dataframe['web_name'] == selected_player_name]
-        if not p_row.empty:
-            render_player_profile(p_row.iloc[0])
-
-    if dataframe.empty:
-        st.info("No players match your filters.")
-        return
-
-    # 4. Sorting Logic
+    # 3. Sorting (Perform this BEFORE dropdown to ensure order matches)
     if selected_col == 'fixture_ease':
         team_fixtures = db.get_team_upcoming_fixtures()
         diff_map = {team: sum(f['diff'] for f in fixtures[:5]) for team, fixtures in team_fixtures.items()}
         dataframe['fixture_ease'] = 30 - dataframe['team_name'].map(diff_map).fillna(25)
 
     sorted_df = dataframe.sort_values(selected_col, ascending=False).head(100)
+
+    with c_view:
+        # Populate View Details Dropdown using the SORTED dataframe (sorted_df)
+        if sorted_df.empty:
+            player_opts = ["No players found"]
+        else:
+            # Use sorted_df here so the dropdown list matches the table order
+            player_opts = ["Select to view details..."] + sorted_df['web_name'].tolist()
+        
+        # If search matches exactly 1 player, default to them
+        idx = 0
+        if len(sorted_df) == 1:
+            idx = 1
+            
+        selected_player_name = st.selectbox("View Player Details", player_opts, index=idx, key=f"view_{sort_key}")
+
+    # 4. Render Profile (If selected)
+    if selected_player_name != "Select to view details..." and selected_player_name != "No players found":
+        p_row = sorted_df[sorted_df['web_name'] == selected_player_name]
+        if not p_row.empty:
+            render_player_profile(p_row.iloc[0])
+
+    if dataframe.empty:
+        st.info("No players match your filters.")
+        return
     
     # 5. Render Table
     team_map = db.get_team_map()
