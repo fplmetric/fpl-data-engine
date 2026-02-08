@@ -173,10 +173,10 @@ for f in raw_fixtures:
 
 for t in team_upcoming: team_upcoming[t].sort(key=lambda x: x['kickoff'])
 
-# Get distinct Next 5 Gameweek IDs
+# Get distinct Next 8 Gameweek IDs (for horizon up to 8)
 all_future_gws = sorted(list(set(f['event'] for t in team_upcoming for f in team_upcoming[t] if f['event'] >= current_gw_id)))
-max_ticker_horizon = all_future_gws[:8] # Pre-fetch 8 for ticker
-next_5_gw_ids = all_future_gws[:5] # Default for player table
+max_ticker_horizon = all_future_gws[:8] 
+next_5_gw_ids = all_future_gws[:5]
 
 # --- LOAD DATA ---
 df = db.fetch_main_data()
@@ -369,6 +369,7 @@ def render_table(df, cols, key):
                 for m in matches:
                     bg = fdr.get(m['diff'], '#333')
                     txt = 'white' if m['diff'] in [1,4,5] else 'black'
+                    # WIDER PILL + CENTERED TEXT
                     fix_html += f'<div class="mini-fix-box" style="background:{bg}; color:{txt};" title="GW{m["event"]}">{m["opp"]}</div>'
             
             fix_html += '</div>' # End Slot
@@ -400,15 +401,28 @@ with t4: render_table(filtered, {"dc_per_90":"DC/90", "tackles":"Tackles", "cbi"
 st.markdown("---")
 st.header("Fixture Difficulty Ticker")
 
-# TICKER CONTROLS RESTORED
+# TICKER CONTROLS
 c1, c2, c3 = st.columns(3)
 with c1: s_order = st.selectbox("Sort Order", ["Easiest", "Hardest", "Alphabetical"])
 with c2: v_type = st.selectbox("Type", ["Overall", "Attack", "Defence"])
-with c3: horizon = st.selectbox("Horizon", ["Next 3 GWs", "Next 5 GWs", "Next 8 GWs"])
+# RESTORED HORIZON OPTIONS
+horizon_options = ["Next 2 GWs", "Next 3 GWs", "Next 4 GWs", "Next 5 GWs", "Next 6 GWs", "Next 7 GWs", "Next 8 GWs"]
+# Add specific GW options (Current to Current+4)
+for i in range(5):
+    if i < len(all_future_gws):
+        horizon_options.append(f"GW {all_future_gws[i]}")
 
-# Horizon Logic
-n_gws = int(horizon.split(" ")[1])
-ticker_gw_ids = max_ticker_horizon[:n_gws]
+with c3: horizon = st.selectbox("Horizon", horizon_options)
+
+# LOGIC TO HANDLE HORIZON SELECTION
+selected_gw_ids = []
+if "Next" in horizon:
+    n_gws = int(horizon.split(" ")[1])
+    selected_gw_ids = max_ticker_horizon[:n_gws]
+else:
+    # Single GW selection (e.g., "GW 26")
+    target_gw = int(horizon.split(" ")[1])
+    selected_gw_ids = [target_gw]
 
 ticker_data = []
 for team in all_teams:
@@ -420,9 +434,9 @@ for team in all_teams:
     fixtures = team_upcoming.get(t_id, [])
     
     # Calculate Diff Sum based on selected horizon
-    row['Diff_Sum'] = sum(f['diff'] for f in fixtures if f['event'] in ticker_gw_ids)
+    row['Diff_Sum'] = sum(f['diff'] for f in fixtures if f['event'] in selected_gw_ids)
     
-    for gw in ticker_gw_ids:
+    for gw in selected_gw_ids:
         matches = [f for f in fixtures if f['event'] == gw]
         cell_html = ""
         if not matches: cell_html = "-"
@@ -440,10 +454,10 @@ ticker_df = pd.DataFrame(ticker_data)
 if s_order == "Alphabetical": ticker_df = ticker_df.sort_values('Team')
 else: ticker_df = ticker_df.sort_values('Diff_Sum', ascending=(s_order=="Easiest"))
 
-tick_heads = "".join([f"<th>GW{gw}</th>" for gw in ticker_gw_ids])
+tick_heads = "".join([f"<th>GW{gw}</th>" for gw in selected_gw_ids])
 tick_rows = ""
 for _, r in ticker_df.iterrows():
-    cells = "".join([f"<td>{r[f'GW{gw}']}</td>" for gw in ticker_gw_ids])
+    cells = "".join([f"<td>{r[f'GW{gw}']}</td>" for gw in selected_gw_ids])
     tick_rows += f"<tr><td style='padding-left:10px; display:flex; align-items:center;'><img src='{r['Logo']}' width='25' style='margin-right:10px;'><b>{r['Team']}</b></td>{cells}</tr>"
 
 st.markdown(f"""<div class="fixture-table-container"><table class="modern-table"><thead><tr><th>Team</th>{tick_heads}</tr></thead><tbody>{tick_rows}</tbody></table></div>""", unsafe_allow_html=True)
