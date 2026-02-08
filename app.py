@@ -49,37 +49,40 @@ st.markdown("""
     .modern-table td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
     .modern-table td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: 1px solid rgba(255, 255, 255, 0.05); }
     
-    /* Fixture Pills Layout - FIXED ALIGNMENT */
+    /* --- FIXTURE PILLS LAYOUT (CENTERED & READABLE) --- */
     .mini-fix-container { 
         display: flex; 
-        gap: 4px; 
+        gap: 6px; 
         justify-content: center; 
         align-items: flex-start;
     }
     
+    /* Vertical Slot for each Gameweek */
     .fix-slot {
         display: flex;
         flex-direction: column;
-        gap: 2px;
-        width: 40px; 
-        min-width: 40px;
+        gap: 4px;
+        width: 50px; /* Fixed width per GW slot */
+        min-width: 50px;
         align-items: center; 
     }
 
+    /* The Pill Itself */
     .mini-fix-box { 
         display: flex; 
         align-items: center; 
-        justify-content: center; 
-        width: 38px; 
-        height: 24px; 
+        justify-content: center; /* Absolute center */
+        width: 50px; /* Wide enough for 'WHU (H)' */
+        height: 26px; 
         border-radius: 4px; 
-        font-size: 0.75rem; 
+        font-size: 0.7rem; 
         font-weight: 900; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3); 
+        text-align: center;
+        white-space: nowrap; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.4); 
     }
     
     .diff-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; display: block; width: 100%; text-align: center; margin-bottom: 2px;}
-    
     div[data-testid="stSidebar"] button { border-radius: 10px !important; height: 3em !important; font-family: 'Orbitron', sans-serif !important; font-weight: 700 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
     
     @media only screen and (max-width: 768px) {
@@ -133,6 +136,7 @@ name_to_id = {}
 for t in teams:
     name_to_id[t['name']] = t['id']
     name_to_id[t['short_name']] = t['id']
+    # Specific fix for Forest variants
     if t['short_name'] == 'NFO':
         name_to_id['Nottingham Forest'] = t['id']
         name_to_id['Nottm Forest'] = t['id']
@@ -248,6 +252,10 @@ with st.sidebar:
         mn_ppg = st.slider("Min PPG", 0.0, 10.0, 0.0)
         mn_dc = st.slider("Min DC/90", 0.0, 10.0, 0.0)
         st.form_submit_button("Apply")
+    
+    # RESTORED BMAC LINK
+    st.markdown("---")
+    st.markdown("""<a href="https://www.buymeacoffee.com/fplmetric" target="_blank" class="bmc-button"><img src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg" alt="Buy me a coffee" class="bmc-logo"><span>Buy me a coffee</span></a>""", unsafe_allow_html=True)
 
 df = df[df['minutes'] >= 90]
 if ex_un: df = df[~df['status'].isin(['i','u','n','s'])]
@@ -369,7 +377,7 @@ def render_table(df, cols, key):
                 for m in matches:
                     bg = fdr.get(m['diff'], '#333')
                     txt = 'white' if m['diff'] in [1,4,5] else 'black'
-                    # WIDER PILL + CENTERED TEXT
+                    # CENTERED PILL
                     fix_html += f'<div class="mini-fix-box" style="background:{bg}; color:{txt};" title="GW{m["event"]}">{m["opp"]}</div>'
             
             fix_html += '</div>' # End Slot
@@ -463,4 +471,5 @@ for _, r in ticker_df.iterrows():
 st.markdown(f"""<div class="fixture-table-container"><table class="modern-table"><thead><tr><th>Team</th>{tick_heads}</tr></thead><tbody>{tick_rows}</tbody></table></div>""", unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("<div style='text-align:center; color:#AAA;'>FPL Metric</div>", unsafe_allow_html=True)
+# RESTORED FOOTER
+st.markdown("""<div style='text-align: center; color: #B0B0B0;'><p><strong>FPL Metric</strong> | Built for the FPL Community</p><p><a href="https://x.com/FPL_Metric" target="_blank" style="color: #00FF85; text-decoration: none;">Follow on X: @FPL_Metric</a></p></div>""", unsafe_allow_html=True)
