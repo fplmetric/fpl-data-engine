@@ -51,6 +51,8 @@ st.markdown("""
     
     /* Pills & Badges */
     .mini-fix-container { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+    /* Double Gameweek Stacking */
+    .dgw-stack { display: flex; flex-direction: column; gap: 2px; }
     .mini-fix-box { display: flex; align-items: center; justify-content: center; width: 38px; height: 24px; border-radius: 4px; font-size: 0.75rem; font-weight: 900; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
     .diff-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; display: block; width: 100%; text-align: center; margin-bottom: 2px;}
     
@@ -67,7 +69,21 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATA OVERRIDE FUNCTIONS (HANDLE DOUBLE GAMEWEEKS) ---
+# --- HELPER: NAME NORMALIZER (FIXES FOREST BUG) ---
+def normalize_name(name):
+    """Normalizes team names to match FPL API Short Names."""
+    n = name.lower().strip()
+    if "nottingham" in n or "forest" in n or "nfo" in n: return "Nott'm Forest"
+    if "man" in n and "utd" in n: return "Man Utd"
+    if "man" in n and "city" in n: return "Man City"
+    if "sheffield" in n: return "Sheff Utd"
+    if "luton" in n: return "Luton"
+    if "wolves" in n: return "Wolves"
+    if "newcastle" in n: return "Newcastle"
+    if "tottenham" in n: return "Spurs"
+    return name
+
+# --- 2. DATA FETCHING ---
 @st.cache_data(ttl=3600)
 def fetch_bootstrap():
     try:
@@ -86,14 +102,17 @@ def fetch_all_fixtures():
 bootstrap = fetch_bootstrap()
 raw_fixtures = fetch_all_fixtures()
 
-# Mappings
+# Mappings (ID <-> Name)
 teams = bootstrap.get('teams', [])
 id_to_name = {t['id']: t['name'] for t in teams}
 id_to_short = {t['id']: t['short_name'] for t in teams}
 id_to_code = {t['id']: t['code'] for t in teams}
-name_to_id = {t['name']: t['id'] for t in teams}
+# IMPORTANT: Map Normalized Names to ID to fix Forest issue
+name_to_id = {normalize_name(t['name']): t['id'] for t in teams}
+# Add short names to map too for robustness
+for t in teams: name_to_id[t['short_name']] = t['id']
 
-# Global FDR Colors (Moved to Global Scope)
+# Global FDR Colors
 fdr = {1:'#375523', 2:'#00FF85', 3:'#EBEBEB', 4:'#FF0055', 5:'#680808'}
 
 # Determine Current GW
@@ -110,10 +129,8 @@ gw_fixtures_display = []
 for f in raw_fixtures:
     if f['event'] is None: continue
     
-    # For Widget (Current GW Only)
+    # For Widget (All matches in Current GW)
     if f['event'] == current_gw_id:
-        h_name = id_to_name.get(f['team_h'])
-        a_name = id_to_name.get(f['team_a'])
         h_code = id_to_code.get(f['team_h'])
         a_code = id_to_code.get(f['team_a'])
         gw_fixtures_display.append({
@@ -124,28 +141,40 @@ for f in raw_fixtures:
 
     # For Player Table & Ticker (Next 5 GWs)
     if f['event'] >= current_gw_id:
-        h_team = id_to_name.get(f['team_h'])
-        a_team = id_to_name.get(f['team_a'])
+        h_name = id_to_name.get(f['team_h'])
+        a_name = id_to_name.get(f['team_a'])
         
-        team_upcoming[h_team].append({
+        # Use normalized names for keys to ensure match with Player DB
+        h_norm = normalize_name(h_name)
+        a_norm = normalize_name(a_name)
+        
+        team_upcoming[h_norm].append({
             'event': f['event'],
             'opp': id_to_short.get(f['team_a']) + " (H)",
             'diff': f['team_h_difficulty'],
             'kickoff': f['kickoff_time']
         })
-        team_upcoming[a_team].append({
+        team_upcoming[a_norm].append({
             'event': f['event'],
             'opp': id_to_short.get(f['team_h']) + " (A)",
             'diff': f['team_a_difficulty'],
             'kickoff': f['kickoff_time']
         })
 
+# Sort fixtures by date
 for t in team_upcoming:
     team_upcoming[t].sort(key=lambda x: x['kickoff'])
+
+# Identify Next 5 Gameweek IDs (e.g., [24, 25, 26, 27, 28])
+all_future_gws = sorted(list(set(f['event'] for t in team_upcoming for f in team_upcoming[t] if f['event'] >= current_gw_id)))
+next_5_gw_ids = all_future_gws[:5]
 
 # --- LOAD MAIN PLAYER DATA ---
 df = db.fetch_main_data()
 df = df.fillna(0)
+
+# Normalize Team Names in DF to match API
+df['team_name'] = df['team_name'].apply(normalize_name)
 
 df['matches_played'] = df['matches_played'].replace(0, 1)
 df['minutes'] = df['minutes'].replace(0, 1)
@@ -192,6 +221,7 @@ def render_player_profile(player_row):
 with st.sidebar:
     if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: st.image("fpl_metric_logo.png", use_container_width=True)
     st.header("Filters")
+    # Use normalized names for filter list
     all_teams = sorted(df['team_name'].unique())
     if 'team_selection' not in st.session_state: st.session_state['team_selection'] = all_teams
     def select_all(): st.session_state['team_selection'] = all_teams
@@ -232,12 +262,16 @@ if gw_fixtures_display:
         .tm {{ font-size: 2rem; font-weight: 900; font-family: 'Orbitron'; margin: 0; }}
         .cnt {{ background: rgba(255,255,255,0.02); border: 1px solid #00FF85; border-top: none; border-radius: 0 0 12px 12px; padding: 15px; }}
         .grd {{ display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }}
-        .c {{ background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center; width: 280px; }}
+        .c {{ background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center; width: 280px; min-width: 280px; }}
         .tc {{ display: flex; flex-direction: column; align-items: center; width: 60px; }}
         .tn {{ font-size: 0.75rem; font-weight: 700; color: #FFF; }}
         .mi {{ display: flex; flex-direction: column; align-items: center; color: #AAA; font-size: 0.8rem; }}
         .mt {{ color: #00FF85; font-weight: 700; font-family: 'Orbitron'; }}
-        @media(max-width:768px){{ .cnt {{ max-height: 400px; overflow-y: auto; }} .c {{ width: 100%; }} }}
+        @media(max-width:768px){{ 
+            .cnt {{ max-height: 500px; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 15px; }}
+            .grd {{ flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 10px; }}
+            .c {{ width: 100%; min-width: 0; max-width: none; }}
+        }}
     </style>
     <div class="w">
         <div class="d"><div class="lbl">{gw_name_str} DEADLINE</div><div id="t" class="tm">--:--:--</div></div>
@@ -310,13 +344,36 @@ def render_table(df, cols, key):
     
     for _, r in sorted_df.iterrows():
         t_code = id_to_code.get(name_to_id.get(r['team_name']), 0)
-        my_fixs = team_upcoming.get(r['team_name'], [])[:5] 
+        # Next 5 GW Logic (Grouping for DGW)
+        fixtures = team_upcoming.get(r['team_name'], [])
         
         fix_html = '<div class="mini-fix-container">'
-        for f in my_fixs:
-            bg = fdr.get(f['diff'], '#333')
-            txt = 'white' if f['diff'] in [1,4,5] else 'black'
-            fix_html += f'<div class="mini-fix-box" style="background:{bg}; color:{txt};" title="GW{f["event"]}">{f["opp"]}</div>'
+        # Iterate over the Next 5 GW IDs, not just next 5 fixtures
+        count = 0
+        for gw_id in next_5_gw_ids:
+            matches = [f for f in fixtures if f['event'] == gw_id]
+            if matches:
+                # If Single or Double, render them
+                if len(matches) > 1:
+                    # Double GW: Stack vertically
+                    fix_html += '<div class="dgw-stack">'
+                    for m in matches:
+                        bg = fdr.get(m['diff'], '#333')
+                        txt = 'white' if m['diff'] in [1,4,5] else 'black'
+                        fix_html += f'<div class="mini-fix-box" style="background:{bg}; color:{txt}; margin-bottom:2px;" title="GW{m["event"]}">{m["opp"]}</div>'
+                    fix_html += '</div>'
+                else:
+                    # Single GW
+                    m = matches[0]
+                    bg = fdr.get(m['diff'], '#333')
+                    txt = 'white' if m['diff'] in [1,4,5] else 'black'
+                    fix_html += f'<div class="mini-fix-box" style="background:{bg}; color:{txt};" title="GW{m["event"]}">{m["opp"]}</div>'
+                count += 1
+            else:
+                # Blank GW
+                fix_html += '<div class="mini-fix-box" style="background:#222; color:#555;">-</div>'
+                count += 1
+            if count >= 5: break # Only show 5 columns/GWs
         fix_html += '</div>'
         
         stats_html = ""
@@ -344,9 +401,8 @@ with t4: render_table(filtered, {"dc_per_90":"DC/90", "tackles":"Tackles", "cbi"
 st.markdown("---")
 st.header("Fixture Difficulty Ticker")
 ticker_data = []
-next_5_gw_ids = sorted(list(set(f['event'] for t in team_upcoming for f in team_upcoming[t])))[:5]
 
-for team in all_teams:
+for team in all_teams: # Use normalized names
     row = {'Team': team, 'Logo': f"https://resources.premierleague.com/premierleague/badges/20/t{id_to_code.get(name_to_id.get(team),0)}.png"}
     fixtures = team_upcoming.get(team, [])
     row['Diff_Sum'] = sum(f['diff'] for f in fixtures if f['event'] in next_5_gw_ids)
