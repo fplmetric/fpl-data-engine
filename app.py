@@ -4,6 +4,7 @@ import os
 import json
 import streamlit.components.v1 as components
 import requests
+from collections import defaultdict
 
 # --- LOCAL IMPORTS ---
 import styles
@@ -16,130 +17,46 @@ st.set_page_config(page_title="FPL Metric Dashboard", page_icon="favicon.png", l
 st.markdown(styles.GLOBAL_CSS, unsafe_allow_html=True)
 st.markdown("""
 <style>
-    /* 1. IMPORT FUTURISTIC FONT */
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@400;700&display=swap');
-
-    /* Typography */
-    h1, h2, h3, .stMetricLabel, [data-baseweb="tab"], .big-font {
-        font-family: 'Orbitron', sans-serif !important;
-        letter-spacing: 1px;
-    }
     
-    /* 2. NEON SCROLLBARS */
+    h1, h2, h3, .stMetricLabel, [data-baseweb="tab"], .big-font { font-family: 'Orbitron', sans-serif !important; letter-spacing: 1px; }
     ::-webkit-scrollbar { width: 8px; height: 8px; background: #1a001e; }
     ::-webkit-scrollbar-thumb { background: #00FF85; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #00cc6a; }
     ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
-
-    /* 3. SIDEBAR */
-    section[data-testid="stSidebar"] {
-        background-color: rgba(20, 0, 30, 0.95);
-        border-right: 1px solid rgba(0, 255, 133, 0.2);
-    }
+    section[data-testid="stSidebar"] { background-color: rgba(20, 0, 30, 0.95); border-right: 1px solid rgba(0, 255, 133, 0.2); }
     section[data-testid="stSidebar"] > div { background-color: transparent; }
-
-    /* 4. INPUTS */
     div[data-baseweb="slider"] div[role="slider"] { background-color: #00FF85 !important; }
     div[data-baseweb="slider"] div[data-testid="stTickBar"] { background: linear-gradient(to right, #00FF85, #00FF85) !important; }
     span[data-baseweb="checkbox"] div[class*="checked"] { background-color: #00FF85 !important; border-color: #00FF85 !important; }
-    span[data-baseweb="tag"] { background-color: rgba(0, 255, 133, 0.2) !important; border: 1px solid #00FF85 !important; }
-    span[data-baseweb="tag"] span { color: #FFFFFF !important; }
+    div[data-baseweb="input"] { background-color: rgba(255, 255, 255, 0.05) !important; border-color: rgba(0, 255, 133, 0.3) !important; color: white !important; border-radius: 8px !important; }
+    div[data-testid="InputInstructions"] { display: none !important; }
     
-    div[data-baseweb="input"] {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border-color: rgba(0, 255, 133, 0.3) !important;
-        border-radius: 8px !important;
-        color: white !important;
-    }
-    
-    /* FIX: HIDE "Press Enter to submit" INSTRUCTION */
-    div[data-testid="InputInstructions"] {
-        display: none !important;
-    }
-
-    /* 5. TABS */
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: rgba(255, 255, 255, 0.03);
-        border-radius: 12px;
-        padding: 8px;
-        border: 1px solid rgba(0, 255, 133, 0.2);
-        gap: 8px;
-        margin-bottom: 20px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: auto;
-        background-color: transparent;
-        border: 1px solid transparent;
-        color: #AAAAAA;
-        font-weight: 700;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        border-radius: 8px;
-        padding: 12px 24px;
-        transition: all 0.3s ease;
-    }
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 8px; border: 1px solid rgba(0, 255, 133, 0.2); gap: 8px; margin-bottom: 20px; }
+    .stTabs [data-baseweb="tab"] { height: auto; background-color: transparent; border: 1px solid transparent; color: #AAAAAA; font-weight: 700; border-radius: 8px; padding: 12px 24px; transition: all 0.3s ease; }
     .stTabs [data-baseweb="tab"]:hover { background-color: rgba(255, 255, 255, 0.08); color: #FFFFFF; }
-    .stTabs [aria-selected="true"] {
-        background-color: rgba(0, 255, 133, 0.15) !important;
-        color: #00FF85 !important;
-        border: 1px solid #00FF85 !important;
-        box-shadow: 0 0 15px rgba(0, 255, 133, 0.2);
-    }
+    .stTabs [aria-selected="true"] { background-color: rgba(0, 255, 133, 0.15) !important; color: #00FF85 !important; border: 1px solid #00FF85 !important; box-shadow: 0 0 15px rgba(0, 255, 133, 0.2); }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
-    /* 6. TABLE STYLING */
-    .player-table-container { 
-        margin-top: 0px; 
-        overflow-x: auto !important; 
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 10px;
-    }
-    .modern-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0 8px;
-        font-family: 'Roboto', sans-serif;
-        color: #E0E0E0;
-        min-width: 800px; 
-    }
-    .modern-table th {
-        background-color: #1a001e !important; 
-        color: #00FF85;
-        font-family: 'Orbitron', sans-serif;
-        font-weight: 700;
-        text-transform: uppercase;
-        padding: 15px;
-        text-align: center;
-        letter-spacing: 1px;
-        border-bottom: none !important;
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-        box-shadow: 0 2px 0 #00FF85; 
-    }
-    /* MASKS */
+    /* Table */
+    .player-table-container, .fixture-table-container { margin-top: 0px; overflow-x: auto !important; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
+    .modern-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; font-family: 'Roboto', sans-serif; color: #E0E0E0; min-width: 800px; }
+    .modern-table th { background-color: #1a001e !important; color: #00FF85; font-family: 'Orbitron', sans-serif; font-weight: 700; padding: 15px; text-align: center; border-bottom: none !important; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 0 #00FF85; }
     .modern-table th::before { content: ""; position: absolute; top: -20px; left: 0; right: 0; height: 20px; background-color: #1a001e; z-index: -1; }
-    .modern-table th:first-child { text-align: left; padding-left: 20px; box-shadow: 0 2px 0 #00FF85, -30px 0 0 #1a001e; }
-    .modern-table th:last-child { box-shadow: 0 2px 0 #00FF85, 30px 0 0 #1a001e; }
-    
     .modern-table tbody tr { transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1; }
     .modern-table tbody tr:hover { transform: scale(1.005); box-shadow: 0 5px 15px rgba(0, 255, 133, 0.15); position: relative; z-index: 10; }
     .modern-table td { padding: 12px; vertical-align: middle; border-top: 1px solid rgba(255, 255, 255, 0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
     .modern-table td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
     .modern-table td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: 1px solid rgba(255, 255, 255, 0.05); }
     
-    /* PILLS */
-    .mini-fix-container { display: flex; gap: 4px; justify-content: center; }
+    /* Pills & Badges */
+    .mini-fix-container { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
     .mini-fix-box { display: flex; align-items: center; justify-content: center; width: 38px; height: 24px; border-radius: 4px; font-size: 0.75rem; font-weight: 900; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    .diff-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; display: block; width: 100%; text-align: center; margin-bottom: 2px;}
     
-    /* SIDEBAR BUTTONS */
-    div[data-testid="stSidebar"] button { border-radius: 10px !important; height: 3em !important; font-family: 'Orbitron', sans-serif !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 1px !important; transition: all 0.3s ease !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")) { background-color: rgba(0, 255, 133, 0.05) !important; color: #00FF85 !important; border: 1px solid #00FF85 !important; }
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("All")):hover { background-color: rgba(0, 255, 133, 0.2) !important; box-shadow: 0 0 15px rgba(0, 255, 133, 0.3) !important; transform: translateY(-2px); }
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")) { background-color: rgba(255, 0, 85, 0.05) !important; color: #FF0055 !important; border: 1px solid #FF0055 !important; }
-    div[data-testid="stSidebar"] div.stButton > button:first-child:has(div:contains("Clear")):hover { background-color: rgba(255, 0, 85, 0.2) !important; box-shadow: 0 0 15px rgba(255, 0, 85, 0.3) !important; transform: translateY(-2px); }
-
-    /* MOBILE */
+    div[data-testid="stSidebar"] button { border-radius: 10px !important; height: 3em !important; font-family: 'Orbitron', sans-serif !important; font-weight: 700 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
+    
+    /* Mobile */
     @media only screen and (max-width: 768px) {
         h1 { font-size: 1.8rem !important; }
         .block-container { padding-top: 2rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
@@ -150,19 +67,88 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. LOAD DATA ---
+# --- 2. DATA OVERRIDE FUNCTIONS (HANDLE DOUBLE GAMEWEEKS) ---
+@st.cache_data(ttl=3600)
+def fetch_bootstrap():
+    try:
+        r = requests.get("https://fantasy.premierleague.com/api/bootstrap-static/", headers={'User-Agent': 'Mozilla/5.0'})
+        return r.json() if r.status_code == 200 else {}
+    except: return {}
+
+@st.cache_data(ttl=3600)
+def fetch_all_fixtures():
+    try:
+        r = requests.get("https://fantasy.premierleague.com/api/fixtures/", headers={'User-Agent': 'Mozilla/5.0'})
+        return r.json() if r.status_code == 200 else []
+    except: return []
+
+# Get Core Data
+bootstrap = fetch_bootstrap()
+raw_fixtures = fetch_all_fixtures()
+
+# Mappings
+teams = bootstrap.get('teams', [])
+id_to_name = {t['id']: t['name'] for t in teams}
+id_to_short = {t['id']: t['short_name'] for t in teams}
+id_to_code = {t['id']: t['code'] for t in teams}
+name_to_id = {t['name']: t['id'] for t in teams}
+
+# Determine Current GW
+events = bootstrap.get('events', [])
+current_gw_obj = next((e for e in events if e['is_next']), events[0] if events else None)
+current_gw_id = current_gw_obj['id'] if current_gw_obj else 1
+gw_name_str = current_gw_obj['name'] if current_gw_obj else "Gameweek 1"
+deadline_str = current_gw_obj['deadline_time'] if current_gw_obj else ""
+
+# Process Upcoming Fixtures (Handling Doubles)
+# Structure: team_upcoming[team_name] = [ {event: 26, opp: 'LIV', diff: 4, is_home: True}, {event: 26, opp: 'ARS', ...} ]
+team_upcoming = defaultdict(list)
+gw_fixtures_display = [] # For widget
+
+for f in raw_fixtures:
+    if f['event'] is None: continue
+    
+    # For Widget (Current GW Only)
+    if f['event'] == current_gw_id:
+        h_name = id_to_name.get(f['team_h'])
+        a_name = id_to_name.get(f['team_a'])
+        h_code = id_to_code.get(f['team_h'])
+        a_code = id_to_code.get(f['team_a'])
+        gw_fixtures_display.append({
+            'home_name': id_to_short.get(f['team_h']), 'away_name': id_to_short.get(f['team_a']),
+            'home_code': h_code, 'away_code': a_code,
+            'iso_time': f['kickoff_time']
+        })
+
+    # For Player Table & Ticker (Next 5 GWs)
+    if f['event'] >= current_gw_id:
+        h_team = id_to_name.get(f['team_h'])
+        a_team = id_to_name.get(f['team_a'])
+        
+        # Home Team perspective
+        team_upcoming[h_team].append({
+            'event': f['event'],
+            'opp': id_to_short.get(f['team_a']) + " (H)",
+            'diff': f['team_h_difficulty'],
+            'kickoff': f['kickoff_time']
+        })
+        # Away Team perspective
+        team_upcoming[a_team].append({
+            'event': f['event'],
+            'opp': id_to_short.get(f['team_h']) + " (A)",
+            'diff': f['team_a_difficulty'],
+            'kickoff': f['kickoff_time']
+        })
+
+# Sort upcoming fixtures by date for each team
+for t in team_upcoming:
+    team_upcoming[t].sort(key=lambda x: x['kickoff'])
+
+# --- LOAD MAIN PLAYER DATA ---
 df = db.fetch_main_data()
 df = df.fillna(0)
 
-# Create Mappings for Real Data Fetching
-if 'team_code' in df.columns:
-    id_to_code_map = df[['team', 'team_code']].drop_duplicates().set_index('team')['team_code'].to_dict()
-    id_to_name_map = df[['team', 'team_name']].drop_duplicates().set_index('team')['team_name'].to_dict()
-else:
-    id_to_code_map = {}
-    id_to_name_map = {}
-
-# Calculate Metrics
+# Metrics Calculation
 df['matches_played'] = df['matches_played'].replace(0, 1)
 df['minutes'] = df['minutes'].replace(0, 1)
 df['avg_minutes'] = df['minutes'] / df['matches_played']
@@ -170,543 +156,248 @@ df['xgi_per_90'] = (df['xgi'] / df['minutes']) * 90
 df['xgc_per_90'] = (df['xgc'] / df['minutes']) * 90
 df['dc_per_90'] = (df['def_cons'] / df['minutes']) * 90
 df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
-
 ep_map = db.get_expected_points_map()
 df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
-# --- ROBUST TEAM MAPPING FETCHER ---
-@st.cache_data(ttl=86400)
-def get_fpl_team_map():
-    try:
-        url = "https://fantasy.premierleague.com/api/bootstrap-static/"
-        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
-        if r.status_code == 200:
-            data = r.json()
-            mapping = {}
-            for t in data['teams']:
-                mapping[t['id']] = {'code': t['code'], 'short_name': t['short_name']}
-            return mapping
-    except:
-        pass
-    return {}
-
-# --- REAL HISTORY DATA FETCHER ---
+# --- HISTORY FETCHING (UNCHANGED) ---
 @st.cache_data(ttl=3600)
-def get_real_player_history(player_id, team_map):
+def get_real_player_history(player_id, _team_map):
     try:
-        url = f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/"
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        r = requests.get(url, headers=headers)
-        
-        if r.status_code != 200:
-            return []
-            
+        r = requests.get(f"https://fantasy.premierleague.com/api/element-summary/{int(player_id)}/", headers={'User-Agent': 'Mozilla/5.0'})
+        if r.status_code != 200: return []
         data = r.json()
-        history = data.get('history', [])
-        last_5 = history[-5:]
-        
-        formatted_history = []
-        for match in last_5:
-            gw = match['round']
-            opp_id = match['opponent_team']
-            pts = match['total_points']
-            
-            team_info = team_map.get(opp_id, {'code': 0, 'short_name': 'UNK'})
-            opp_name = team_info['short_name']
-            opp_code = team_info['code']
-            
-            color = "#F0F0F0"
-            text_color = "#333"
-            if pts >= 7: 
-                color = "#00FF85" 
-                text_color = "#000"
-            elif pts <= 2: 
-                color = "#EBEBEB" 
-                text_color = "#333"
-            else: 
-                color = "#FFCC00" 
-                text_color = "#000"
-                
-            formatted_history.append({
-                "gw": f"GW{gw}",
-                "opp_code": opp_code,
-                "opp_name": opp_name,
-                "pts": pts,
-                "color": color,
-                "text_color": text_color
+        history = data.get('history', [])[-5:]
+        formatted = []
+        for m in history:
+            opp_info = _team_map.get(m['opponent_team'], {'code': 0, 'short_name': 'UNK'})
+            pts = m['total_points']
+            color = "#00FF85" if pts >= 7 else "#EBEBEB" if pts <= 2 else "#FFCC00"
+            formatted.append({
+                "gw": f"GW{m['round']}", "opp_code": opp_info['code'], "opp_name": opp_info['short_name'],
+                "pts": pts, "color": color, "text_color": "#000" if pts >= 3 else "#333"
             })
-        return formatted_history
-    except Exception as e:
-        return []
+        return formatted
+    except: return []
 
 def render_player_profile(player_row):
-    fpl_team_map = get_fpl_team_map()
-    history = get_real_player_history(player_row['player_id'], fpl_team_map)
-    t_code = db.get_team_map().get(player_row['team_name'], 0)
+    hist = get_real_player_history(player_row['player_id'], {t['id']: {'code': t['code'], 'short_name': t['short_name']} for t in teams})
+    t_code = id_to_code.get(name_to_id.get(player_row['team_name']), 0)
+    h_html = ""
+    if hist:
+        for h in hist:
+            h_html += f"""<div style="flex: 1; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; min-width: 70px;"><span style="color: #AAA; font-size: 0.7rem; margin-bottom: 5px;">{h['gw']}</span><img src="https://resources.premierleague.com/premierleague/badges/50/t{h['opp_code']}.png" style="width: 30px; margin-bottom: 5px;"><span style="color: #FFF; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">{h['opp_name']}</span><div style="background-color: {h['color']}; color: {h['text_color']}; border-radius: 12px; padding: 2px 10px; font-weight: 900; font-size: 0.9rem;">{h['pts']}pts</div></div>"""
+    else: h_html = "<div style='color: #AAA;'>No history.</div>"
     
-    history_html = ""
-    if history:
-        for h in history:
-            opp_badge = f"https://resources.premierleague.com/premierleague/badges/50/t{h['opp_code']}.png"
-            history_html += f"""<div style="flex: 1; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; min-width: 70px;"><span style="color: #AAA; font-size: 0.7rem; margin-bottom: 5px;">{h['gw']}</span><img src="{opp_badge}" style="width: 30px; margin-bottom: 5px;"><span style="color: #FFF; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px;">{h['opp_name']}</span><div style="background-color: {h['color']}; color: {h['text_color']}; border-radius: 12px; padding: 2px 10px; font-weight: 900; font-size: 0.9rem;">{h['pts']}pts</div></div>"""
-    else:
-        history_html = "<div style='color: #AAA; padding: 10px;'>No match history available.</div>"
+    st.markdown(f"""<div style="background: linear-gradient(180deg, rgba(20,0,30,1) 0%, rgba(40,0,50,1) 100%); border: 1px solid #00FF85; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 133, 0.2);"><div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;"><div style="display: flex; align-items: center; gap: 20px;"><div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 2px solid #00FF85; background: #FFF;"><img src="https://resources.premierleague.com/premierleague/badges/50/t{t_code}.png" style="width: 100%; height: 100%; object-fit: cover; padding: 10px;"></div><div><h2 style="margin: 0; color: #FFF; font-size: 1.8rem;">{player_row['web_name']}</h2><p style="margin: 0; color: #00FF85; font-size: 1rem; font-weight: bold;">{player_row['team_name']} | {player_row['position']}</p></div></div><div style="text-align: right;"><div style="font-size: 0.9rem; color: #AAA;">Current Price</div><div style="font-size: 2rem; font-weight: 900; color: #FFF;">£{player_row['cost']}</div></div></div><div style="margin-top: 25px;"><h4 style="color: #FFF; font-family: 'Orbitron', sans-serif; margin-bottom: 15px;">Form (Last 5 Matches)</h4><div style="display: flex; gap: 10px; justify-content: space-between; overflow-x: auto;">{h_html}</div></div></div>""", unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div style="background: linear-gradient(180deg, rgba(20,0,30,1) 0%, rgba(40,0,50,1) 100%); border: 1px solid #00FF85; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 255, 133, 0.2);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 2px solid #00FF85; background: #FFF;">
-                    <img src="https://resources.premierleague.com/premierleague/badges/50/t{t_code}.png" style="width: 100%; height: 100%; object-fit: cover; padding: 10px;">
-                </div>
-                <div>
-                    <h2 style="margin: 0; color: #FFF; font-size: 1.8rem;">{player_row['web_name']}</h2>
-                    <p style="margin: 0; color: #00FF85; font-size: 1rem; font-weight: bold;">{player_row['team_name']} | {player_row['position']}</p>
-                </div>
-            </div>
-            <div style="text-align: right;">
-                <div style="font-size: 0.9rem; color: #AAA;">Current Price</div>
-                <div style="font-size: 2rem; font-weight: 900; color: #FFF;">£{player_row['cost']}</div>
-            </div>
-        </div>
-        <div style="margin-top: 25px;">
-            <h4 style="color: #FFF; font-family: 'Orbitron', sans-serif; margin-bottom: 15px;">Form (Last 5 Matches)</h4>
-            <div style="display: flex; gap: 10px; justify-content: space-between; overflow-x: auto;">
-                {history_html}
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# --- SIDEBAR ---
+# --- SIDEBAR FILTERS ---
 with st.sidebar:
-    if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-        st.image("fpl_metric_logo.png", use_container_width=True)
-    
+    if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: st.image("fpl_metric_logo.png", use_container_width=True)
     st.header("Filters")
     all_teams = sorted(df['team_name'].unique())
     if 'team_selection' not in st.session_state: st.session_state['team_selection'] = all_teams
-    def select_all_teams(): st.session_state['team_selection'] = all_teams
-    def deselect_all_teams(): st.session_state['team_selection'] = []
-    
-    col_sel, col_desel = st.columns(2)
-    with col_sel: st.button("✅ All", on_click=select_all_teams, use_container_width=True)
-    with col_desel: st.button("❌ Clear", on_click=deselect_all_teams, use_container_width=True)
-    
-    with st.form("filter_form"):
-        st.caption("Adjust filters and click 'Apply'.")
-        selected_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
-        position = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
-        exclude_unavailable = st.checkbox("Exclude Unavailable (Red Flags)", value=False)
-        max_price = st.slider("Max Price (£)", 3.8, 15.1, 15.1, 0.1)
-        max_owner = st.slider("Max Ownership (%)", 0.0, 100.0, 100.0, 0.5)
-        st.subheader("Performance")
-        min_mpg = st.slider("Min Minutes Per Game", 0, 90, 0, 5)
-        min_ppg = st.slider("Min Points Per Game", 0.0, 10.0, 0.0, 0.1)
-        min_dc90 = st.slider("Min Def. Contributions / 90", 0.0, 15.0, 0.0, 0.5)
-        submitted = st.form_submit_button("Apply Filters", use_container_width=True)
+    def select_all(): st.session_state['team_selection'] = all_teams
+    def clear_all(): st.session_state['team_selection'] = []
+    c1, c2 = st.columns(2)
+    with c1: st.button("✅ All", on_click=select_all, use_container_width=True)
+    with c2: st.button("❌ Clear", on_click=clear_all, use_container_width=True)
+    with st.form("f"):
+        s_teams = st.multiselect("Teams", all_teams, default=all_teams, key='team_selection')
+        pos = st.multiselect("Position", ["GKP", "DEF", "MID", "FWD"], default=["DEF", "MID", "FWD"])
+        ex_un = st.checkbox("Exclude Red Flags")
+        mx_p = st.slider("Max Price", 3.5, 15.0, 15.0, 0.1)
+        mx_o = st.slider("Max Own%", 0, 100, 100)
+        st.subheader("Stats")
+        mn_mpg = st.slider("Min Mins", 0, 90, 0)
+        mn_ppg = st.slider("Min PPG", 0.0, 10.0, 0.0)
+        mn_dc = st.slider("Min DC/90", 0.0, 10.0, 0.0)
+        st.form_submit_button("Apply")
 
-    st.markdown("---")
-    st.markdown("""<a href="https://www.buymeacoffee.com/fplmetric" target="_blank" class="bmc-button"><img src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg" alt="Buy me a coffee" class="bmc-logo"><span>Buy me a coffee</span></a>""", unsafe_allow_html=True)
-
-# --- FILTER LOGIC ---
 df = df[df['minutes'] >= 90]
-if exclude_unavailable:
-    df = df[~df['status'].isin(['i', 'u', 'n', 's'])]
+if ex_un: df = df[~df['status'].isin(['i','u','n','s'])]
+filtered = df[(df['team_name'].isin(s_teams)) & (df['position'].isin(pos)) & (df['cost']<=mx_p) & (df['selected_by_percent']<=mx_o) & (df['avg_minutes']>=mn_mpg) & (df['points_per_game']>=mn_ppg) & (df['dc_per_90']>=mn_dc)]
 
-filtered = df[
-    (df['team_name'].isin(selected_teams)) & 
-    (df['position'].isin(position)) &
-    (df['cost'] <= max_price) & 
-    (df['selected_by_percent'] <= max_owner) &
-    (df['avg_minutes'] >= min_mpg) & 
-    (df['points_per_game'] >= min_ppg) & 
-    (df['dc_per_90'] >= min_dc90)
-]
-
-# --- MAIN DISPLAY ---
+# --- MAIN UI ---
 if "fpl_metric_logo.png" in [f.name for f in os.scandir(".")]: 
-    col_l, col_m, col_r = st.columns([3, 2, 3]) 
-    with col_m: 
-        st.image("fpl_metric_logo.png", use_container_width=True)
+    _, cm, _ = st.columns([3, 2, 3])
+    with cm: st.image("fpl_metric_logo.png", use_container_width=True)
 
-# =========================================================================
-# 📅 DEADLINE & FIXTURES WIDGET
-# =========================================================================
-gw_name, deadline_iso, fixtures_data = db.get_next_gw_data()
-
-if gw_name and deadline_iso:
-    fixtures_json = json.dumps(fixtures_data)
-    combined_html = f"""
+# FIXTURE WIDGET
+if gw_fixtures_display:
+    fix_json = json.dumps(gw_fixtures_display)
+    comp_html = f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;700&display=swap');
-        .widget-container {{ margin-bottom: 0px; font-family: 'Roboto', sans-serif; }}
-        ::-webkit-scrollbar {{ width: 6px; }}
-        ::-webkit-scrollbar-thumb {{ background: #00FF85; border-radius: 3px; }}
-        ::-webkit-scrollbar-track {{ background: rgba(0,0,0,0.2); }}
-        .deadline-box {{
-            background: linear-gradient(135deg, #1a001e 0%, #37003c 100%);
-            border: 1px solid #00FF85; border-top-left-radius: 12px; border-top-right-radius: 12px;
-            padding: 15px; text-align: center; color: white; border-bottom: none;
-        }}
-        .label {{ color: #00FF85; font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; font-family: 'Orbitron', sans-serif; }}
-        .timer {{ font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; font-family: 'Orbitron', sans-serif; }}
-        .sub {{ font-size: 0.85rem; color: #BBB; margin-top: 5px; }}
-        .fix-container {{
-            border: 1px solid #00FF85; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
-            overflow: hidden; background-color: rgba(255, 255, 255, 0.02);
-        }}
-        .fix-header {{
-            background: linear-gradient(90deg, rgba(55,0,60,0.9) 0%, rgba(30,30,30,0.9) 100%);
-            padding: 10px 20px; font-weight: 700; color: #00FF85;
-            text-align: center; font-family: 'Orbitron', sans-serif;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            border-bottom: 1px solid #00FF85;
-        }}
-        .content {{ padding: 20px; }}
-        .match-grid {{ display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }}
-        .match-card {{
-            background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            cursor: pointer;
-            flex: 1 1 280px; max-width: 350px;
-            min-width: 280px; 
-        }}
-        .match-card:hover {{ 
-            border-color: #00FF85; background-color: rgba(0, 255, 133, 0.05);
-            transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0, 255, 133, 0.2);
-        }}
-        .team-col {{ display: flex; flex-direction: column; align-items: center; width: 60px; }}
-        .team-logo {{ width: 35px; height: 35px; object-fit: contain; margin-bottom: 5px; }}
-        .team-name {{ font-size: 0.75rem; font-weight: 700; text-align: center; color: #FFF; }}
-        .match-info {{ display: flex; flex-direction: column; align-items: center; color: #AAA; }}
-        .match-time {{ font-size: 1rem; font-weight: 700; color: #00FF85; font-family: 'Orbitron', sans-serif; }}
-        .match-date {{ font-size: 0.7rem; text-transform: uppercase; }}
-
-        @media only screen and (max-width: 768px) {{
-            .fix-container .content {{
-                max-height: 500px;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-                padding-bottom: 15px; 
-            }}
-            .match-grid {{
-                flex-direction: column;
-                align-items: stretch;
-                flex-wrap: nowrap;
-                gap: 10px;
-            }}
-            .match-card {{
-                width: 100%;
-                min-width: 0;
-                max-width: none;
-            }}
-        }}
+        .w {{ font-family: 'Roboto', sans-serif; }}
+        .d {{ background: linear-gradient(135deg, #1a001e 0%, #37003c 100%); border: 1px solid #00FF85; border-radius: 12px 12px 0 0; padding: 15px; text-align: center; color: white; }}
+        .lbl {{ color: #00FF85; font-weight: 700; letter-spacing: 2px; }}
+        .tm {{ font-size: 2rem; font-weight: 900; font-family: 'Orbitron'; margin: 0; }}
+        .cnt {{ background: rgba(255,255,255,0.02); border: 1px solid #00FF85; border-top: none; border-radius: 0 0 12px 12px; padding: 15px; }}
+        .grd {{ display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }}
+        .c {{ background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center; width: 280px; }}
+        .tc {{ display: flex; flex-direction: column; align-items: center; width: 60px; }}
+        .tn {{ font-size: 0.75rem; font-weight: 700; color: #FFF; }}
+        .mi {{ display: flex; flex-direction: column; align-items: center; color: #AAA; font-size: 0.8rem; }}
+        .mt {{ color: #00FF85; font-weight: 700; font-family: 'Orbitron'; }}
+        @media(max-width:768px){{ .cnt {{ max-height: 400px; overflow-y: auto; }} .c {{ width: 100%; }} }}
     </style>
-    
-    <div class="widget-container">
-        <div class="deadline-box">
-            <div class="label">{gw_name} DEADLINE</div>
-            <div id="timer" class="timer">Loading...</div>
-            <div id="sub" class="sub"></div>
-        </div>
-        <div class="fix-container">
-            <div class="fix-header">View {gw_name} Fixtures (Your Local Time)</div>
-            <div class="content">
-                <div class="match-grid" id="grid"></div>
-            </div>
-        </div>
+    <div class="w">
+        <div class="d"><div class="lbl">{gw_name_str} DEADLINE</div><div id="t" class="tm">--:--:--</div></div>
+        <div class="cnt"><div class="grd" id="g"></div></div>
     </div>
-
     <script>
-        var deadline = new Date("{deadline_iso}").getTime();
-        var dateOpts = {{ weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }};
-        var subEl = document.getElementById("sub");
-        if(subEl) subEl.innerText = new Date("{deadline_iso}").toLocaleDateString(undefined, dateOpts) + " (Local)";
+        var d = new Date("{deadline_str}").getTime();
         setInterval(function() {{
-            var now = new Date().getTime();
-            var t = deadline - now;
-            var timerEl = document.getElementById("timer");
-            if(timerEl) {{
-                if (t < 0) {{
-                    timerEl.innerHTML = "DEADLINE PASSED";
-                    timerEl.style.color = "#FF0055";
-                }} else {{
-                    var d = Math.floor(t / (1000 * 60 * 60 * 24));
-                    var h = Math.floor((t % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    var m = Math.floor((t % (1000 * 60 * 60)) / (1000 * 60));
-                    var s = Math.floor((t % (1000 * 60)) / 1000);
-                    timerEl.innerHTML = d + "d " + h + "h " + m + "m " + s + "s ";
-                }}
+            var n = new Date().getTime();
+            var t = d - n;
+            var el = document.getElementById("t");
+            if(t<0) {{ el.innerHTML = "DEADLINE PASSED"; el.style.color="#FF0055"; }}
+            else {{
+                var days = Math.floor(t/(1000*60*60*24));
+                var hrs = Math.floor((t%(1000*60*60*24))/(1000*60*60));
+                var mins = Math.floor((t%(1000*60*60))/(1000*60));
+                el.innerHTML = days + "d " + hrs + "h " + mins + "m";
             }}
         }}, 1000);
-        var fixtures = {fixtures_json};
-        var grid = document.getElementById("grid");
-        if(grid) {{
-            fixtures.forEach(f => {{
-                var d = new Date(f.iso_time);
-                var timeStr = d.toLocaleTimeString([], {{hour: '2-digit', minute:'2-digit'}});
-                var dateStr = d.toLocaleDateString([], {{weekday: 'short', day: 'numeric', month: 'short'}});
-                var h_img = "https://resources.premierleague.com/premierleague/badges/50/t" + f.home_code + ".png";
-                var a_img = "https://resources.premierleague.com/premierleague/badges/50/t" + f.away_code + ".png";
-                var card = `
-                <div class="match-card">
-                    <div class="team-col"><img src="${{h_img}}" class="team-logo"><span class="team-name">${{f.home_name}}</span></div>
-                    <div class="match-info"><span class="match-time">${{timeStr}}</span><span class="match-date">${{dateStr}}</span></div>
-                    <div class="team-col"><img src="${{a_img}}" class="team-logo"><span class="team-name">${{f.away_name}}</span></div>
-                </div>`;
-                grid.innerHTML += card;
-            }});
-        }}
+        var fx = {fix_json};
+        var g = document.getElementById("g");
+        fx.forEach(f => {{
+            var dt = new Date(f.iso_time);
+            var ts = dt.toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
+            var ds = dt.toLocaleDateString([], {{weekday:'short', day:'numeric'}});
+            g.innerHTML += `<div class="c"><div class="tc"><img src="https://resources.premierleague.com/premierleague/badges/50/t${{f.home_code}}.png" width="30"><span class="tn">${{f.home_name}}</span></div><div class="mi"><span class="mt">${{ts}}</span><span>${{ds}}</span></div><div class="tc"><img src="https://resources.premierleague.com/premierleague/badges/50/t${{f.away_code}}.png" width="30"><span class="tn">${{f.away_name}}</span></div></div>`;
+        }});
     </script>
     """
-    n_fixtures = len(fixtures_data)
-    n_rows = (n_fixtures + 2) // 3  
-    widget_height = 180 + (n_rows * 95) 
-    components.html(combined_html, height=widget_height, scrolling=False)
-else:
-    st.info("No fixtures found for next Gameweek.")
+    components.html(comp_html, height=400, scrolling=False)
 
-st.markdown("""<div style="text-align: center; margin-bottom: 50px; margin-top: 10px;"><h1 style="font-size: 2.8rem; font-weight: 900; background: linear-gradient(to right, #00FF85, #FFFFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; font-family: 'Orbitron', sans-serif;">FPL Metric Scouting Dashboard</h1></div>""", unsafe_allow_html=True)
+st.markdown("""<h1 style='text-align: center; background: linear-gradient(to right, #00FF85, #FFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>FPL Metric Dashboard</h1>""", unsafe_allow_html=True)
 
-st.markdown(
-    """
-    <div class="scout-tip">
-        <span style="color: #E0E0E0; font-size: 1rem; font-family: 'Roboto', sans-serif;">
-            <strong style="color: #00FF85;">SCOUT'S TIP:</strong> 
-            Can't find a player? Open the <strong style="color: #fff; text-decoration: underline decoration-color: #00FF85;">Sidebar</strong> to filter by Team, Position, Price, PPG, Mins/Game, and Work Rate. 
-            <br>Use the search box to view a player's detailed history.
-        </span>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-col1, col2, col3, col4 = st.columns(4)
+# METRICS
+c1,c2,c3,c4 = st.columns(4)
 if not filtered.empty:
-    best_xgi = filtered.sort_values('xgi', ascending=False).iloc[0]
-    best_dc = filtered.sort_values('dc_per_90', ascending=False).iloc[0]
-    best_val = filtered.sort_values('value_season', ascending=False).iloc[0]
-    best_ppg = filtered.sort_values('points_per_game', ascending=False).iloc[0]
+    def crd(t, n, v): return f"""<div style="background:rgba(255,255,255,0.03); border:1px solid #00FF85; border-radius:10px; padding:15px; text-align:center;"><div style="color:#AAA; font-size:0.8rem; font-weight:700;">{t}</div><div style="font-size:1.2rem; font-weight:900;">{n}</div><div style="color:#00FF85; font-weight:bold;">{v}</div></div>"""
+    with c1: st.markdown(crd("Threat King", filtered.sort_values('xgi',0).iloc[0]['web_name'], filtered.sort_values('xgi',0).iloc[0]['xgi']), unsafe_allow_html=True)
+    with c2: st.markdown(crd("Work Rate", filtered.sort_values('dc_per_90',0).iloc[0]['web_name'], round(filtered.sort_values('dc_per_90',0).iloc[0]['dc_per_90'],2)), unsafe_allow_html=True)
+    with c3: st.markdown(crd("Best Value", filtered.sort_values('value_season',0).iloc[0]['web_name'], filtered.sort_values('value_season',0).iloc[0]['value_season']), unsafe_allow_html=True)
+    with c4: st.markdown(crd("Best PPG", filtered.sort_values('points_per_game',0).iloc[0]['web_name'], filtered.sort_values('points_per_game',0).iloc[0]['points_per_game']), unsafe_allow_html=True)
 
-    def metric_card(title, name, value, icon):
-        return f"""
-        <div style="
-            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
-            border: 1px solid rgba(0, 255, 133, 0.4);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            height: 100%;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        " onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 5px 15px rgba(0, 255, 133, 0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.1)';">
-            <div style="font-size: 1.5rem; margin-bottom: 5px;">{icon}</div>
-            <div style="color: #AAAAAA; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-family: 'Orbitron', sans-serif;">{title}</div>
-            <div style="color: #FFFFFF; font-size: 1.2rem; font-weight: 900; line-height: 1.2;">{name}</div>
-            <div style="background-color: rgba(0, 255, 133, 0.15); color: #00FF85; padding: 4px 12px; border-radius: 12px; font-size: 0.9rem; font-weight: bold; margin-top: 8px; border: 1px solid rgba(0, 255, 133, 0.3);">
-                {value}
-            </div>
-        </div>
-        """
-
-    with col1: st.markdown(metric_card("Threat King (xGI)", best_xgi['web_name'], f"{best_xgi['xgi']}", ""), unsafe_allow_html=True)
-    with col2: st.markdown(metric_card("Work Rate (DC/90)", best_dc['web_name'], f"{best_dc['dc_per_90']:.2f}", ""), unsafe_allow_html=True)
-    with col3: st.markdown(metric_card("Best Value", best_val['web_name'], f"{best_val['value_season']}", ""), unsafe_allow_html=True)
-    with col4: st.markdown(metric_card("Best PPG", best_ppg['web_name'], f"{best_ppg['points_per_game']}", ""), unsafe_allow_html=True)
-
-# --- REFACTORED RENDER FUNCTION (CONTROLS IN ONE ROW) ---
-def render_modern_table(dataframe, column_config, sort_key):
-    # 1. Layout: Sort (Left) | Search (Middle) | View Details (Right)
-    c_sort, c_search, c_view = st.columns([1, 1.5, 1.5])
+def render_table(df, cols, key):
+    c1, c2, c3 = st.columns([1, 1.5, 1.5])
+    with c1: 
+        s_lbl = st.selectbox("Sort by:", ["Price", "Ownership", "Matches", "Fixtures"] + list(cols.values()), key=key)
+        s_col = {v:k for k,v in cols.items()}.get(s_lbl, s_lbl.lower().replace("price","cost").replace("ownership","selected_by_percent").replace("matches","matches_played").replace("fixtures","fixture_ease"))
+    with c2: search = st.text_input("Find Player", key=f"s_{key}")
     
-    with c_sort:
-        sort_options = {"cost": "Price", "selected_by_percent": "Ownership", "matches_played": "Matches", "fixture_ease": "Fixtures"}
-        sort_options.update(column_config)
-        if "news" in sort_options: del sort_options["news"]
-        
-        options_keys = list(sort_options.keys())
-        options_labels = list(sort_options.values())
-        selected_label = st.selectbox(f"Sort by:", options_labels, key=sort_key)
-        selected_col = options_keys[options_labels.index(selected_label)]
-        
-    with c_search:
-        search_term = st.text_input("Find Player", placeholder="Type name...", label_visibility="visible", key=f"search_{sort_key}")
-
-    # 2. Filter Data
-    if search_term:
-        dataframe = dataframe[dataframe['web_name'].str.contains(search_term, case=False)]
-
-    # 3. Sorting (Perform this BEFORE dropdown to ensure order matches)
-    if selected_col == 'fixture_ease':
-        team_fixtures = db.get_team_upcoming_fixtures()
-        diff_map = {team: sum(f['diff'] for f in fixtures[:5]) for team, fixtures in team_fixtures.items()}
-        dataframe['fixture_ease'] = 30 - dataframe['team_name'].map(diff_map).fillna(25)
-
-    sorted_df = dataframe.sort_values(selected_col, ascending=False).head(100)
-
-    with c_view:
-        # Populate View Details Dropdown using the SORTED dataframe (sorted_df)
-        if sorted_df.empty:
-            player_opts = ["No players found"]
-        else:
-            # Use sorted_df here so the dropdown list matches the table order
-            player_opts = ["Select to view details..."] + sorted_df['web_name'].tolist()
-        
-        # If search matches exactly 1 player, default to them
-        idx = 0
-        if len(sorted_df) == 1:
-            idx = 1
-            
-        selected_player_name = st.selectbox("View Player Details", player_opts, index=idx, key=f"view_{sort_key}")
-
-    # 4. Render Profile (If selected)
-    if selected_player_name != "Select to view details..." and selected_player_name != "No players found":
-        p_row = sorted_df[sorted_df['web_name'] == selected_player_name]
-        if not p_row.empty:
-            render_player_profile(p_row.iloc[0])
-
-    if dataframe.empty:
-        st.info("No players match your filters.")
-        return
+    if search: df = df[df['web_name'].str.contains(search, case=False)]
     
-    # 5. Render Table
-    team_map = db.get_team_map()
-    team_fixtures = db.get_team_upcoming_fixtures()
+    # Calculate Fixture Ease (Handling DGWs by summing difficulty)
+    if s_col == 'fixture_ease':
+        # Lower sum = easier. So invert for descending sort.
+        # Sum diff of next 5 games. If DGW, it adds both.
+        ease_map = {}
+        for t, fixs in team_upcoming.items():
+            # Sum difficulty of first 5 fixtures found
+            total_diff = sum(f['diff'] for f in fixs[:5])
+            ease_map[t] = 30 - total_diff # Max diff approx 25. 
+        df['fixture_ease'] = df['team_name'].map(ease_map).fillna(0)
+
+    sorted_df = df.sort_values(s_col, ascending=False).head(100)
     
-    base_headers = ["Player", "Next 5", "Price", "Own%", "Matches"]
-    dynamic_headers = list(column_config.values())
-    all_headers = base_headers + dynamic_headers
-    header_html = "".join([f"<th>{h}</th>" for h in all_headers])
+    with c3:
+        p_opts = ["Select..."] + sorted_df['web_name'].tolist()
+        sel_p = st.selectbox("Details", p_opts, index=1 if len(sorted_df)==1 else 0, key=f"v_{key}")
     
-    fdr_colors = {1: '#375523', 2: '#00FF85', 3: '#EBEBEB', 4: '#FF0055', 5: '#680808'}
-    fdr_text = {1: 'white', 2: 'black', 3: 'black', 4: 'white', 5: 'white'}
+    if sel_p != "Select...":
+        render_player_profile(sorted_df[sorted_df['web_name']==sel_p].iloc[0])
+
+    # Table HTML generation
+    heads = "".join([f"<th>{h}</th>" for h in ["Player", "Next 5"] + ["Price", "Own%", "Matches"] + list(cols.values())])
+    rows = ""
+    fdr = {1:'#375523', 2:'#00FF85', 3:'#EBEBEB', 4:'#FF0055', 5:'#680808'}
     
-    html_rows = ""
-    for _, row in sorted_df.iterrows():
-        t_code = team_map.get(row['team_name'], 0)
-        logo_img = f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"
+    for _, r in sorted_df.iterrows():
+        t_code = id_to_code.get(name_to_id.get(r['team_name']), 0)
+        # Next 5 Fixtures Logic (Handle Doubles)
+        # Get next 5 fixtures from our global map
+        my_fixs = team_upcoming.get(r['team_name'], [])[:5] 
         
-        status = row['status']
-        row_style = ""
-        border_color = "rgba(255, 255, 255, 0.05)"
-        
-        if status in ['i', 'u', 'n', 's']: 
-            row_style = 'background-color: rgba(255, 0, 85, 0.15);' 
-            border_color = "#FF0055"
-        elif status == 'd': 
-            row_style = 'background-color: rgba(255, 204, 0, 0.15);' 
-            border_color = "#FFCC00"
-        else:
-            row_style = 'background-color: rgba(255, 255, 255, 0.03);' 
-            
-        status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
-        if status in ['i', 'u', 'n', 's']: status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
-        elif status == 'd': status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
-        
-        html_rows += f"""<tr style="{row_style} border-left: 4px solid {border_color};">
-        <td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 10px;">{status_dot}</div><img src="{logo_img}" style="width: 35px;">
-            <div style="display: flex; flex-direction: column;"><span style="font-weight: bold; color: #FFF;">{row['web_name']}</span><span style="font-size: 0.8rem; color: #AAA;">{row['team_name']} | {row['position']}</span></div>
-        </div></td>"""
-        
-        my_fixtures = team_fixtures.get(row['team_name'], [])
         fix_html = '<div class="mini-fix-container">'
-        for f in my_fixtures:
-            bg, txt = fdr_colors.get(f['diff'], '#333'), fdr_text.get(f['diff'], 'white')
-            fix_html += f'<div class="mini-fix-box" style="background-color: {bg}; color: {txt}; min-width: 38px; text-align: center;">{f["opp"]}</div>'
+        for f in my_fixs:
+            bg = fdr.get(f['diff'], '#333')
+            txt = 'white' if f['diff'] in [1,4,5] else 'black'
+            # DGW Check: If multiple games in same event have passed, loop handles it.
+            # Visual: Just stack them all.
+            fix_html += f'<div class="mini-fix-box" style="background:{bg}; color:{txt};" title="GW{f["event"]}">{f["opp"]}</div>'
         fix_html += '</div>'
-        html_rows += f'<td style="text-align: center;">{fix_html}</td>'
         
-        for col_name in ['cost', 'selected_by_percent', 'matches_played'] + list(column_config.keys()):
-            val = row[col_name]
-            if isinstance(val, float): val = f"{val:.2f}"
-            if col_name == 'cost': val = f"£{float(val):.1f}"
-            elif col_name == 'selected_by_percent': val = f"{val}%"
-            elif col_name in ['matches_played', 'avg_minutes', 'total_points', 'goals_scored', 'assists', 'clean_sheets', 'goals_conceded']: val = int(float(val))
+        # Stats columns
+        stats_html = ""
+        for k in ['cost', 'selected_by_percent', 'matches_played'] + list(cols.keys()):
+            val = r[k]
+            if k == 'cost': val = f"£{val}"
+            elif k == 'selected_by_percent': val = f"{val}%"
+            elif isinstance(val, float): val = f"{val:.1f}"
+            stats_html += f"<td style='text-align:center;'>{val}</td>"
             
-            style = "text-align: center;"
-            if col_name == selected_col: style += " font-weight: bold; color: #00FF85;"
-            html_rows += f"""<td style="{style}">{val}</td>"""
-        html_rows += "</tr>"
+        rows += f"""<tr style="background:rgba(255,255,255,0.03);">
+        <td style="padding-left:10px;"><div style="display:flex;align-items:center;gap:10px;"><img src="https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png" width="30"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem;color:#AAA;">{r['team_name']}</span></div></div></td>
+        <td style="text-align:center;">{fix_html}</td>
+        {stats_html}</tr>"""
+        
+    st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr>{heads}</tr></thead><tbody>{rows}</tbody></table></div>""", unsafe_allow_html=True)
 
-    st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr>{header_html}</tr></thead><tbody>{html_rows}</tbody></table></div>""", unsafe_allow_html=True)
+t1, t2, t3, t4 = st.tabs(["Overview", "Attack", "Defense", "Work Rate"])
+with t1: render_table(filtered, {"ep_next":"XP", "total_points":"Pts", "points_per_game":"PPG"}, "t1")
+with t2: render_table(filtered, {"xgi":"xGI", "goals_scored":"Goals", "assists":"Assists"}, "t2")
+with t3: render_table(filtered, {"clean_sheets":"CS", "xgc":"xGC", "goals_conceded":"GC"}, "t3")
+with t4: render_table(filtered, {"dc_per_90":"DC/90", "tackles":"Tackles", "cbi":"CBI"}, "t4")
 
-tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Attack", "Defense", "Work Rate"])
-with tab1: render_modern_table(filtered, { "ep_next": "XP", "total_points": "Pts", "points_per_game": "PPG", "avg_minutes": "Mins/Gm", "news": "News" }, "sort_ov")
-with tab2: render_modern_table(filtered, { "xg": "xG", "xa": "xA", "xgi": "xGI", "xgi_per_90": "xGI/90", "goals_scored": "Goals", "assists": "Assists" }, "sort_att")
-with tab3: render_modern_table(filtered, { "clean_sheets": "Clean Sheets", "goals_conceded": "Conceded", "xgc": "xGC", "xgc_per_90": "xGC/90" }, "sort_def")
-with tab4: render_modern_table(filtered, { "def_cons": "Total DC", "dc_per_90": "DC/90", "tackles": "Tackles", "tackles_per_90": "Tackles/90", "cbi": "CBI" }, "sort_wr")
-
-st.markdown("---") 
+# --- TICKER (DOUBLE GAMEWEEK HANDLING) ---
+st.markdown("---")
 st.header("Fixture Difficulty Ticker")
-current_next_gw = db.get_next_gameweek_id()
-horizon_opts = ["Next 2 GWs", "Next 3 GWs", "Next 4 GWs", "Next 5 GWs", "Next 6 GWs", "Next 7 GWs", "Next 8 GWs"] + [f"GW {current_next_gw+i}" for i in range(5)]
-c1, c2, c3 = st.columns(3)
-with c1: s_order = st.selectbox("Sort Order", ["Easiest", "Hardest", "Alphabetical"])
-with c2: v_type = st.selectbox("Type", ["Overall", "Attack", "Defence"])
-with c3: horizon = st.selectbox("Horizon", horizon_opts)
+# Build Ticker Dataframe
+# Rows: Teams. Cols: Next 5 GWs. Cells: Badge(s) if single/double.
+ticker_data = []
+# Identify next 5 distinct GW IDs
+next_5_gw_ids = sorted(list(set(f['event'] for t in team_upcoming for f in team_upcoming[t])))[:5]
 
-if horizon.startswith("Next"):
-    n_gws = int(horizon.split(" ")[1])
-    s_gw = current_next_gw
-    e_gw = current_next_gw + n_gws - 1
-else:
-    s_gw = e_gw = int(horizon.split(" ")[1])
-
-t_df = db.get_fixture_ticker(s_gw, e_gw)
-if s_order == "Alphabetical": t_df = t_df.sort_values('Team')
-else:
-    s_col = "Diff_Attack" if v_type == "Attack" else "Diff_Defence" if v_type == "Defence" else "Diff_Overall"
-    t_df = t_df.sort_values(s_col, ascending=(s_order == "Easiest"))
-
-gw_cols = [c for c in t_df.columns if c.startswith('GW')]
-h_rows = ""
-for i, r in t_df.iterrows():
-    f_cells = ""
-    for c in gw_cols:
-        d = r.get(f'Dif_{c}', 3)
-        bg, txt = {1:'#375523', 2:'#00FF85', 3:'#EBEBEB', 4:'#FF0055', 5:'#680808'}.get(d, '#EBEBEB'), 'white' if d in [1,4,5] else 'black'
-        f_cells += f'<td><span class="diff-badge" style="background-color: {bg}; color: {txt};">{r[c]}</span></td>'
-    h_rows += f"""<tr><td style="padding-left: 15px; display: flex; align-items: center;"><img src="{r['Logo']}" style="width: 25px; margin-right: 10px;"><b>{r['Team']}</b></td>{f_cells}</tr>"""
-st.markdown(f"""<div class="fixture-table-container"><table class="modern-table"><thead><tr><th>Team</th>{"".join([f"<th>{c}</th>" for c in gw_cols])}</tr></thead><tbody>{h_rows}</tbody></table></div>""", unsafe_allow_html=True)
-
-st.markdown("---")
-st.header("Market Movers (Daily Change)")
-st.caption("Price changes over the last 24h.")
-df_c = db.get_db_price_changes()
-if df_c.empty: st.info("No price changes detected.")
-else:
-    c_r, c_f = st.columns(2)
-    # --- ARROW FIX: FILLED CIRCLES (Green/Black & Pink/White) ---
-    icon_up = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#00FF85"/><path d="M7 14L12 9L17 14" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    icon_dn = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#FF0055"/><path d="M7 10L12 15L17 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+for team in all_teams:
+    row = {'Team': team, 'Logo': f"https://resources.premierleague.com/premierleague/badges/20/t{id_to_code.get(name_to_id.get(team),0)}.png"}
+    fixtures = team_upcoming.get(team, [])
     
-    with c_r:
-        st.subheader("Price Risers")
-        risers = df_c[df_c['change'] > 0].sort_values('change', ascending=False)
-        if risers.empty: st.info("No risers.")
+    # Calculate Total Difficulty for Sort
+    # Sum difficulty of all matches in next 5 GWs
+    row['Diff_Sum'] = sum(f['diff'] for f in fixtures if f['event'] in next_5_gw_ids)
+    
+    for gw in next_5_gw_ids:
+        # Find all matches for this team in this GW
+        matches = [f for f in fixtures if f['event'] == gw]
+        
+        # Build Cell HTML (Handle Singles and Doubles)
+        cell_html = ""
+        if not matches:
+            cell_html = "-"
         else:
-            h_r = ""
-            for _, r in risers.iterrows():
-                tc = db.get_team_map().get(r['team'], 0)
-                # +£ FIX & 1 Decimal
-                h_r += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_up}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']:.1f}</td><td style="text-align: center; color: #00FF85;">+£{r['change']:.1f}</td></tr>"""
-            st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_r}</tbody></table></div>""", unsafe_allow_html=True)
-            
-    with c_f:
-        st.subheader("Price Fallers")
-        fallers = df_c[df_c['change'] < 0].sort_values('change')
-        if fallers.empty: st.info("No fallers.")
-        else:
-            h_f = ""
-            for _, r in fallers.iterrows():
-                tc = db.get_team_map().get(r['team'], 0)
-                # -£ FIX (ABS Value) & 1 Decimal
-                h_f += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_dn}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']:.1f}</td><td style="text-align: center; color: #FF0055;">-£{abs(r['change']):.1f}</td></tr>"""
-            st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_f}</tbody></table></div>""", unsafe_allow_html=True)
+            for m in matches:
+                bg = fdr.get(m['diff'], '#333')
+                txt = 'white' if m['diff'] in [1,4,5] else 'black'
+                # Flex badge
+                cell_html += f'<span class="diff-badge" style="background:{bg}; color:{txt}; margin-bottom:2px;">{m["opp"]}</span>'
+        
+        row[f"GW{gw}"] = cell_html
+    ticker_data.append(row)
+
+ticker_df = pd.DataFrame(ticker_data).sort_values('Diff_Sum')
+
+# Render Ticker
+tick_heads = "".join([f"<th>GW{gw}</th>" for gw in next_5_gw_ids])
+tick_rows = ""
+for _, r in ticker_df.iterrows():
+    cells = "".join([f"<td>{r[f'GW{gw}']}</td>" for gw in next_5_gw_ids])
+    tick_rows += f"<tr><td style='padding-left:10px; display:flex; align-items:center;'><img src='{r['Logo']}' width='25' style='margin-right:10px;'><b>{r['Team']}</b></td>{cells}</tr>"
+
+st.markdown(f"""<div class="fixture-table-container"><table class="modern-table"><thead><tr><th>Team</th>{tick_heads}</tr></thead><tbody>{tick_rows}</tbody></table></div>""", unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("""<div style='text-align: center; color: #B0B0B0;'><p><strong>FPL Metric</strong> | Built for the FPL Community</p><p><a href="https://x.com/FPL_Metric" target="_blank" style="color: #00FF85; text-decoration: none;">Follow on X: @FPL_Metric</a></p></div>""", unsafe_allow_html=True)
+st.markdown("<div style='text-align:center; color:#AAA;'>FPL Metric</div>", unsafe_allow_html=True)
