@@ -93,6 +93,9 @@ id_to_short = {t['id']: t['short_name'] for t in teams}
 id_to_code = {t['id']: t['code'] for t in teams}
 name_to_id = {t['name']: t['id'] for t in teams}
 
+# Global FDR Colors (Moved to Global Scope)
+fdr = {1:'#375523', 2:'#00FF85', 3:'#EBEBEB', 4:'#FF0055', 5:'#680808'}
+
 # Determine Current GW
 events = bootstrap.get('events', [])
 current_gw_obj = next((e for e in events if e['is_next']), events[0] if events else None)
@@ -101,9 +104,8 @@ gw_name_str = current_gw_obj['name'] if current_gw_obj else "Gameweek 1"
 deadline_str = current_gw_obj['deadline_time'] if current_gw_obj else ""
 
 # Process Upcoming Fixtures (Handling Doubles)
-# Structure: team_upcoming[team_name] = [ {event: 26, opp: 'LIV', diff: 4, is_home: True}, {event: 26, opp: 'ARS', ...} ]
 team_upcoming = defaultdict(list)
-gw_fixtures_display = [] # For widget
+gw_fixtures_display = [] 
 
 for f in raw_fixtures:
     if f['event'] is None: continue
@@ -125,14 +127,12 @@ for f in raw_fixtures:
         h_team = id_to_name.get(f['team_h'])
         a_team = id_to_name.get(f['team_a'])
         
-        # Home Team perspective
         team_upcoming[h_team].append({
             'event': f['event'],
             'opp': id_to_short.get(f['team_a']) + " (H)",
             'diff': f['team_h_difficulty'],
             'kickoff': f['kickoff_time']
         })
-        # Away Team perspective
         team_upcoming[a_team].append({
             'event': f['event'],
             'opp': id_to_short.get(f['team_h']) + " (A)",
@@ -140,7 +140,6 @@ for f in raw_fixtures:
             'kickoff': f['kickoff_time']
         })
 
-# Sort upcoming fixtures by date for each team
 for t in team_upcoming:
     team_upcoming[t].sort(key=lambda x: x['kickoff'])
 
@@ -148,7 +147,6 @@ for t in team_upcoming:
 df = db.fetch_main_data()
 df = df.fillna(0)
 
-# Metrics Calculation
 df['matches_played'] = df['matches_played'].replace(0, 1)
 df['minutes'] = df['minutes'].replace(0, 1)
 df['avg_minutes'] = df['minutes'] / df['matches_played']
@@ -273,7 +271,7 @@ if gw_fixtures_display:
 
 st.markdown("""<h1 style='text-align: center; background: linear-gradient(to right, #00FF85, #FFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>FPL Metric Dashboard</h1>""", unsafe_allow_html=True)
 
-# METRICS - FIXED SORT_VALUES ERROR
+# METRICS
 c1,c2,c3,c4 = st.columns(4)
 if not filtered.empty:
     def crd(t, n, v): return f"""<div style="background:rgba(255,255,255,0.03); border:1px solid #00FF85; border-radius:10px; padding:15px; text-align:center;"><div style="color:#AAA; font-size:0.8rem; font-weight:700;">{t}</div><div style="font-size:1.2rem; font-weight:900;">{n}</div><div style="color:#00FF85; font-weight:bold;">{v}</div></div>"""
@@ -291,7 +289,6 @@ def render_table(df, cols, key):
     
     if search: df = df[df['web_name'].str.contains(search, case=False)]
     
-    # Calculate Fixture Ease (Handling DGWs by summing difficulty)
     if s_col == 'fixture_ease':
         ease_map = {}
         for t, fixs in team_upcoming.items():
@@ -308,10 +305,8 @@ def render_table(df, cols, key):
     if sel_p != "Select...":
         render_player_profile(sorted_df[sorted_df['web_name']==sel_p].iloc[0])
 
-    # Table HTML generation
     heads = "".join([f"<th>{h}</th>" for h in ["Player", "Next 5"] + ["Price", "Own%", "Matches"] + list(cols.values())])
     rows = ""
-    fdr = {1:'#375523', 2:'#00FF85', 3:'#EBEBEB', 4:'#FF0055', 5:'#680808'}
     
     for _, r in sorted_df.iterrows():
         t_code = id_to_code.get(name_to_id.get(r['team_name']), 0)
@@ -345,7 +340,7 @@ with t2: render_table(filtered, {"xgi":"xGI", "goals_scored":"Goals", "assists":
 with t3: render_table(filtered, {"clean_sheets":"CS", "xgc":"xGC", "goals_conceded":"GC"}, "t3")
 with t4: render_table(filtered, {"dc_per_90":"DC/90", "tackles":"Tackles", "cbi":"CBI"}, "t4")
 
-# --- TICKER (DOUBLE GAMEWEEK HANDLING) ---
+# --- TICKER ---
 st.markdown("---")
 st.header("Fixture Difficulty Ticker")
 ticker_data = []
