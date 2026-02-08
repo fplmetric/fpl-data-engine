@@ -49,38 +49,40 @@ st.markdown("""
     .modern-table td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
     .modern-table td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: 1px solid rgba(255, 255, 255, 0.05); }
     
-    /* Fixture Pills Layout - FIXED ALIGNMENT */
+    /* --- FIXTURE PILLS LAYOUT (READABLE) --- */
     .mini-fix-container { 
         display: flex; 
-        gap: 4px; 
+        gap: 6px; 
         justify-content: center; 
         align-items: flex-start;
     }
     
-    /* Individual Slot for a Gameweek - Ensures exact width alignment */
+    /* Vertical Slot for each Gameweek */
     .fix-slot {
         display: flex;
         flex-direction: column;
-        gap: 2px;
-        width: 40px; 
-        min-width: 40px; /* Force minimum width */
+        gap: 3px;
+        width: 46px; 
+        min-width: 46px;
         align-items: center; 
     }
 
+    /* The Pill Itself */
     .mini-fix-box { 
         display: flex; 
         align-items: center; 
         justify-content: center; 
-        width: 38px; 
+        width: 45px; /* Wider for readability */
         height: 24px; 
         border-radius: 4px; 
-        font-size: 0.75rem; 
-        font-weight: 900; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3); 
+        font-size: 0.65rem; /* Smaller font to fit text */
+        font-weight: 800; 
+        white-space: nowrap; /* Prevent wrapping */
+        letter-spacing: -0.3px; /* Slightly tighter text */
+        box-shadow: 0 1px 3px rgba(0,0,0,0.4); 
     }
     
     .diff-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; display: block; width: 100%; text-align: center; margin-bottom: 2px;}
-    
     div[data-testid="stSidebar"] button { border-radius: 10px !important; height: 3em !important; font-family: 'Orbitron', sans-serif !important; font-weight: 700 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
     
     @media only screen and (max-width: 768px) {
@@ -97,9 +99,8 @@ st.markdown("""
 def normalize_name(name):
     """Normalize team names to match FPL API Short Names."""
     n = name.lower().strip()
-    # Explicit fix for the screenshot "Nottm Forest"
-    if n == "nottm forest": return "Nott'm Forest"
     if "nottingham" in n or "forest" in n or "nfo" in n: return "Nott'm Forest"
+    if "nottm" in n: return "Nott'm Forest" # Catch user specific case
     if "man" in n and "utd" in n: return "Man Utd"
     if "man" in n and "city" in n: return "Man City"
     if "sheffield" in n: return "Sheff Utd"
@@ -136,7 +137,7 @@ name_to_id = {}
 for t in teams:
     name_to_id[t['name']] = t['id']
     name_to_id[t['short_name']] = t['id']
-    # Specific fix for Forest
+    # Specific fix for Forest variants
     if t['short_name'] == 'NFO':
         name_to_id['Nottingham Forest'] = t['id']
         name_to_id['Nottm Forest'] = t['id']
@@ -361,27 +362,24 @@ def render_table(df, cols, key):
         t_id = name_to_id.get(r['team_name'])
         t_code = id_to_code.get(t_id, 0)
         
-        # --- FIXED FIXTURE LAYOUT ---
+        # --- FIXED FIXTURE LAYOUT (5 SLOTS) ---
         fix_html = '<div class="mini-fix-container">'
-        # Iterate strictly over the next 5 unique Gameweeks
+        
         for gw_id in next_5_gw_ids:
-            # Find all matches for this specific GW for this team
-            matches = [m for m in team_upcoming.get(t_id, []) if m['event'] == gw_id]
-            
-            # Create a Vertical Slot for this GW
-            fix_html += '<div class="fix-slot">'
+            matches = [f for f in team_upcoming.get(t_id, []) if f['event'] == gw_id]
+            fix_html += '<div class="fix-slot">' # Start Slot
             
             if not matches:
-                # Blank GW
                 fix_html += '<div class="mini-fix-box" style="background:#222; color:#555;">-</div>'
             else:
-                # 1 Match or 2 Matches (DGW)
                 for m in matches:
                     bg = fdr.get(m['diff'], '#333')
                     txt = 'white' if m['diff'] in [1,4,5] else 'black'
+                    # WIDER PILL + CENTERED TEXT
                     fix_html += f'<div class="mini-fix-box" style="background:{bg}; color:{txt};" title="GW{m["event"]}">{m["opp"]}</div>'
             
             fix_html += '</div>' # End Slot
+            
         fix_html += '</div>'
         
         stats_html = ""
