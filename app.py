@@ -49,10 +49,36 @@ st.markdown("""
     .modern-table td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
     .modern-table td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: 1px solid rgba(255, 255, 255, 0.05); }
     
-    /* Fixture Slots */
-    .mini-fix-container { display: flex; gap: 4px; justify-content: center; align-items: flex-start; }
-    .fix-slot { display: flex; flex-direction: column; gap: 2px; width: 40px; align-items: center; } /* Fixed width slot */
-    .mini-fix-box { display: flex; align-items: center; justify-content: center; width: 38px; height: 24px; border-radius: 4px; font-size: 0.75rem; font-weight: 900; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    /* Fixture Pills Layout - FIXED ALIGNMENT */
+    .mini-fix-container { 
+        display: flex; 
+        gap: 4px; 
+        justify-content: center; 
+        align-items: flex-start;
+    }
+    
+    /* Individual Slot for a Gameweek - Ensures exact width alignment */
+    .fix-slot {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        width: 40px; 
+        min-width: 40px; /* Force minimum width */
+        align-items: center; 
+    }
+
+    .mini-fix-box { 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        width: 38px; 
+        height: 24px; 
+        border-radius: 4px; 
+        font-size: 0.75rem; 
+        font-weight: 900; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3); 
+    }
+    
     .diff-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; display: block; width: 100%; text-align: center; margin-bottom: 2px;}
     
     div[data-testid="stSidebar"] button { border-radius: 10px !important; height: 3em !important; font-family: 'Orbitron', sans-serif !important; font-weight: 700 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
@@ -71,6 +97,8 @@ st.markdown("""
 def normalize_name(name):
     """Normalize team names to match FPL API Short Names."""
     n = name.lower().strip()
+    # Explicit fix for the screenshot "Nottm Forest"
+    if n == "nottm forest": return "Nott'm Forest"
     if "nottingham" in n or "forest" in n or "nfo" in n: return "Nott'm Forest"
     if "man" in n and "utd" in n: return "Man Utd"
     if "man" in n and "city" in n: return "Man City"
@@ -112,6 +140,7 @@ for t in teams:
     if t['short_name'] == 'NFO':
         name_to_id['Nottingham Forest'] = t['id']
         name_to_id['Nottm Forest'] = t['id']
+        name_to_id["Nott'm Forest"] = t['id']
 
 fdr = {1:'#375523', 2:'#00FF85', 3:'#EBEBEB', 4:'#FF0055', 5:'#680808'}
 
@@ -312,7 +341,6 @@ def render_table(df, cols, key):
             t_id = name_to_id.get(t_name)
             if t_id:
                 fixs = team_upcoming.get(t_id, [])
-                # Sum difficulty of all matches in next 5 GWs
                 total_diff = sum(f['diff'] for f in fixs if f['event'] in next_5_gw_ids)
                 ease_map[t_name] = 30 - total_diff 
         df['fixture_ease'] = df['team_name'].map(ease_map).fillna(0)
