@@ -159,7 +159,7 @@ df['tackles_per_90'] = (df['tackles'] / df['minutes']) * 90
 ep_map = db.get_expected_points_map()
 df['ep_next'] = df['player_id'].map(ep_map).fillna(0.0)
 
-# --- HISTORY FETCHING (UNCHANGED) ---
+# --- HISTORY FETCHING ---
 @st.cache_data(ttl=3600)
 def get_real_player_history(player_id, _team_map):
     try:
@@ -273,14 +273,14 @@ if gw_fixtures_display:
 
 st.markdown("""<h1 style='text-align: center; background: linear-gradient(to right, #00FF85, #FFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>FPL Metric Dashboard</h1>""", unsafe_allow_html=True)
 
-# METRICS
+# METRICS - FIXED SORT_VALUES ERROR
 c1,c2,c3,c4 = st.columns(4)
 if not filtered.empty:
     def crd(t, n, v): return f"""<div style="background:rgba(255,255,255,0.03); border:1px solid #00FF85; border-radius:10px; padding:15px; text-align:center;"><div style="color:#AAA; font-size:0.8rem; font-weight:700;">{t}</div><div style="font-size:1.2rem; font-weight:900;">{n}</div><div style="color:#00FF85; font-weight:bold;">{v}</div></div>"""
-    with c1: st.markdown(crd("Threat King", filtered.sort_values('xgi',0).iloc[0]['web_name'], filtered.sort_values('xgi',0).iloc[0]['xgi']), unsafe_allow_html=True)
-    with c2: st.markdown(crd("Work Rate", filtered.sort_values('dc_per_90',0).iloc[0]['web_name'], round(filtered.sort_values('dc_per_90',0).iloc[0]['dc_per_90'],2)), unsafe_allow_html=True)
-    with c3: st.markdown(crd("Best Value", filtered.sort_values('value_season',0).iloc[0]['web_name'], filtered.sort_values('value_season',0).iloc[0]['value_season']), unsafe_allow_html=True)
-    with c4: st.markdown(crd("Best PPG", filtered.sort_values('points_per_game',0).iloc[0]['web_name'], filtered.sort_values('points_per_game',0).iloc[0]['points_per_game']), unsafe_allow_html=True)
+    with c1: st.markdown(crd("Threat King", filtered.sort_values('xgi', ascending=False).iloc[0]['web_name'], filtered.sort_values('xgi', ascending=False).iloc[0]['xgi']), unsafe_allow_html=True)
+    with c2: st.markdown(crd("Work Rate", filtered.sort_values('dc_per_90', ascending=False).iloc[0]['web_name'], round(filtered.sort_values('dc_per_90', ascending=False).iloc[0]['dc_per_90'],2)), unsafe_allow_html=True)
+    with c3: st.markdown(crd("Best Value", filtered.sort_values('value_season', ascending=False).iloc[0]['web_name'], filtered.sort_values('value_season', ascending=False).iloc[0]['value_season']), unsafe_allow_html=True)
+    with c4: st.markdown(crd("Best PPG", filtered.sort_values('points_per_game', ascending=False).iloc[0]['web_name'], filtered.sort_values('points_per_game', ascending=False).iloc[0]['points_per_game']), unsafe_allow_html=True)
 
 def render_table(df, cols, key):
     c1, c2, c3 = st.columns([1, 1.5, 1.5])
@@ -293,13 +293,10 @@ def render_table(df, cols, key):
     
     # Calculate Fixture Ease (Handling DGWs by summing difficulty)
     if s_col == 'fixture_ease':
-        # Lower sum = easier. So invert for descending sort.
-        # Sum diff of next 5 games. If DGW, it adds both.
         ease_map = {}
         for t, fixs in team_upcoming.items():
-            # Sum difficulty of first 5 fixtures found
             total_diff = sum(f['diff'] for f in fixs[:5])
-            ease_map[t] = 30 - total_diff # Max diff approx 25. 
+            ease_map[t] = 30 - total_diff 
         df['fixture_ease'] = df['team_name'].map(ease_map).fillna(0)
 
     sorted_df = df.sort_values(s_col, ascending=False).head(100)
@@ -318,20 +315,15 @@ def render_table(df, cols, key):
     
     for _, r in sorted_df.iterrows():
         t_code = id_to_code.get(name_to_id.get(r['team_name']), 0)
-        # Next 5 Fixtures Logic (Handle Doubles)
-        # Get next 5 fixtures from our global map
         my_fixs = team_upcoming.get(r['team_name'], [])[:5] 
         
         fix_html = '<div class="mini-fix-container">'
         for f in my_fixs:
             bg = fdr.get(f['diff'], '#333')
             txt = 'white' if f['diff'] in [1,4,5] else 'black'
-            # DGW Check: If multiple games in same event have passed, loop handles it.
-            # Visual: Just stack them all.
             fix_html += f'<div class="mini-fix-box" style="background:{bg}; color:{txt};" title="GW{f["event"]}">{f["opp"]}</div>'
         fix_html += '</div>'
         
-        # Stats columns
         stats_html = ""
         for k in ['cost', 'selected_by_percent', 'matches_played'] + list(cols.keys()):
             val = r[k]
@@ -356,41 +348,27 @@ with t4: render_table(filtered, {"dc_per_90":"DC/90", "tackles":"Tackles", "cbi"
 # --- TICKER (DOUBLE GAMEWEEK HANDLING) ---
 st.markdown("---")
 st.header("Fixture Difficulty Ticker")
-# Build Ticker Dataframe
-# Rows: Teams. Cols: Next 5 GWs. Cells: Badge(s) if single/double.
 ticker_data = []
-# Identify next 5 distinct GW IDs
 next_5_gw_ids = sorted(list(set(f['event'] for t in team_upcoming for f in team_upcoming[t])))[:5]
 
 for team in all_teams:
     row = {'Team': team, 'Logo': f"https://resources.premierleague.com/premierleague/badges/20/t{id_to_code.get(name_to_id.get(team),0)}.png"}
     fixtures = team_upcoming.get(team, [])
-    
-    # Calculate Total Difficulty for Sort
-    # Sum difficulty of all matches in next 5 GWs
     row['Diff_Sum'] = sum(f['diff'] for f in fixtures if f['event'] in next_5_gw_ids)
     
     for gw in next_5_gw_ids:
-        # Find all matches for this team in this GW
         matches = [f for f in fixtures if f['event'] == gw]
-        
-        # Build Cell HTML (Handle Singles and Doubles)
         cell_html = ""
-        if not matches:
-            cell_html = "-"
+        if not matches: cell_html = "-"
         else:
             for m in matches:
                 bg = fdr.get(m['diff'], '#333')
                 txt = 'white' if m['diff'] in [1,4,5] else 'black'
-                # Flex badge
                 cell_html += f'<span class="diff-badge" style="background:{bg}; color:{txt}; margin-bottom:2px;">{m["opp"]}</span>'
-        
         row[f"GW{gw}"] = cell_html
     ticker_data.append(row)
 
 ticker_df = pd.DataFrame(ticker_data).sort_values('Diff_Sum')
-
-# Render Ticker
 tick_heads = "".join([f"<th>GW{gw}</th>" for gw in next_5_gw_ids])
 tick_rows = ""
 for _, r in ticker_df.iterrows():
