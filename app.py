@@ -49,40 +49,15 @@ st.markdown("""
     .modern-table td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
     .modern-table td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: 1px solid rgba(255, 255, 255, 0.05); }
     
-    /* --- FIXTURE PILLS LAYOUT (CENTERED & READABLE) --- */
-    .mini-fix-container { 
-        display: flex; 
-        gap: 6px; 
-        justify-content: center; 
-        align-items: flex-start;
-    }
-    
-    /* Vertical Slot for each Gameweek */
-    .fix-slot {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        width: 50px; /* Fixed width per GW slot */
-        min-width: 50px;
-        align-items: center; 
-    }
+    /* Status Dot */
+    .status-pill { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
-    /* The Pill Itself */
-    .mini-fix-box { 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; /* Absolute center */
-        width: 50px; /* Wide enough for 'WHU (H)' */
-        height: 26px; 
-        border-radius: 4px; 
-        font-size: 0.7rem; 
-        font-weight: 900; 
-        text-align: center;
-        white-space: nowrap; 
-        box-shadow: 0 1px 3px rgba(0,0,0,0.4); 
-    }
-    
+    /* Fixture Pills Layout - FIXED ALIGNMENT */
+    .mini-fix-container { display: flex; gap: 6px; justify-content: center; align-items: flex-start; }
+    .fix-slot { display: flex; flex-direction: column; gap: 4px; width: 50px; min-width: 50px; align-items: center; }
+    .mini-fix-box { display: flex; align-items: center; justify-content: center; width: 50px; height: 26px; border-radius: 4px; font-size: 0.7rem; font-weight: 900; text-align: center; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
     .diff-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; display: block; width: 100%; text-align: center; margin-bottom: 2px;}
+    
     div[data-testid="stSidebar"] button { border-radius: 10px !important; height: 3em !important; font-family: 'Orbitron', sans-serif !important; font-weight: 700 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
     
     @media only screen and (max-width: 768px) {
@@ -136,7 +111,6 @@ name_to_id = {}
 for t in teams:
     name_to_id[t['name']] = t['id']
     name_to_id[t['short_name']] = t['id']
-    # Specific fix for Forest variants
     if t['short_name'] == 'NFO':
         name_to_id['Nottingham Forest'] = t['id']
         name_to_id['Nottm Forest'] = t['id']
@@ -177,7 +151,6 @@ for f in raw_fixtures:
 
 for t in team_upcoming: team_upcoming[t].sort(key=lambda x: x['kickoff'])
 
-# Get distinct Next 8 Gameweek IDs (for horizon up to 8)
 all_future_gws = sorted(list(set(f['event'] for t in team_upcoming for f in team_upcoming[t] if f['event'] >= current_gw_id)))
 max_ticker_horizon = all_future_gws[:8] 
 next_5_gw_ids = all_future_gws[:5]
@@ -364,6 +337,21 @@ def render_table(df, cols, key):
         t_id = name_to_id.get(r['team_name'])
         t_code = id_to_code.get(t_id, 0)
         
+        # --- PLAYER AVAILABILITY LOGIC (RESTORED) ---
+        status = r['status']
+        row_style = 'background:rgba(255,255,255,0.03);'
+        border_color = "rgba(255, 255, 255, 0.05)"
+        status_dot = '<span class="status-pill" style="background-color: #00FF85;"></span>'
+        
+        if status in ['i', 'u', 'n', 's']:
+            row_style = 'background-color: rgba(255, 0, 85, 0.15);'
+            border_color = "#FF0055"
+            status_dot = '<span class="status-pill" style="background-color: #FF0055;"></span>'
+        elif status == 'd':
+            row_style = 'background-color: rgba(255, 204, 0, 0.15);'
+            border_color = "#FFCC00"
+            status_dot = '<span class="status-pill" style="background-color: #FFCC00;"></span>'
+
         # --- FIXED FIXTURE LAYOUT (5 SLOTS) ---
         fix_html = '<div class="mini-fix-container">'
         
@@ -392,8 +380,8 @@ def render_table(df, cols, key):
             elif isinstance(val, float): val = f"{val:.1f}"
             stats_html += f"<td style='text-align:center;'>{val}</td>"
             
-        rows += f"""<tr style="background:rgba(255,255,255,0.03);">
-        <td style="padding-left:10px;"><div style="display:flex;align-items:center;gap:10px;"><img src="https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png" width="30"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem;color:#AAA;">{r['team_name']}</span></div></div></td>
+        rows += f"""<tr style="{row_style} border-left: 4px solid {border_color};">
+        <td style="padding-left:10px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:10px;">{status_dot}</div><img src="https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png" width="30"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem;color:#AAA;">{r['team_name']}</span></div></div></td>
         <td style="text-align:center;">{fix_html}</td>
         {stats_html}</tr>"""
         
@@ -413,7 +401,6 @@ st.header("Fixture Difficulty Ticker")
 c1, c2, c3 = st.columns(3)
 with c1: s_order = st.selectbox("Sort Order", ["Easiest", "Hardest", "Alphabetical"])
 with c2: v_type = st.selectbox("Type", ["Overall", "Attack", "Defence"])
-# RESTORED HORIZON OPTIONS
 horizon_options = ["Next 2 GWs", "Next 3 GWs", "Next 4 GWs", "Next 5 GWs", "Next 6 GWs", "Next 7 GWs", "Next 8 GWs"]
 for i in range(5):
     if i < len(all_future_gws):
