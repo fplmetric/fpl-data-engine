@@ -253,7 +253,6 @@ with st.sidebar:
         mn_dc = st.slider("Min DC/90", 0.0, 10.0, 0.0)
         st.form_submit_button("Apply")
     
-    # RESTORED BMAC LINK
     st.markdown("---")
     st.markdown("""<a href="https://www.buymeacoffee.com/fplmetric" target="_blank" class="bmc-button"><img src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg" alt="Buy me a coffee" class="bmc-logo"><span>Buy me a coffee</span></a>""", unsafe_allow_html=True)
 
@@ -303,7 +302,8 @@ if gw_fixtures_display:
                 var days = Math.floor(t/(1000*60*60*24));
                 var hrs = Math.floor((t%(1000*60*60*24))/(1000*60*60));
                 var mins = Math.floor((t%(1000*60*60))/(1000*60));
-                el.innerHTML = days + "d " + hrs + "h " + mins + "m";
+                var secs = Math.floor((t%(1000*60))/1000);
+                el.innerHTML = days + "d " + hrs + "h " + mins + "m " + secs + "s";
             }}
         }}, 1000);
         var fx = {fix_json};
@@ -415,20 +415,17 @@ with c1: s_order = st.selectbox("Sort Order", ["Easiest", "Hardest", "Alphabetic
 with c2: v_type = st.selectbox("Type", ["Overall", "Attack", "Defence"])
 # RESTORED HORIZON OPTIONS
 horizon_options = ["Next 2 GWs", "Next 3 GWs", "Next 4 GWs", "Next 5 GWs", "Next 6 GWs", "Next 7 GWs", "Next 8 GWs"]
-# Add specific GW options (Current to Current+4)
 for i in range(5):
     if i < len(all_future_gws):
         horizon_options.append(f"GW {all_future_gws[i]}")
 
 with c3: horizon = st.selectbox("Horizon", horizon_options)
 
-# LOGIC TO HANDLE HORIZON SELECTION
 selected_gw_ids = []
 if "Next" in horizon:
     n_gws = int(horizon.split(" ")[1])
     selected_gw_ids = max_ticker_horizon[:n_gws]
 else:
-    # Single GW selection (e.g., "GW 26")
     target_gw = int(horizon.split(" ")[1])
     selected_gw_ids = [target_gw]
 
@@ -441,7 +438,6 @@ for team in all_teams:
     row = {'Team': team, 'Logo': f"https://resources.premierleague.com/premierleague/badges/20/t{t_code}.png"}
     fixtures = team_upcoming.get(t_id, [])
     
-    # Calculate Diff Sum based on selected horizon
     row['Diff_Sum'] = sum(f['diff'] for f in fixtures if f['event'] in selected_gw_ids)
     
     for gw in selected_gw_ids:
@@ -458,7 +454,6 @@ for team in all_teams:
 
 ticker_df = pd.DataFrame(ticker_data)
 
-# Sort Logic
 if s_order == "Alphabetical": ticker_df = ticker_df.sort_values('Team')
 else: ticker_df = ticker_df.sort_values('Diff_Sum', ascending=(s_order=="Easiest"))
 
@@ -469,6 +464,39 @@ for _, r in ticker_df.iterrows():
     tick_rows += f"<tr><td style='padding-left:10px; display:flex; align-items:center;'><img src='{r['Logo']}' width='25' style='margin-right:10px;'><b>{r['Team']}</b></td>{cells}</tr>"
 
 st.markdown(f"""<div class="fixture-table-container"><table class="modern-table"><thead><tr><th>Team</th>{tick_heads}</tr></thead><tbody>{tick_rows}</tbody></table></div>""", unsafe_allow_html=True)
+
+# --- MARKET MOVERS (RESTORED) ---
+st.markdown("---")
+st.header("Market Movers (Daily Change)")
+st.caption("Price changes over the last 24h.")
+df_c = db.get_db_price_changes()
+if df_c.empty: st.info("No price changes detected.")
+else:
+    c_r, c_f = st.columns(2)
+    icon_up = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#00FF85"/><path d="M7 14L12 9L17 14" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    icon_dn = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#FF0055"/><path d="M7 10L12 15L17 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+
+    with c_r:
+        st.subheader("Price Risers")
+        risers = df_c[df_c['change'] > 0].sort_values('change', ascending=False)
+        if risers.empty: st.info("No risers.")
+        else:
+            h_r = ""
+            for _, r in risers.iterrows():
+                tc = db.get_team_map().get(r['team'], 0)
+                h_r += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_up}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']:.1f}</td><td style="text-align: center; color: #00FF85;">+£{r['change']:.1f}</td></tr>"""
+            st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_r}</tbody></table></div>""", unsafe_allow_html=True)
+
+    with c_f:
+        st.subheader("Price Fallers")
+        fallers = df_c[df_c['change'] < 0].sort_values('change')
+        if fallers.empty: st.info("No fallers.")
+        else:
+            h_f = ""
+            for _, r in fallers.iterrows():
+                tc = db.get_team_map().get(r['team'], 0)
+                h_f += f"""<tr><td style="padding-left: 20px;"><div style="display: flex; align-items: center; gap: 10px;">{icon_dn}<img src="https://resources.premierleague.com/premierleague/badges/20/t{tc}.png" style="width: 30px;"><div><b>{r['web_name']}</b><br><span style="font-size:0.8rem; color:#AAA;">{r['team']}</span></div></div></td><td style="text-align: center;">£{r['cost']:.1f}</td><td style="text-align: center; color: #FF0055;">-£{abs(r['change']):.1f}</td></tr>"""
+            st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr><th>Player</th><th>Price</th><th>Change</th></tr></thead><tbody>{h_f}</tbody></table></div>""", unsafe_allow_html=True)
 
 st.markdown("---")
 # RESTORED FOOTER
