@@ -387,8 +387,9 @@ def render_table(df, cols, key):
         
     st.markdown(f"""<div class="player-table-container"><table class="modern-table"><thead><tr>{heads}</tr></thead><tbody>{rows}</tbody></table></div>""", unsafe_allow_html=True)
 
+# ADDED PPG AND MINS/GAME TO OVERVIEW TAB
 t1, t2, t3, t4 = st.tabs(["Overview", "Attack", "Defense", "Work Rate"])
-with t1: render_table(filtered, {"ep_next":"XP", "total_points":"Pts", "points_per_game":"PPG"}, "t1")
+with t1: render_table(filtered, {"ep_next":"XP", "total_points":"Pts", "points_per_game":"PPG", "avg_minutes":"Mins/Gm"}, "t1")
 with t2: render_table(filtered, {"xgi":"xGI", "goals_scored":"Goals", "assists":"Assists"}, "t2")
 with t3: render_table(filtered, {"clean_sheets":"CS", "xgc":"xGC", "goals_conceded":"GC"}, "t3")
 with t4: render_table(filtered, {"dc_per_90":"DC/90", "tackles":"Tackles", "cbi":"CBI"}, "t4")
